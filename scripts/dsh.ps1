@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   DSH n'a ni --cwd, ni --model, ni --base-url. Tout passe par :
-    1. le REPERTOIRE COURANT      -> espace de travail + cle des sessions
+    1. le REPERTOIRE DU PROCESS   -> espace de travail + cle des sessions
     2. l'ENV du process           -> resout les references apiKeyEnv de settings.yaml
     3. ~/.dsh/settings.yaml       -> les routes (local / openrouter / openrouter-cheap)
   Ce script fait 1 et 2, puis lance. Il ne touche jamais a settings.yaml.
@@ -14,7 +14,8 @@
 
 .EXAMPLE
   .\scripts\dsh.ps1
-  Ouvre l'UI de chat sur http://127.0.0.1:8010, espace de travail = dossier courant.
+  Ouvre l'UI de chat sur http://127.0.0.1:8010 dans le BAC A SABLE par defaut
+  (%LOCALAPPDATA%\Temp\dsh-workspace), pas dans le repertoire courant.
 
 .EXAMPLE
   .\scripts\dsh.ps1 -Workspace C:\projets\essai -Cheap
@@ -31,7 +32,9 @@
 [CmdletBinding()]
 param(
     [string] $Ask,                                   # tache one-shot (profil headless)
-    [string] $Workspace,                             # defaut : repertoire courant
+    [string] $Workspace,                             # dossier nomme (cree s'il manque)
+    [switch] $Here,                                  # utiliser le repertoire COURANT
+    [switch] $Fresh,                                 # dossier jetable horodate
     [int]    $Port = 8010,                           # port de l'UI web
     [int]    $ProxyPort = 8011,                      # port du proxy "moins cher"
     [switch] $Cheap,                                 # demarre le proxy s'il est absent
@@ -50,15 +53,23 @@ if ($Help) {
     $usage = @'
 
 USAGE
-  .\scripts\dsh.ps1 [-Workspace <dir>] [-Port <n>] [-Cheap] [-NoOpen]
-  .\scripts\dsh.ps1 -Ask "<tache>" [-Workspace <dir>]
+  .\scripts\dsh.ps1 [-Here | -Fresh | -Workspace <dir>] [-Port <n>] [-Cheap] [-NoOpen]
+  .\scripts\dsh.ps1 -Ask "<tache>" [-Here | -Fresh | -Workspace <dir>]
   .\scripts\dsh.ps1 -Stop [-Port <n>] [-ProxyPort <n>]
   .\scripts\dsh.ps1 -Help
 
 PARAMETRES
-  -Workspace <dir>  Espace de travail. Defaut : le repertoire courant.
-                    DSH n'a PAS de --cwd : ce dossier est a la fois ce que l'agent
-                    voit et la cle sous laquelle tes sessions sont rangees.
+  ESPACE DE TRAVAIL -- par DEFAUT un bac a sable temporaire, PAS le repertoire
+                    courant. DSH n'a pas de --cwd : ce dossier est a la fois ce que
+                    l'agent voit et la cle sous laquelle tes sessions sont rangees,
+                    donc lancer depuis le depot lui donnerait le depot comme terrain.
+    (rien)          %LOCALAPPDATA%\Temp\dsh-workspace -- stable : tes fichiers et
+                    ton historique de chat y survivent d'un lancement a l'autre.
+    -Fresh          sous-dossier horodate jetable. Session NEUVE a chaque fois, et
+                    rien du run precedent : c'est le prix de l'isolement.
+    -Here           le repertoire courant, explicitement. Le script previent si ce
+                    dossier est dans le depot.
+    -Workspace <d>  un dossier nomme, cree s'il manque.
   -Ask "<tache>"    Une seule tache (profil headless), pas d'UI, rend la main a la fin.
                     Sans -Ask, ouvre l'UI de chat.
   -Port <n>         Port de l'UI web. Defaut 8010.
@@ -71,7 +82,8 @@ PARAMETRES
   -Help             Ceci.
 
 CE QUE LE SCRIPT PREPARE POUR TOI
-  1. le repertoire de travail          (-Workspace, sinon le courant)
+  1. le repertoire de travail          bac a sable par defaut ; -Here / -Fresh /
+                                        -Workspace pour en changer
   2. l'environnement                    DSH_TELEMETRY_DISABLED=1, DSH_LOCAL_API_KEY,
                                         et OPENROUTER_API_KEY lue depuis le .env du
                                         depot -- jamais affichee, jamais recopiee
@@ -112,10 +124,10 @@ function Get-ListenerPid([int]$p) {
 # --- -Stop : on arrete et on sort ------------------------------------------
 if ($Stop) {
     foreach ($pair in @(@{n='UI';p=$Port}, @{n='proxy';p=$ProxyPort})) {
-        $target = Get-ListenerPid $pair.p
-        if ($target) {
-            taskkill /PID $target /T /F | Out-Null
-            Write-Host ("{0} arrete (PID {1}, port {2})" -f $pair.n, $target, $pair.p)
+        $listenerPid = Get-ListenerPid $pair.p
+        if ($listenerPid) {
+            taskkill /PID $listenerPid /T /F | Out-Null
+            Write-Host ("{0} arrete (PID {1}, port {2})" -f $pair.n, $listenerPid, $pair.p)
         } else {
             Write-Host ("{0} : rien n'ecoute sur {1}" -f $pair.n, $pair.p)
         }
@@ -124,11 +136,43 @@ if ($Stop) {
 }
 
 # --- ingredient 1 : le repertoire de travail --------------------------------
+# DEFAUT = un workspace TEMPORAIRE, jamais le repertoire courant. L'agent ecrit
+# dans son cwd : lancer depuis le depot lui donnerait le depot comme terrain de
+# jeu, et un simple "cd" oublie suffirait. Il faut donc DEMANDER le depot.
+#   (defaut)          bac a sable stable -> l'historique et les fichiers survivent
+#   -Fresh            dossier horodate jetable -> nouvelle session a chaque fois
+#   -Here             le repertoire courant, explicitement
+#   -Workspace <dir>  un dossier nomme (cree s'il manque)
+$ScratchRoot = Join-Path $env:LOCALAPPDATA 'Temp\dsh-workspace'
+
 if ($Workspace) {
-    if (-not (Test-Path $Workspace)) { throw "Workspace introuvable : $Workspace" }
-    Set-Location $Workspace
+    if (-not (Test-Path $Workspace)) { New-Item -ItemType Directory -Force -Path $Workspace | Out-Null }
+    $target = (Resolve-Path $Workspace).Path
+    $origin = 'dossier nomme (-Workspace)'
+} elseif ($Fresh) {
+    $target = Join-Path $ScratchRoot ('run-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+    New-Item -ItemType Directory -Force -Path $target | Out-Null
+    $origin = 'jetable (-Fresh) -- session neuve, rien du run precedent'
+} elseif ($Here) {
+    $target = (Get-Location).Path
+    $origin = 'repertoire courant (-Here)'
+} else {
+    if (-not (Test-Path $ScratchRoot)) { New-Item -ItemType Directory -Force -Path $ScratchRoot | Out-Null }
+    $target = $ScratchRoot
+    $origin = 'bac a sable par defaut'
 }
-$cwd = (Get-Location).Path
+
+# On ne fait PAS Set-Location : ca deplacerait le shell de l'appelant et il se
+# retrouverait dans le bac a sable apres coup. Le cwd est pousse UNIQUEMENT autour
+# de l'appel npx, plus bas, et depile dans un finally.
+$cwd = $target
+Write-Host ("espace de travail : {0}   [{1}]" -f $cwd, $origin)
+
+# Le slug de session DERIVE du cwd : changer d'espace de travail change de
+# conversation. C'est aussi ce qui rend un espace partage dangereux.
+if ($cwd.StartsWith($RepoRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+    Write-Warning "  cet espace est DANS le depot : l'agent peut y ecrire. git status avant/apres."
+}
 
 # --- ingredient 2 : l'environnement ----------------------------------------
 $env:DSH_TELEMETRY_DISABLED = '1'          # en plus du defaut DISABLED du paquet
@@ -204,8 +248,10 @@ if ($Cheap) {
 $pkg = '@deepseek-ai/dsh@' + $DshVersion
 
 if ($Ask) {
-    Write-Host ("tache one-shot | espace de travail : {0}" -f $cwd)
-    & npx -y $pkg --profile headless $Ask
+    Write-Host "tache one-shot (profil headless)"
+    Push-Location $cwd
+    try { & npx -y $pkg --profile headless $Ask }
+    finally { Pop-Location }
     exit $LASTEXITCODE
 }
 
@@ -216,9 +262,10 @@ if ($busy) {
 }
 
 Write-Host ("UI de chat  : http://127.0.0.1:{0}" -f $Port)
-Write-Host ("espace de travail : {0}" -f $cwd)
 Write-Host "Ctrl+C pour arreter, ou depuis un autre terminal : .\scripts\dsh.ps1 -Stop"
 
 $dshArgs = @('-y', $pkg, 'web', '--host', '127.0.0.1', '--port', $Port)
 if ($NoOpen) { $dshArgs += '--no-open' }
-& npx @dshArgs
+Push-Location $cwd
+try { & npx @dshArgs }
+finally { Pop-Location }
