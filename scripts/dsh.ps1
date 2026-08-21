@@ -42,11 +42,13 @@ param(
     [switch] $Stop,                                  # arreter UI + proxy
     [string] $QuarantineSession,                     # deplacer UN journal de session fautif
     [switch] $SkipSessionCheck,                      # sauter le preflight du magasin de sessions
+    [switch] $SkipTreeCheck,                         # sauter le preflight de coherence de l'arbre
+    [string] $DshVersion = '0.1.1-rc.2',             # version de @deepseek-ai/dsh a lancer
+    [switch] $InstallRuntime,                        # (re)construire l'arbre EPINGLE de cette version
     [switch] $Help                                   # afficher l'aide et sortir
 )
 
 $ErrorActionPreference = 'Stop'
-$DshVersion = '0.1.0-rc.7'
 $RepoRoot   = Split-Path -Parent $PSScriptRoot
 
 # --- -Help : on affiche et on sort, sans rien toucher -----------------------
@@ -87,6 +89,11 @@ PARAMETRES
                     ~/.dsh/quarantine/<horodatage>/. Les octets sont CONSERVES ;
                     rien n'est supprime. Sert quand le preflight nomme un journal.
   -SkipSessionCheck Sauter le preflight du magasin de sessions (voir plus bas).
+  -DshVersion <v>   Version de @deepseek-ai/dsh a lancer. Defaut 0.1.1-rc.2.
+  -InstallRuntime   (Re)construit l'arbre EPINGLE de cette version sous
+                    ~/.dsh/runtime/dsh-<v>, puis sort. A faire UNE fois par
+                    version ; ensuite le boot le prefere a npx tout seul.
+  -SkipTreeCheck    Sauter le preflight de coherence de l'arbre (voir plus bas).
   -Help             Ceci.
 
 LE PREFLIGHT DU MAGASIN DE SESSIONS (scripts/dsh_session_check.mjs)
@@ -95,6 +102,28 @@ LE PREFLIGHT DU MAGASIN DE SESSIONS (scripts/dsh_session_check.mjs)
     "plugin tree failed to load: ... corrupt Zstandard session log"
   Le preflight rejoue les trois refus possibles et sort le NOM du fautif avec la
   commande de quarantaine. Il DECRIT, il ne bloque pas : le lancement suit.
+
+LE PREFLIGHT DE COHERENCE DE L'ARBRE (scripts/dsh_tree_check.mjs)
+  Ce script n'epingle que @deepseek-ai/dsh ; ses 65 dependances sont declarees en
+  caret, donc npm resout les greffons au plus recent < 0.2.0 le JOUR de
+  l'installation. L'app et ses greffons peuvent donc diverger sans que rien ne le
+  dise. Mesure du 21/08 : app 0.1.0-rc.7 + 185 greffons 0.1.0-rc.8, et rc.8
+  enregistrait une section de prompt a nom fixe "delegation:policy" que les
+  presets livres declarent DEUX fois. Plus aucun preset ne montait :
+    "preset 'standard' failed to mount: prompt section 'delegation:policy'
+     is already registered in this scope"
+  L'UI repondait 200 et aucun modele ne chargeait. Le preflight NOMME les presets
+  concernes. Il DECRIT, il ne bloque pas.
+  -DshVersion <v> pour epingler autre chose ; -SkipTreeCheck pour le sauter.
+
+L'ARBRE EPINGLE (~/.dsh/runtime/dsh-<version>)
+  La reparation de fond, pas le detecteur : npx re-resout les greffons a chaque
+  installation, donc on installe UNE fois avec des `overrides` exacts sur les 186
+  paquets du scope, et le package-lock.json fige l'arbre pour de bon.
+    .\scripts\dsh.ps1 -InstallRuntime                 (version par defaut)
+    .\scripts\dsh.ps1 -InstallRuntime -DshVersion <v> (une autre)
+  Ensuite le boot prend ce binaire tout seul. S'il manque, le script le DIT et
+  retombe sur npx -- il ne t'arrete pas, mais l'arbre redevient flottant.
 
 CE QUE LE SCRIPT PREPARE POUR TOI
   1. le repertoire de travail          bac a sable par defaut ; -Here / -Fresh /
@@ -134,6 +163,77 @@ function Get-ListenerPid([int]$p) {
             Select-String -Pattern 'LISTENING' | Select-Object -First 1
     if ($null -eq $line) { return $null }
     return ($line.Line -split '\s+')[-1]
+}
+
+# --- l'arbre EPINGLE : ~/.dsh/runtime/dsh-<version> -------------------------
+# `npx -y @deepseek-ai/dsh@<v>` n'epingle QUE ce paquet. Ses 65 dependances sont
+# declarees en caret, donc npm les RE-RESOUT a chaque installation et l'arbre
+# derive tout seul -- mesure du 21/08 : app 0.1.0-rc.7, greffons 0.1.0-rc.8, et
+# plus aucun preset ne montait. On installe donc une seule fois, avec des
+# `overrides` EXACTS sur tout le scope, dans un repertoire a nous ; le
+# package-lock.json qui en sort fige l'arbre. Le boot prefere ce binaire et ne
+# retombe sur npx qu'a defaut, en le DISANT.
+$RuntimeRoot = Join-Path (Join-Path $env:USERPROFILE '.dsh') 'runtime'
+$RuntimeDir  = Join-Path $RuntimeRoot ('dsh-' + $DshVersion)
+$RuntimeBin  = Join-Path (Join-Path (Join-Path $RuntimeDir 'node_modules') '.bin') 'dsh.cmd'
+$Self        = Join-Path (Join-Path '.' 'scripts') 'dsh.ps1'
+
+if ($InstallRuntime) {
+    # Les NOMS du scope viennent d'un arbre deja installe (npx ou runtime) : c'est
+    # la seule source qui connaisse les dependances TRANSITIVES. Sans aucun arbre
+    # sous la main on installe sans overrides -- correct, mais npm peut thrasher
+    # sur 186 plages de prerelease (mesure : 12 min a 100 % de CPU et 3,4 Go sans
+    # ecrire un seul paquet). On le dit plutot que de le cacher.
+    $names = New-Object System.Collections.Generic.HashSet[string]
+    $scan  = @()
+    $npxRoot = Join-Path (Join-Path $env:LOCALAPPDATA 'npm-cache') '_npx'
+    if (Test-Path $npxRoot)     { $scan += (Get-ChildItem -Directory $npxRoot     | ForEach-Object { $_.FullName }) }
+    if (Test-Path $RuntimeRoot) { $scan += (Get-ChildItem -Directory $RuntimeRoot | ForEach-Object { $_.FullName }) }
+    foreach ($dir in $scan) {
+        $scoped = Join-Path (Join-Path $dir 'node_modules') '@deepseek-ai'
+        if (-not (Test-Path $scoped)) { continue }
+        # SEULEMENT dsh et dsh-* : le scope @deepseek-ai/ heberge aussi cordis
+        # 4.0.1, cosmokit 1.8.2, schemastery 3.18.1, node-addon-landlock-run
+        # 0.1.1 et cinq cordis-plugin-*, qui ont leur PROPRE versionnement.
+        # Les forcer a la version de dsh casse l'installation (ETARGET) --
+        # mesure 21/08 : 11 paquets du scope sur 197 sont dans ce cas, et les
+        # 188 restants sont tous a 0.1.1-rc.2, donc le motif dsh* est exact.
+        foreach ($p in (Get-ChildItem -Directory $scoped)) {
+            if ($p.Name -ne 'dsh' -and -not $p.Name.StartsWith('dsh-')) { continue }
+            [void]$names.Add('@deepseek-ai/' + $p.Name)
+        }
+    }
+    [void]$names.Add('@deepseek-ai/dsh')
+
+    $overrides = [ordered]@{}
+    foreach ($n in ($names | Sort-Object)) { $overrides[$n] = $DshVersion }
+    $manifest = [ordered]@{
+        name         = 'dsh-runtime'
+        private      = $true
+        version      = '1.0.0'
+        dependencies = [ordered]@{ '@deepseek-ai/dsh' = $DshVersion }
+        overrides    = $overrides
+    }
+    New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
+    # Serialiser A COTE puis deplacer : ouvrir le fichier cible le tronque AVANT
+    # que l'ecriture puisse echouer. Sans BOM, npm lit du JSON, pas de l'UTF-8
+    # decore.
+    $target = Join-Path $RuntimeDir 'package.json'
+    $tmp    = $target + '.tmp'
+    [System.IO.File]::WriteAllText($tmp, ($manifest | ConvertTo-Json -Depth 5), (New-Object System.Text.UTF8Encoding($false)))
+    Move-Item -Path $tmp -Destination $target -Force
+
+    Write-Host ("arbre epingle : {0}" -f $RuntimeDir)
+    Write-Host ("  {0} paquets du scope forces a {1}" -f $overrides.Count, $DshVersion)
+    if ($overrides.Count -le 1) {
+        Write-Warning "aucun arbre @deepseek-ai deja installe : npm va tout re-resoudre a partir des plages caret. Compter >10 min, ou un thrash."
+    }
+    Push-Location $RuntimeDir
+    try { & npm install --no-audit --no-fund }
+    finally { Pop-Location }
+    if (Test-Path $RuntimeBin) { Write-Host ("pret : {0}" -f $RuntimeBin) }
+    else { Write-Warning ("npm a rendu la main mais {0} n'existe pas." -f $RuntimeBin) }
+    return
 }
 
 # --- -QuarantineSession : on deplace UN journal fautif, on ne supprime rien --
@@ -305,13 +405,47 @@ if (-not $SkipSessionCheck) {
     }
 }
 
+# --- preflight : l'app et ses greffons sont-ils de la MEME version ? ---------
+# Le lanceur n'epingle que @deepseek-ai/dsh ; ses 65 dependances sont en caret,
+# donc npm les resout au plus recent < 0.2.0 le jour de l'installation. Mesure
+# du 21/08 : app 0.1.0-rc.7 + 185 greffons 0.1.0-rc.8, et rc.8 enregistrait une
+# section de prompt a nom FIXE que les presets livres declarent deux fois. Plus
+# aucun preset ne montait : l'UI repondait 200, aucun modele ne chargeait.
+# Ce controle NOMME les presets qui ne peuvent pas monter. Il decrit, il ne
+# refuse pas : le lancement suit.
+if (-not $SkipTreeCheck) {
+    $treeChecker = Join-Path $PSScriptRoot 'dsh_tree_check.mjs'
+    if (Test-Path $treeChecker) {
+        $treeReport = & node $treeChecker $DshVersion 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host ($treeReport | Select-Object -Last 1)
+        } else {
+            Write-Warning "l'arbre npx est incoherent -- le detail suit, aucune session ne s'ouvrira :"
+            $treeReport | ForEach-Object { Write-Host ("  " + $_) }
+        }
+    } else {
+        Write-Warning "preflight absent ($treeChecker) : un arbre npx incoherent ne sera pas nomme."
+    }
+}
+
 # --- boot -------------------------------------------------------------------
 $pkg = '@deepseek-ai/dsh@' + $DshVersion
+
+# L'arbre epingle d'abord ; npx seulement a defaut, et jamais en silence.
+if (Test-Path $RuntimeBin) {
+    $exe = $RuntimeBin
+    $pre = @()
+    Write-Host ("arbre       : epingle -- {0}" -f $RuntimeDir)
+} else {
+    $exe = 'npx'
+    $pre = @('-y', $pkg)
+    Write-Warning ("aucun arbre epingle pour {0} : npx va re-resoudre les greffons, et l'arbre peut deriver sous toi. Le figer : {1} -InstallRuntime -DshVersion {0}" -f $DshVersion, $Self)
+}
 
 if ($Ask) {
     Write-Host "tache one-shot (profil headless)"
     Push-Location $cwd
-    try { & npx -y $pkg --profile headless $Ask }
+    try { & $exe @pre --profile headless $Ask }
     finally { Pop-Location }
     exit $LASTEXITCODE
 }
@@ -325,8 +459,8 @@ if ($busy) {
 Write-Host ("UI de chat  : http://127.0.0.1:{0}" -f $Port)
 Write-Host "Ctrl+C pour arreter, ou depuis un autre terminal : .\scripts\dsh.ps1 -Stop"
 
-$dshArgs = @('-y', $pkg, 'web', '--host', '127.0.0.1', '--port', $Port)
+$dshArgs = $pre + @('web', '--host', '127.0.0.1', '--port', $Port)
 if ($NoOpen) { $dshArgs += '--no-open' }
 Push-Location $cwd
-try { & npx @dshArgs }
+try { & $exe @dshArgs }
 finally { Pop-Location }
