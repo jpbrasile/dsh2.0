@@ -40,6 +40,8 @@ param(
     [switch] $Cheap,                                 # demarre le proxy s'il est absent
     [switch] $NoOpen,                                # ne pas ouvrir le navigateur
     [switch] $Stop,                                  # arreter UI + proxy
+    [string] $QuarantineSession,                     # deplacer UN journal de session fautif
+    [switch] $SkipSessionCheck,                      # sauter le preflight du magasin de sessions
     [switch] $Help                                   # afficher l'aide et sortir
 )
 
@@ -56,6 +58,7 @@ USAGE
   .\scripts\dsh.ps1 [-Here | -Fresh | -Workspace <dir>] [-Port <n>] [-Cheap] [-NoOpen]
   .\scripts\dsh.ps1 -Ask "<tache>" [-Here | -Fresh | -Workspace <dir>]
   .\scripts\dsh.ps1 -Stop [-Port <n>] [-ProxyPort <n>]
+  .\scripts\dsh.ps1 -QuarantineSession <dir>
   .\scripts\dsh.ps1 -Help
 
 PARAMETRES
@@ -79,7 +82,19 @@ PARAMETRES
   -ProxyPort <n>    Port de ce proxy. Defaut 8011.
   -NoOpen           Ne pas ouvrir le navigateur automatiquement.
   -Stop             Arrete l'UI et le proxy, puis sort.
+  -QuarantineSession <dir>
+                    Deplace UN repertoire de session hors de ~/.dsh/sessions, vers
+                    ~/.dsh/quarantine/<horodatage>/. Les octets sont CONSERVES ;
+                    rien n'est supprime. Sert quand le preflight nomme un journal.
+  -SkipSessionCheck Sauter le preflight du magasin de sessions (voir plus bas).
   -Help             Ceci.
+
+LE PREFLIGHT DU MAGASIN DE SESSIONS (scripts/dsh_session_check.mjs)
+  Au boot, dsh parcourt TOUTES les sessions de TOUS les workspaces. UN journal
+  illisible fait echouer le boot partout, et la trace ne NOMME AUCUN FICHIER :
+    "plugin tree failed to load: ... corrupt Zstandard session log"
+  Le preflight rejoue les trois refus possibles et sort le NOM du fautif avec la
+  commande de quarantaine. Il DECRIT, il ne bloque pas : le lancement suit.
 
 CE QUE LE SCRIPT PREPARE POUR TOI
   1. le repertoire de travail          bac a sable par defaut ; -Here / -Fresh /
@@ -119,6 +134,31 @@ function Get-ListenerPid([int]$p) {
             Select-String -Pattern 'LISTENING' | Select-Object -First 1
     if ($null -eq $line) { return $null }
     return ($line.Line -split '\s+')[-1]
+}
+
+# --- -QuarantineSession : on deplace UN journal fautif, on ne supprime rien --
+# Le magasin de sessions est un CACHE, mais il porte l'historique de chat : on
+# DEPLACE, jamais on n'efface. Le repertoire de destination reproduit le chemin
+# d'origine (projet/session) pour qu'un retour en arriere soit une seule commande.
+if ($QuarantineSession) {
+    if (-not (Test-Path $QuarantineSession)) { throw "repertoire de session introuvable : $QuarantineSession" }
+    $src         = (Resolve-Path $QuarantineSession).Path
+    $sessionRoot = Join-Path $env:USERPROFILE '.dsh\sessions'
+    if (-not $src.StartsWith($sessionRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "refus : $src n'est pas sous $sessionRoot"
+    }
+    $sessionName = Split-Path -Leaf $src
+    $projectName = Split-Path -Leaf (Split-Path -Parent $src)
+    $stamp       = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $dest        = Join-Path $env:USERPROFILE ('.dsh\quarantine\{0}\{1}' -f $stamp, $projectName)
+    New-Item -ItemType Directory -Force -Path $dest | Out-Null
+    Move-Item -Path $src -Destination $dest
+    $moved = Join-Path $dest $sessionName
+    Write-Host ("session mise en quarantaine (rien n'est supprime) :")
+    Write-Host ("  depuis : {0}" -f $src)
+    Write-Host ("  vers   : {0}" -f $moved)
+    Write-Host ("pour la remettre : Move-Item '{0}' '{1}'" -f $moved, (Split-Path -Parent $src))
+    return
 }
 
 # --- -Stop : on arrete et on sort ------------------------------------------
@@ -241,6 +281,27 @@ if ($Cheap) {
         Start-Sleep -Seconds 2
         if (Get-ListenerPid $ProxyPort) { Write-Host ("proxy demarre sur {0}" -f $ProxyPort) }
         else { Write-Warning "le proxy n'ecoute pas encore ; la route 'openrouter-cheap' echouera" }
+    }
+}
+
+# --- preflight : le magasin de sessions peut-il seulement etre LISTE ? -------
+# dsh-workspace appelle listArtifacts() au boot, qui parcourt TOUTES les sessions
+# de TOUS les workspaces sous ~/.dsh/sessions. Un seul journal illisible fait
+# echouer le boot partout, et la trace ne nomme AUCUN fichier (mesure 21/08 :
+# un journal ayant perdu sa frame d'en-tete tenait dsh mort dans tous les profils).
+# Ce controle NOMME le fautif. Il decrit, il ne refuse pas : le lancement suit.
+if (-not $SkipSessionCheck) {
+    $checker = Join-Path $PSScriptRoot 'dsh_session_check.mjs'
+    if (Test-Path $checker) {
+        $report = & node $checker 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host ($report | Select-Object -First 1)
+        } else {
+            Write-Warning "le magasin de sessions bloque le boot -- le detail suit, dsh va probablement echouer :"
+            $report | ForEach-Object { Write-Host ("  " + $_) }
+        }
+    } else {
+        Write-Warning "preflight absent ($checker) : un journal de session fautif ne sera pas nomme."
     }
 }
 
