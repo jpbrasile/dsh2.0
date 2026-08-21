@@ -45,6 +45,8 @@ param(
     [switch] $SkipTreeCheck,                         # sauter le preflight de coherence de l'arbre
     [string] $DshVersion = '0.1.1-rc.2',             # version de @deepseek-ai/dsh a lancer
     [switch] $InstallRuntime,                        # (re)construire l'arbre EPINGLE de cette version
+    [switch] $InstallPlugins,                        # monter scripts/dsh-plugins/ dans les profils
+    [int]    $SubagentTimeoutMs = 600000,            # borne par defaut d'un sous-agent (10 min)
     [switch] $Help                                   # afficher l'aide et sortir
 )
 
@@ -94,6 +96,12 @@ PARAMETRES
                     ~/.dsh/runtime/dsh-<v>, puis sort. A faire UNE fois par
                     version ; ensuite le boot le prefere a npx tout seul.
   -SkipTreeCheck    Sauter le preflight de coherence de l'arbre (voir plus bas).
+  -InstallPlugins   Monte les greffons de scripts/dsh-plugins/ dans les profils
+                    web et headless (jonction + rangee dans cordis.patch.yml),
+                    puis sort. Idempotent. Voir plus bas.
+  -SubagentTimeoutMs <n>
+                    Borne posee par -InstallPlugins sur un sous-agent. Defaut
+                    600000 (10 min).
   -Help             Ceci.
 
 LE PREFLIGHT DU MAGASIN DE SESSIONS (scripts/dsh_session_check.mjs)
@@ -124,6 +132,21 @@ L'ARBRE EPINGLE (~/.dsh/runtime/dsh-<version>)
     .\scripts\dsh.ps1 -InstallRuntime -DshVersion <v> (une autre)
   Ensuite le boot prend ce binaire tout seul. S'il manque, le script le DIT et
   retombe sur npx -- il ne t'arrete pas, mais l'arbre redevient flottant.
+
+LA BORNE DES SOUS-AGENTS (scripts/dsh-plugins/dsh-subagent-timeout)
+  dsh livre bien une politique de timeout, mais elle est COOPERATIVE : elle
+  n'arme une echeance que sur les outils qui declarent un `timeoutMs`. Or
+  `subagent` et `subagent_fork` n'en declarent AUCUN -- verifie sur le master
+  amont, meme version. Un enfant qui ne finit pas ne finit donc jamais, et il
+  faut aller le tuer a la main. Le greffon local pose la borne manquante :
+    .\scripts\dsh.ps1 -InstallPlugins                        (10 min par defaut)
+    .\scripts\dsh.ps1 -InstallPlugins -SubagentTimeoutMs 1800000
+  Au boot il s'annonce sur stderr ("subagent-timeout: arme a N ms sur ...") :
+  pas d'annonce = pas de borne, ne pas le deduire du fichier de config.
+  ARRETER UN ENFANT DEJA PARTI, sans attendre la borne : les fournisseurs sont
+  `in-process`, il n'y a donc AUCUN processus a tuer. Dans la conversation,
+  `list_agents` puis `interrupt_agent <id>`. Sinon .\scripts\dsh.ps1 -Stop,
+  qui emporte tout le serveur.
 
 CE QUE LE SCRIPT PREPARE POUR TOI
   1. le repertoire de travail          bac a sable par defaut ; -Here / -Fresh /
@@ -233,6 +256,73 @@ if ($InstallRuntime) {
     finally { Pop-Location }
     if (Test-Path $RuntimeBin) { Write-Host ("pret : {0}" -f $RuntimeBin) }
     else { Write-Warning ("npm a rendu la main mais {0} n'existe pas." -f $RuntimeBin) }
+    return
+}
+
+# --- -InstallPlugins : monter les greffons LOCAUX dans les profils dsh ------
+# Un greffon qui vit dans le depot mais n'est cable que par une edition a la
+# main sous ~/.dsh est invisible en lisant l'arbre, et il meurt au prochain
+# `pnpm install` du profil. Cette etape est son APPELANT : elle cree la
+# jonction (repertoire, donc pas besoin d'admin) et insere la rangee dans la
+# couche patch du profil. Idempotente : relancer ne duplique rien.
+if ($InstallPlugins) {
+    $pluginRoot = Join-Path $PSScriptRoot 'dsh-plugins'
+    if (-not (Test-Path $pluginRoot)) { throw "aucun greffon local sous $pluginRoot" }
+    $profilesRoot = Join-Path (Join-Path $env:USERPROFILE '.dsh') 'profiles'
+
+    foreach ($profileName in @('web', 'headless')) {
+        $profileDir = Join-Path $profilesRoot $profileName
+        if (-not (Test-Path $profileDir)) { Write-Warning ("profil absent, ignore : {0}" -f $profileDir); continue }
+        Write-Host ("profil {0}" -f $profileName)
+
+        $modules = Join-Path $profileDir 'node_modules'
+        New-Item -ItemType Directory -Force -Path $modules | Out-Null
+        foreach ($plugin in (Get-ChildItem -Directory $pluginRoot)) {
+            $link = Join-Path $modules $plugin.Name
+            if (Test-Path $link) { Write-Host ("  {0} : deja monte" -f $plugin.Name) }
+            else {
+                New-Item -ItemType Junction -Path $link -Target $plugin.FullName | Out-Null
+                Write-Host ("  {0} : jonction creee" -f $plugin.Name)
+            }
+        }
+
+        # La rangee. Le chargeur n'INSERE que via `- insert:` ; une entree
+        # `- id:` nue ne fait que CIBLER une rangee existante et sort
+        # "entry not found" (mesure du 21/08, premier essai).
+        $patch = Join-Path $profileDir 'cordis.patch.yml'
+        if (-not (Test-Path $patch)) { Write-Warning ("couche patch absente : {0}" -f $patch); continue }
+        $text = Get-Content -Raw -Path $patch
+        if ($text -match 'id:\s*subagent-timeout') {
+            Write-Host "  rangee subagent-timeout : deja presente"
+            continue
+        }
+        $row = @(
+            '',
+            '# Borne de duree par defaut sur les outils de delegation.',
+            '# `subagent` / `subagent_fork` ne declarent AUCUN `timeoutMs`, donc la',
+            '# politique livree `timeout-policy` ne peut rien armer sur eux : un enfant',
+            '# qui ne finit pas ne finit jamais. Pose par dsh.ps1 -InstallPlugins.',
+            '- insert:',
+            '    - id: subagent-timeout',
+            '      name: dsh-subagent-timeout',
+            '      config:',
+            ('        timeoutMs: {0}' -f $SubagentTimeoutMs),
+            ''
+        ) -join "`n"
+        # `[]` est le marqueur de liste VIDE du fichier livre : le laisser en
+        # place ferait deux documents. Sinon on ajoute a la suite, une liste
+        # YAML de tete acceptant des elements supplementaires.
+        if ($text -match '(?m)^\[\]\s*$') { $body = ($text -replace '(?m)^\[\]\s*$', '').TrimEnd() }
+        else { $body = $text.TrimEnd() }
+        $merged = $body + "`n" + $row
+        $tmp = $patch + '.tmp'
+        [System.IO.File]::WriteAllText($tmp, $merged, (New-Object System.Text.UTF8Encoding($false)))
+        Move-Item -Path $tmp -Destination $patch -Force
+        Write-Host ("  rangee subagent-timeout inseree ({0} ms)" -f $SubagentTimeoutMs)
+    }
+    Write-Host ""
+    Write-Host "relance dsh pour que les profils prennent ces rangees ; au boot le greffon s'annonce sur stderr :"
+    Write-Host ("  subagent-timeout: arme a {0} ms sur subagent, subagent_fork" -f $SubagentTimeoutMs)
     return
 }
 

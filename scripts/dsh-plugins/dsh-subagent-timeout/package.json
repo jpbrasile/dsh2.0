@@ -1,0 +1,11 @@
+{
+  "name": "dsh-subagent-timeout",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Borne de duree par defaut pour les sous-agents dsh : les outils de delegation ne declarent aucun timeoutMs, donc la politique livree ne peut rien armer sur eux.",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  }
+}
