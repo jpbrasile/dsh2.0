@@ -164,10 +164,21 @@ export function apply(ctx, config) {
       const parentSessionId = child?.session?.header?.parentSession;
       // Un run one-shot n'a pas d'activation : rien a interrompre ici, c'est
       // l'ARME 1 qui borne ce cas-la.
-      if (parentSessionId === undefined) return;
+      if (parentSessionId === undefined) {
+        console.error(`subagent-timeout: ARME 2 -- ${childId} n'a pas de parent durable `
+          + '(run one-shot) : rien a interrompre, ce cas appartient a l\'ARME 1');
+        return;
+      }
+      // Sans cette ligne l'ARME 2 tirait SANS UN MOT : l'enfant s'arretait, et
+      // rien ne distinguait "la borne a coupe" de "l'enfant avait fini". Un
+      // garde qu'on ne peut pas voir tirer ne peut pas etre montre vivant --
+      // c'est la regle que l'ARME 1 s'appliquait deja a elle-meme.
+      console.error(`subagent-timeout: ARME 2 -- borne de ${timeoutMs} ms atteinte sur `
+        + `l'enfant continuable ${childId} (parent ${parentSessionId}) : interruption demandee`);
       ctx.subagents.interrupt(childId, { kind: 'user', parentSessionId });
+      console.error(`subagent-timeout: ARME 2 -- interruption de ${childId} acceptee`);
     } catch (error) {
-      console.error(`subagent-timeout: interruption de ${childId} refusee : ${String(error)}`);
+      console.error(`subagent-timeout: ARME 2 -- interruption de ${childId} REFUSEE : ${String(error)}`);
     }
   };
 

@@ -235,3 +235,47 @@ sous-agent n'existe pas.
 elle-même lancés continuent. Sur un arbre, `list_agents scope=descendants` puis un
 `interrupt_agent` par nœud. Et `list_agents` ne liste que les enfants **continuables** —
 un enfant one-shot n'y apparaît pas, il meurt avec son appel d'outil.
+
+### Quel outil emprunte quelle route (mesuré le 21/08/2026, profil `headless`)
+
+`dsh --profile headless --dump-config` donne le `backgroundMode` de chaque rangée, et
+il n'est **pas** le même pour toutes — les trois outils de délégation se répartissent
+sur les deux routes :
+
+| outil | `backgroundMode` | conséquence |
+|---|---|---|
+| `subagent` | `continuable` | l'appel rend `started subagent <id>` **immédiatement** ; une échéance posée sur l'appel d'outil ne voit jamais rien |
+| `subagent_fork` | `one-shot` | l'appel bloque jusqu'au résultat : bornable sur l'appel |
+| `subagent_vision` | `one-shot` | idem (posé ainsi par `-InstallVision`, précisément pour cette raison) |
+
+C'est pourquoi une borne de délégation a besoin de **deux** armes, et c'est aussi
+l'unique manière d'écrire le fixture : pour exercer la route continuable il faut
+appeler `subagent`, **pas** `subagent_fork` ni `subagent_vision`, qui ne l'empruntent
+jamais. Un fixture écrit sur le mauvais outil ne mesure pas « la borne » : il
+re-mesure l'arme qu'on avait déjà.
+
+**Le bon outil ne suffit pas : il faut aussi que le processus VIVE assez longtemps.**
+Premier fixture, sur `subagent` : rien. Le parent délègue, reçoit `started subagent
+<id>`, **termine son tour**, et `headless` sort — la minuterie de 8 s n'avait pas
+encore couru. Ce n'était pas un greffon mort, c'était un banc trop court. Le fixture
+qui tire ajoute une deuxième étape au parent :
+
+```
+1) Delegue au sous-agent `subagent` EN ARRIERE-PLAN (run_in_background: true) : <tache longue>
+2) Immediatement apres, execute la commande shell `sleep 40`.
+```
+
+Le `sleep` maintient le tour ouvert pendant que la borne du **run** court. Trace :
+
+```
+subagent-timeout: ARME 2 -- borne de 8000 ms atteinte sur l'enfant continuable <id> : interruption demandee
+subagent-timeout: ARME 2 -- interruption de <id> acceptee
+```
+
+⚠️ **Deux leçons y ont été payées.** D'abord, l'ARME 2 tirait *sans un mot* : rien ne
+distinguait « la borne a coupé » de « l'enfant avait fini ». Elle annonce désormais son
+tir, comme l'ARME 1 le faisait déjà — sans quoi elle était indémontrable. Ensuite, la
+preuve ne vaut que **corroborée** : le parent, qui ne lit pas ce flux, a rapporté de
+lui-même que l'enfant avait été « stoppé avant d'avoir fini, sans aucun nombre
+produit ». Et son état final est `ready`, **pas** tué : `interrupt` ne coupe que le tour
+courant, l'enfant reste reprenable par `send_message`.
