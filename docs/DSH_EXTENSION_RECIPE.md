@@ -157,12 +157,24 @@ regarde. Elle est câblée par
 
 Les **quatre** conditions, toutes nécessaires, chacune avec un refus différent :
 
-| condition | où | ce qu'on voit si elle manque |
+| condition | ce qu'on voit si elle manque | **comment la vérifier AVANT de lancer quoi que ce soit** |
 |---|---|---|
-| le serveur charge un `mmproj` | argv de llama-server | rien de visible : le serveur répond, **texte seulement** |
-| la route déclare `input: [text, image]` | `~/.dsh/settings.yaml` | `model "X" does not declare image input` |
-| la route a un `apiKeyEnv` **défini** | idem + environnement | `PI_AI_ERROR: No API key for provider: X` |
-| un serveur MCP émet un bloc `image` | `cordis.patch.yml` | l'outil n'existe pas, sans erreur |
+| le serveur charge un `mmproj` | le serveur répond, **texte seulement**, sans rien dire | `curl -s http://127.0.0.1:8005/props` → `.modalities.vision` doit valoir `true` |
+| la route déclare `input: [text, image]` | `model "X" does not declare image input` | `grep -A3 'id: <modele>' ~/.dsh/settings.yaml` |
+| la route a un `apiKeyEnv` **défini** | `MISSING_CREDENTIAL: llm-pi-ai: no credential for provider route "X"; its profile resolves <VAR>, which is not set` | `[ -n "$VAR" ]` **dans le processus qui lance dsh** |
+| un serveur MCP émet un bloc `image` | l'outil n'existe pas, sans erreur | `dsh --profile <p> --dump-config` → la rangée `mcp-*` |
+
+> **Corrigé le 21/08/2026 :** ce tableau disait « rien de visible » pour la
+> première condition. C'était faux, et c'était la ligne la plus coûteuse :
+> `/props` expose `modalities`, donc un `mmproj` absent se voit en une requête.
+> Chercher la preuve dans le **journal** est en revanche sans issue — b10488 à
+> verbosité 3 n'écrit aucune ligne de périphérique ni d'offload.
+
+> **La 3ᵉ condition se re-casse toute seule.** `DSH_LOCAL_API_KEY` n'est définie
+> ni au niveau utilisateur ni machine : elle ne vit que dans le shell qui l'a
+> exportée. Une tâche de fond lancée depuis un AUTRE shell échoue donc alors
+> que la même commande venait de réussir. Le message nomme la variable — le lire
+> plutôt que soupçonner la vision.
 
 Le poids GGUF d'un modèle de vision **ne contient que le modèle de langue** :
 llama.cpp garde la tour de vision dans un second fichier. Sans `--mmproj`, lire
