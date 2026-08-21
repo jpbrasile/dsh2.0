@@ -148,6 +148,50 @@ navigateur.
 
 ---
 
+## Cas travaillé n°2 — faire regarder une IMAGE à un sous-agent
+
+Chaîne complète : un serveur MCP émet l'image, le pont la relaie, le modèle la
+regarde. Elle est câblée par
+[`.\scripts\dsh.ps1 -InstallVision`](../scripts/dsh.ps1) et son serveur est
+[`scripts/dsh-mcp/effitech-image/`](../scripts/dsh-mcp/effitech-image/server.mjs).
+
+Les **quatre** conditions, toutes nécessaires, chacune avec un refus différent :
+
+| condition | où | ce qu'on voit si elle manque |
+|---|---|---|
+| le serveur charge un `mmproj` | argv de llama-server | rien de visible : le serveur répond, **texte seulement** |
+| la route déclare `input: [text, image]` | `~/.dsh/settings.yaml` | `model "X" does not declare image input` |
+| la route a un `apiKeyEnv` **défini** | idem + environnement | `PI_AI_ERROR: No API key for provider: X` |
+| un serveur MCP émet un bloc `image` | `cordis.patch.yml` | l'outil n'existe pas, sans erreur |
+
+Le poids GGUF d'un modèle de vision **ne contient que le modèle de langue** :
+llama.cpp garde la tour de vision dans un second fichier. Sans `--mmproj`, lire
+une image n'est pas lent, c'est impossible — et rien ne le dit.
+
+`llm-pi-ai` met par défaut `DEFAULT_INPUT = ["text"]` (`lib/index.js:862`) et
+`dsh-mcp-client` refuse en conséquence (`lib/index.js:330`). Le README de
+`llm-pi-ai` affirme que les modalités « have no harness consumer » : **c'était
+vrai avant ce pont, ce ne l'est plus.** Lire le schéma zod, pas la prose.
+
+Pour que l'ENFANT tourne sur un autre modèle que son parent, ne pas chercher un
+preset : `agentOptions` d'une instance de `dsh-tool-subagent` porte `provider`,
+`model`, `maxTokens` et surcharge l'héritage. Et déclarer la nouvelle instance
+dans le `tools:` de la borne, sinon elle est la seule non bornée.
+
+---
+
+## Table des pièges n°2 (mesurés le 21/08/2026, en écrivant l'installateur)
+
+| piège | symptôme exact | règle |
+|---|---|---|
+| backtick dans une chaîne PowerShell à guillemets **doubles** | `bad indentation of a mapping entry` au boot, du code PowerShell visible dans le YAML | le backtick EST l'échappement de PowerShell : chaîne à guillemets simples, ou pas de backtick |
+| détecter « déjà fait » par sous-chaîne | l'installateur annonce « déjà présent » et n'écrit rien, sur un fichier où la config a disparu | ancrer le motif sur la **ligne YAML** ; le marqueur s'était trouvé dans son propre commentaire |
+| écrire sans relire par le consommateur | le patch cassé ne se voit qu'au boot suivant, qui peut être dans trois semaines | après écriture : `dsh --profile <p> --dump-config`, exit ≠ 0 ⇒ **restaurer** |
+| `-CheckOnly` / `--dump-config` comme preuve | la rangée est composée, `apply()` n'a jamais tourné | composer ≠ exécuter : exiger l'annonce sur stderr |
+| budget de sortie trop court | la dernière ligne demandée (verdict, `TYPE:`) n'arrive jamais | une réponse tronquée à `max_tokens` n'est pas un mauvais verdict, c'est **pas de verdict** |
+
+---
+
 ## Ce qui ne se règle PAS par un greffon
 
 Certains comportements sont de la **configuration de preset**, pas du code. Les presets

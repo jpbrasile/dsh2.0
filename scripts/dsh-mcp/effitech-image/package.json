@@ -1,0 +1,11 @@
+{
+  "name": "effitech-image-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Serveur MCP stdio sans dependance : rend une photographie de decharge du site EFFITECH comme bloc image MCP.",
+  "main": "server.mjs",
+  "bin": {
+    "effitech-image-mcp": "server.mjs"
+  }
+}

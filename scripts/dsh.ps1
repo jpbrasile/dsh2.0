@@ -47,6 +47,9 @@ param(
     [switch] $InstallRuntime,                        # (re)construire l'arbre EPINGLE de cette version
     [switch] $InstallPlugins,                        # monter scripts/dsh-plugins/ dans les profils
     [int]    $SubagentTimeoutMs = 600000,            # borne par defaut d'un sous-agent (10 min)
+    [switch] $InstallVision,                         # cabler la chaine MCP + delegation vision
+    [string] $VisionProvider = 'local-vision',       # route llm-pi-ai du serveur local vision
+    [string] $VisionModel    = 'specdec-q38-plain-vision',  # alias servi par llama-server
     [switch] $Help                                   # afficher l'aide et sortir
 )
 
@@ -96,6 +99,18 @@ PARAMETRES
                     ~/.dsh/runtime/dsh-<v>, puis sort. A faire UNE fois par
                     version ; ensuite le boot le prefere a npx tout seul.
   -SkipTreeCheck    Sauter le preflight de coherence de l'arbre (voir plus bas).
+  -InstallVision    Cable la chaine image de bout en bout dans les profils : le
+                    serveur MCP scripts/dsh-mcp/effitech-image (qui rend une
+                    photo d'effitech.eu comme BLOC IMAGE), une instance de
+                    delegation `subagent_vision` dont l'ENFANT tourne sur la
+                    route locale vision, et l'extension de la borne a ce nouvel
+                    outil. Idempotent.
+                    PREALABLE, hors de ce script : la route -VisionProvider doit
+                    exister dans ~/.dsh/settings.yaml AVEC `input: [text, image]`
+                    et un `apiKeyEnv` defini. Sans la modalite, le pont MCP
+                    refuse TOUTE image -- "does not declare image input" -- quel
+                    que soit le serveur derriere. Sans la clef, pi-ai rend
+                    "No API key for provider" meme pour un serveur local.
   -InstallPlugins   Monte les greffons de scripts/dsh-plugins/ dans les profils
                     web et headless (jonction + rangee dans cordis.patch.yml),
                     puis sort. Idempotent. Voir plus bas.
@@ -323,6 +338,158 @@ if ($InstallPlugins) {
     Write-Host ""
     Write-Host "relance dsh pour que les profils prennent ces rangees ; au boot le greffon s'annonce sur stderr :"
     Write-Host ("  subagent-timeout: arme a {0} ms sur subagent, subagent_fork" -f $SubagentTimeoutMs)
+    return
+}
+
+# --- -InstallVision : cabler MCP + delegation vision dans les profils -------
+# Trois gestes, tous idempotents. Ecrits ici plutot qu'a la main sous ~/.dsh :
+# une rangee ecrite a la main est invisible en lisant le depot et meurt sans
+# bruit au prochain `pnpm install` du profil.
+if ($InstallVision) {
+    $mcpServer = Join-Path $PSScriptRoot (Join-Path 'dsh-mcp' (Join-Path 'effitech-image' 'server.mjs'))
+    if (-not (Test-Path $mcpServer)) { throw "serveur MCP introuvable : $mcpServer" }
+    # YAML veut des barres obliques. On CONSTRUIT le caractere ([char]92) au
+    # lieu de l'ecrire : un antislash litteral se fait manger par plus d'un
+    # canal d'edition, et le cadavre est une config qui a l'air correcte.
+    $mcpYamlPath = $mcpServer.Replace([char]92, '/')
+    $profilesRoot = Join-Path (Join-Path $env:USERPROFILE '.dsh') 'profiles'
+    # Motifs ANCRES SUR UNE LIGNE YAML, jamais sur une occurrence de texte.
+    # Mesure du 21/08 : la premiere version cherchait `subagent_vision` n'importe
+    # ou dans le fichier et l'a trouve DANS SON PROPRE COMMENTAIRE -- elle a donc
+    # declare "borne deja etendue" sur un fichier dont la liste `tools` avait
+    # disparu, et la borne ne couvrait plus rien. Une occurrence de texte n'est
+    # pas une occurrence de la chose. ([char]92 : l'antislash se construit, il ne
+    # s'ecrit pas -- plus d'un canal d'edition le mange en silence.)
+    $bs = [char]92
+    $listItemPattern = '(?m)^' + $bs + 's+- subagent_vision' + $bs + 's*$'
+    $idPattern = '(?m)^' + $bs + 's*- id:' + $bs + 's*'
+
+    foreach ($profileName in @('web', 'headless')) {
+        $profileDir = Join-Path $profilesRoot $profileName
+        $patch = Join-Path $profileDir 'cordis.patch.yml'
+        if (-not (Test-Path $patch)) { Write-Warning ("couche patch absente : {0}" -f $patch); continue }
+        Write-Host ("profil {0}" -f $profileName)
+        $text = Get-Content -Raw -Path $patch
+        $original = $text          # copie de repli, pour le garde de fin de boucle
+        $changed = $false
+
+        # (1) etendre la borne au nouvel outil. Le greffon ne borne par defaut
+        # que subagent/subagent_fork : sans cette liste, l'instance ajoutee en
+        # (3) serait la seule NON bornee -- le defaut d'origine, re-cree par
+        # extension. C'est le piege exact que ce script existe pour eviter.
+        if ($text -notmatch $listItemPattern) {
+            $old = ('        timeoutMs: {0}' -f $SubagentTimeoutMs)
+            if ($text.Contains($old)) {
+                $new = @(
+                    $old,
+                    '        # `tools` doit NOMMER chaque instance de delegation : le greffon',
+                    '        # ne borne par defaut que subagent / subagent_fork.',
+                    '        tools:',
+                    '          - subagent',
+                    '          - subagent_fork',
+                    '          - subagent_vision'
+                ) -join "`n"
+                $text = $text.Replace($old, $new)
+                $changed = $true
+                Write-Host "  borne etendue a subagent_vision"
+            } else {
+                Write-Warning "  rangee subagent-timeout absente : lancer -InstallPlugins d'abord"
+            }
+        } else { Write-Host "  borne : deja etendue" }
+
+        # (2) le serveur MCP qui EMET un bloc image.
+        if ($text -notmatch ($idPattern + 'mcp-effitech')) {
+            $row = @(
+                '',
+                "# Serveur MCP local : rend une photo d'effitech.eu comme BLOC IMAGE.",
+                '# `failOnStartupError: true` : un pont MCP qui echoue en silence est',
+                "# indiscernable d'un outil absent. Pose par dsh.ps1 -InstallVision.",
+                '- insert:',
+                '    - id: mcp-effitech',
+                "      name: '@deepseek-ai/dsh-mcp-client'",
+                '      config:',
+                '        serverName: effitech',
+                '        transport: stdio',
+                '        command: node',
+                '        args:',
+                ('          - {0}' -f $mcpYamlPath),
+                '        toolCallTimeoutMs: 60000',
+                '        failOnStartupError: true',
+                ''
+            ) -join "`n"
+            $text = $text.TrimEnd() + "`n" + $row
+            $changed = $true
+            Write-Host "  rangee mcp-effitech inseree"
+        } else { Write-Host "  rangee mcp-effitech : deja presente" }
+
+        # (3) l'instance de delegation dont l'ENFANT est le modele vision.
+        if ($text -notmatch ($idPattern + 'tool-subagent-vision')) {
+            $row = @(
+                '',
+                # ATTENTION : PAS DE BACKTICK dans une chaine a guillemets
+                # DOUBLES. Le backtick est le caractere d'echappement de
+                # PowerShell : "... `agentOptions`" a avale la fin de la ligne
+                # ET les lignes suivantes du tableau, qui sont parties telles
+                # quelles dans le YAML -- "bad indentation of a mapping entry"
+                # au boot suivant, sur les DEUX profils (mesure du 21/08).
+                # Une chaine a guillemets simples ne cite rien du tout.
+                '# Delegation dont l''ENFANT tourne sur la route vision :',
+                '# agentOptions surcharge le modele herite, le parent garde le sien.',
+                '# one-shot et non continuable : en continuable l''appel rend',
+                '# "started subagent <id>" et AUCUN resultat -- comportement documente',
+                "# en amont, et c'est exactement la plainte : ils ne rendent rien.",
+                '- insert:',
+                '    - id: tool-subagent-vision',
+                "      name: '@deepseek-ai/dsh-tool-subagent'",
+                '      config:',
+                '        provider: spawn',
+                '        toolName: subagent_vision',
+                '        backgroundMode: one-shot',
+                '        enableRunInBackground: false',
+                '        agentOptions:',
+                ('          provider: {0}' -f $VisionProvider),
+                ('          model: {0}' -f $VisionModel),
+                '          maxTokens: 4096',
+                ''
+            ) -join "`n"
+            $text = $text.TrimEnd() + "`n" + $row
+            $changed = $true
+            Write-Host "  rangee tool-subagent-vision inseree"
+        } else { Write-Host "  rangee tool-subagent-vision : deja presente" }
+
+        if ($changed) {
+            # On serialise a cote puis on deplace : ouvrir le fichier de
+            # destination en ecriture le tronque AVANT que l'ecriture puisse
+            # echouer, et il ne resterait rien a restaurer.
+            $tmp = $patch + '.tmp'
+            [System.IO.File]::WriteAllText($tmp, $text, (New-Object System.Text.UTF8Encoding($false)))
+            Move-Item -Path $tmp -Destination $patch -Force
+
+            # GARDE : relire le profil par son CONSOMMATEUR REEL. Un patch
+            # syntaxiquement casse ne se voit pas en relisant le texte qu'on
+            # vient d'ecrire -- il se voit au boot suivant, et le boot suivant
+            # peut etre dans trois semaines. Bras known-BAD parcouru pour de
+            # vrai le 21/08 : un backtick dans une chaine PowerShell a
+            # guillemets doubles a fait fuir du code dans le YAML, et les DEUX
+            # profils rendaient "bad indentation of a mapping entry" au boot.
+            # A l'epoque ce garde n'existait pas ; la reparation a ete manuelle.
+            if (Test-Path $RuntimeBin) {
+                & $RuntimeBin --profile $profileName --dump-config > $null 2>&1
+                if ($LASTEXITCODE -ne 0) {
+                    [System.IO.File]::WriteAllText($patch, $original, (New-Object System.Text.UTF8Encoding($false)))
+                    Write-Warning ("  REFUS : le chargeur n'accepte pas le profil {0} apres ecriture -- couche patch RESTAUREE." -f $profileName)
+                    Write-Warning ("  Diagnostic : {0} --profile {1} --dump-config" -f $RuntimeBin, $profileName)
+                    continue
+                }
+                Write-Host "  relu par le chargeur : profil valide"
+            } else {
+                Write-Warning "  arbre epingle absent : ecriture NON relue par le chargeur (lancer -InstallRuntime)"
+            }
+        }
+    }
+    Write-Host ""
+    Write-Host "RAPPEL -- ce script ne touche PAS ~/.dsh/settings.yaml. La route doit y declarer :"
+    Write-Host ("  {0}:  models: [- id: {1} , input: [text, image]]  + apiKeyEnv" -f $VisionProvider, $VisionModel)
     return
 }
 
