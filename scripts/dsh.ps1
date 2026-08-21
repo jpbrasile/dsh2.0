@@ -490,6 +490,31 @@ if ($InstallVision) {
     Write-Host ""
     Write-Host "RAPPEL -- ce script ne touche PAS ~/.dsh/settings.yaml. La route doit y declarer :"
     Write-Host ("  {0}:  models: [- id: {1} , input: [text, image]]  + apiKeyEnv" -f $VisionProvider, $VisionModel)
+
+    # La panne la plus couteuse de ce chantier n'etait pas la vision : c'etait
+    # une variable absente. `apiKeyEnv` DECLARE n'est pas `apiKeyEnv` DEFINI, et
+    # llm-pi-ai refuse la route entiere si la variable ne resout pas -- avec un
+    # message qui parle de credentials, pas d'image, sur une chaine qu'on vient
+    # de cabler pour l'image. Mesure du 21/08 : la meme commande a REUSSI depuis
+    # un shell qui l'avait exportee puis ECHOUE depuis une tache de fond, parce
+    # que la variable ne vivait que dans le premier processus.
+    $keyName = 'DSH_LOCAL_API_KEY'
+    $keyFound = $false
+    foreach ($scope in @('Process', 'User', 'Machine')) {
+        try {
+            if ([Environment]::GetEnvironmentVariable($keyName, $scope)) { $keyFound = $true }
+        } catch {}
+    }
+    Write-Host ""
+    if ($keyFound) {
+        Write-Host ("  {0} : DEFINIE -- la route peut s'authentifier." -f $keyName)
+    } else {
+        Write-Warning ("  {0} n'est definie NULLE PART (ni process, ni user, ni machine)." -f $keyName)
+        Write-Warning "  La chaine echouera a l'execution, et le message parlera de credentials :"
+        Write-Warning ("    MISSING_CREDENTIAL: llm-pi-ai: no credential for provider route ""{0}""" -f $VisionProvider)
+        Write-Warning "  Le serveur local n'authentifie rien : une valeur de remplissage suffit."
+        Write-Warning ("  Pour la rendre PERSISTANTE (a lancer soi-meme) :  setx {0} local-loopback-noauth" -f $keyName)
+    }
     return
 }
 
