@@ -190,6 +190,16 @@ preset : `agentOptions` d'une instance de `dsh-tool-subagent` porte `provider`,
 `model`, `maxTokens` et surcharge l'héritage. Et déclarer la nouvelle instance
 dans le `tools:` de la borne, sinon elle est la seule non bornée.
 
+> ⚠️ **La chaîne qui marche n'est pas un modèle qui classe.** Cette chaîne rend des
+> réponses justes, et une réponse juste n'est pas une capacité.
+> [`scripts/bench_local_vision.py`](../scripts/bench_local_vision.py) mesure
+> 48 % (format descriptif) et 42 % (verdict sec) sur trois classes, contre 33 %
+> au hasard — et son **bras négatif, sans aucune image**, rend `corona` 5 fois
+> sur 6, donc tout succès sur cette classe-là est confondu avec un a priori. La
+> vision elle-même est réelle (un code inguessable est lu à 11 caractères sur 12) ;
+> c'est la classification qui ne l'est pas. Lancer le banc avant de citer un
+> résultat isolé, et lire le bras négatif **avant** les taux.
+
 ---
 
 ## Table des pièges n°2 (mesurés le 21/08/2026, en écrivant l'installateur)
