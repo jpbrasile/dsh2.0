@@ -56,7 +56,7 @@ T["t31"] = dict(
     enonce="""Implement forward-mode automatic differentiation that stays correct when
 derivatives are NESTED.
 
-Provide `derivative(f, x::Real)` returning `f'(x)`, computed by propagating a dual
+Provide `derivative(f, x::Number)` returning `f'(x)`, computed by propagating a dual
 number through `f` -- not by finite differences, and not by symbolic manipulation.
 
 Your dual number must support `+`, `-`, `*`, `/`, `^`, unary `-`, `sin`, `cos`, `exp`,
@@ -86,8 +86,17 @@ const NIVEAU = Ref(0)
 # dual de niveau inferieur dans sa valeur et un reel ordinaire dans sa
 # derivee : un champ commun `T` forcerait une promotion entre Dual{1,Float64}
 # et Float64, pour laquelle il faudrait ecrire convert ET promote_rule -- et
-# c'est justement dans le cas imbriquer que ca casserait. Pas de type commun,
+# c'est justement dans le cas imbrique que ca casserait. Pas de type commun,
 # pas de promotion, pas de piege.
+# La signature de l'enonce est `derivative(f, x::Number)`, PAS `x::Real` :
+# imbriquer passe un dual EN TANT QUE `x`, et `x::Real` force alors un choix de
+# conception qui n'est pas le piege que la tache mesure. Les deux voies ont ete
+# essayees le 22/08 : un dual `<: Number` ne s'applique plus (MethodError), un
+# dual `<: Real` rend `<` ambigu contre `Base.<(::Real, ::Real)`. Dans les deux
+# cas la reference ET la solution known-BAD tombaient sur la MEME erreur, donc
+# le bras known-BAD n'atteignait jamais son propre defaut et ne mesurait rien.
+# `Number` laisse passer les deux conceptions : la confusion de perturbation
+# redevient le seul discriminant.
 struct Dual{L} <: Number
     v
     d
@@ -154,7 +163,7 @@ valeur(x::Number) = x
 extraire(y::Dual{L2}, L::Int) where {L2} = L2 == L ? y.d : zero(y)
 extraire(y::Number, L::Int) = zero(y)
 
-function derivative(f, x::Real)
+function derivative(f, x::Number)
     NIVEAU[] += 1
     L = NIVEAU[]
     try
@@ -167,6 +176,15 @@ end
     bad="""# BAD: une SEULE etiquette pour toutes les derivations. Tout est juste tant
 # qu'on ne derive qu'une fois ; des que deux derivations s'imbriquent, l'interne
 # ramasse la perturbation de l'externe. C'est la confusion de perturbation.
+# La signature de l'enonce est `derivative(f, x::Number)`, PAS `x::Real` :
+# imbriquer passe un dual EN TANT QUE `x`, et `x::Real` force alors un choix de
+# conception qui n'est pas le piege que la tache mesure. Les deux voies ont ete
+# essayees le 22/08 : un dual `<: Number` ne s'applique plus (MethodError), un
+# dual `<: Real` rend `<` ambigu contre `Base.<(::Real, ::Real)`. Dans les deux
+# cas la reference ET la solution known-BAD tombaient sur la MEME erreur, donc
+# le bras known-BAD n'atteignait jamais son propre defaut et ne mesurait rien.
+# `Number` laisse passer les deux conceptions : la confusion de perturbation
+# redevient le seul discriminant.
 struct Dual <: Number
     v
     d
@@ -206,7 +224,7 @@ Base.:(==)(a::Dual, b::Dual) = valeur(a) == valeur(b)
 Base.:(==)(a::Dual, b::Number) = valeur(a) == b
 Base.:(==)(a::Number, b::Dual) = a == valeur(b)
 
-derivative(f, x::Real) = f(Dual(x, one(x))).d
+derivative(f, x::Number) = f(Dual(x, one(x))).d
 """,
     checks="""using .Sol: derivative
 

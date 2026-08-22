@@ -3,7 +3,7 @@ Write a Julia solution and save it as the file `solution.jl` in the current work
 Implement forward-mode automatic differentiation that stays correct when
 derivatives are NESTED.
 
-Provide `derivative(f, x::Real)` returning `f'(x)`, computed by propagating a dual
+Provide `derivative(f, x::Number)` returning `f'(x)`, computed by propagating a dual
 number through `f` -- not by finite differences, and not by symbolic manipulation.
 
 Your dual number must support `+`, `-`, `*`, `/`, `^`, unary `-`, `sin`, `cos`, `exp`,

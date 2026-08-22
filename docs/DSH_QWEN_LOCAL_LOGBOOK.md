@@ -162,6 +162,68 @@ vérificateur rendait **0/10 attrapées** alors qu'il les attrapait toutes.
 
 Correction : le harnais aplatit le message, et le lecteur filtre sur `^VERDICT`.
 
+### 2.7 · Un bras known-BAD peut tomber sans jamais toucher son défaut
+
+Calibrage du palier limite, 22/08. Le compte disait :
+
+```
+known-GOOD 5/6   known-BAD attrapés 6/6
+```
+
+Lu comme un compte, c'est « le vérificateur attrape tout, et une référence a un
+souci ». Lu par le **nom de l'assertion**, c'est autre chose : sur t31, les deux
+bras tombaient sur **la même** erreur.
+
+| bras | cause du refus |
+|---|---|
+| known-GOOD (référence) | `MethodError: no method matching derivative(::typeof(sin), ::Dual{1})` |
+| known-BAD | `MethodError: no method matching derivative(::typeof(sin), ::Dual{1})` |
+
+Le `6/6 attrapés` de t31 ne mesurait donc rien : la mauvaise solution était
+refusée **avant** que son défaut nommé — la confusion de perturbation — ait la
+moindre chance d'être évalué. Un bras known-BAD dont on ne lit que le compte est
+d'accord avec l'hypothèse par construction.
+
+La cause était dans l'énoncé, pas dans le code : il imposait
+`derivative(f, x::Real)` **et** l'imbrication. Or imbriquer passe un dual *en
+tant que* `x`. Les deux voies ont été essayées et mesurées :
+
+| dual déclaré | ce qui arrive |
+|---|---|
+| `<: Number` | `x::Real` ne s'applique plus → `MethodError` |
+| `<: Real` | `<(::Dual, ::Int64) is ambiguous` contre `Base.<(::Real, ::Real)` |
+
+L'énoncé dit désormais `derivative(f, x::Number)`, qui laisse passer les deux
+conceptions. Après correction, le bras known-BAD tombe par son défaut :
+`confusion de perturbation : 2.0 au lieu de 1.0`.
+
+> **Pour le tutoriel.** Une tâche doit échouer par le piège qu'elle nomme. Un
+> second piège non nommé — ici un choix de hiérarchie de types imposé par la
+> signature — transforme la mesure en loterie, et le compte ne le montre jamais.
+
+### 2.8 · Assouplir une exigence est une décision, donc ça se mesure
+
+Deux modifications du juge attendaient, non commitées, et toutes deux dans le
+sens de l'indulgence : une tolérance numérique divisée par dix (t22) et deux
+témoins de primalité remplacés (t34). Le test qui tranche coûte deux appels à
+Julia : faire tourner les deux bras contre les **anciennes** assertions.
+
+| | ancien jeu | nouveau jeu |
+|---|---|---|
+| t22 référence | PASS | PASS |
+| t22 known-BAD | FAIL `pas non adaptatif` | FAIL `pas non adaptatif` |
+| t34 référence | PASS | PASS |
+| t34 known-BAD | FAIL `jeu de témoins tronqué` | FAIL `jeu de témoins tronqué` |
+
+Aucun des deux assouplissements ne réparait quoi que ce soit. Le second retirait
+même un piège : `999999999989` au carré déborde de 64 bits, `2147483647` non.
+Les deux sont annulés. (Vérifié au passage : les quatre constantes, ancienne et
+nouvelle version, étaient factuellement justes — ce n'était pas une correction.)
+
+> **Pour le tutoriel.** Un juge ne se desserre pas « pour être raisonnable ». Il
+> se desserre contre une mesure qui montre qu'il refusait à tort, et cette mesure
+> tient en une ligne : la référence passe-t-elle l'exigence stricte ?
+
 ---
 
 ## Partie 3 — Ce que le modèle fait réellement
@@ -290,6 +352,46 @@ Calibrage mesuré le 22/08 : 6/6 GOOD, 6/6 BAD, chacune par son défaut.
 > tirait, mais pas par où je l'avais prévu — raison de plus pour imprimer *par
 > quelle assertion* chaque échec tombe, plutôt que de compter les échecs.
 
+### 3.7 · Douze tâches à phase de planification, calibrées 12/12 et 12/12
+
+Le corpus dur `t11..t16` vise des pièges d'écriture. Les douze tâches suivantes
+visent autre chose : il faut **décider plusieurs composants avant d'écrire**.
+Deux paliers, et sur chacun la moitié des tâches dépend d'un fait **externe
+vérifiable** — là où une recherche web peut aider — et l'autre moitié n'en
+dépend pas du tout. Sans ces témoins, « le web aide » serait indistinguable de
+« un énoncé plus long aide ».
+
+| | tâche | piège nommé | fait externe |
+|---|---|---|---|
+| EXPERT | t21 | matrice bande : écriture non nulle hors bande | non |
+| | t22 | RK adaptatif : le pas doit vraiment s'adapter | **oui** |
+| | t23 | analyseur de Pratt : `^` associe à DROITE | non |
+| | t24 | décodeur MessagePack : entiers gros-boutistes | **oui** |
+| | t25 | Tarjan + condensation : pas d'auto-boucle | non |
+| | t26 | `gemm` 5 arguments : `beta = 0` écrase `C` **sans le lire** | **oui** |
+| LIMITE | t31 | confusion de perturbation en dérivation imbriquée | non |
+| | t32 | `BroadcastStyle` + `similar(::Broadcasted)` | **oui** |
+| | t33 | tri radix conforme à `isless` (`-0.0` et `NaN` compris) | **oui** |
+| | t34 | Miller-Rabin déterministe 64 bits : jeu de témoins | **oui** |
+| | t35 | arithmétique d'intervalles : produit sur **quatre** coins | non |
+| | t36 | vecteur persistant : partage de structure réel | non |
+
+Calibrage mesuré le 22/08 : **12/12 known-GOOD, 12/12 known-BAD**, chacune par
+son propre défaut nommé. Le chemin pour y arriver est en 2.7 et 2.8 : le premier
+compte affiché était `6/6 attrapés` sur un bras qui ne mesurait rien.
+
+Le bras « avec web » n'est pas un interrupteur : c'est un **préambule** qui
+impose chercher-puis-planifier, parce que laissé seul ce modèle ne cherche
+jamais (3.5). Et le banc **compte les appels web réellement passés par run**, en
+relisant le journal de session du répertoire de travail — chaque run a le sien,
+donc la correspondance est exacte. L'analyse refuse les deux façons d'être
+trompé : un run « sans » qui cherche quand même, un run « avec » qui ne cherche
+jamais. Quand la mesure n'a pas pu être faite, elle rend `-1`, pas `0`.
+
+**Ce qui n'est pas local.** La recherche passe par l'API DeepSeek
+(`dsh-web-search-deepseek`, `https://api.deepseek.com`) : le bras « avec web »
+sort de la machine. Toute comparaison doit le dire.
+
 ---
 
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
@@ -319,6 +421,10 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 | 2026-08-22 | `prompt_n` ≠ contexte ; le pic réel est 52 228, pas 23 007 (2.2). |
 | 2026-08-22 | Compaction automatique établie par la mesure : seuil ≈ 80 %, retour à ≈ 52 % (2.3). |
 | 2026-08-22 | Étude paramétrique sur corpus dur lancée : un-coup puis itératif, 3 répétitions, 90 runs chacune. |
+| 2026-08-22 | Palier expert `t21..t26` calibré 6/6 GOOD, 6/6 BAD (3.7). |
+| 2026-08-22 | t31 : le bras known-BAD tombait par la même erreur que le bras known-GOOD — il ne mesurait rien. Énoncé corrigé, bras rendu à son défaut (2.7). |
+| 2026-08-22 | Palier limite `t31..t36` calibré 6/6 GOOD, 6/6 BAD (3.7). |
+| 2026-08-22 | Deux assouplissements du juge mesurés inutiles et annulés (2.8). |
 
 ---
 
@@ -331,11 +437,10 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 - **Taux d'acceptation MTP par type de texte.** Le mécanisme de 2.4 est cohérent
   avec les débits mesurés mais n'a **pas** été ré-instrumenté ici. *Unverified.*
 - **Tâches à phase de planification, avec et sans recherche web préalable.**
-  Corpus écrit (t21..t26 et t31..t36), bras web câblé, **non encore calibré** :
-  les douze bras known-GOOD/known-BAD n'ont pas tourné. À noter que la recherche
-  passe par l'API DeepSeek (`dsh-web-search-deepseek`, `https://api.deepseek.com`),
-  donc **hors du modèle local** : la comparaison doit dire ce qui est local et ce
-  qui ne l'est pas.
+  Corpus écrit **et calibré** 12/12 GOOD, 12/12 BAD (3.7) ; bras web câblé et
+  compté par run. Ce qui manque est la campagne elle-même : **aucun des douze
+  énoncés n'a encore été soumis au modèle**, ni avec ni sans recherche. Elle
+  attend que les deux campagnes du corpus dur libèrent la carte.
 
 ---
 

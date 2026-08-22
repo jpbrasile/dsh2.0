@@ -57,6 +57,20 @@ t10 FAIL check: AssertionError: produit signe : got [6.0, 4.0]
 
 Mesuré le 2026-08-22 : known-GOOD 10/10, known-BAD attrapées 10/10, **CALIBRÉ**.
 
+Chaque palier se calibre séparément — le corpus de base n'en dit rien :
+
+```bash
+python bench.py --selftest dur       # t11..t16   6/6 GOOD, 6/6 BAD  (22/08)
+python bench.py --selftest expert    # t21..t26   6/6 GOOD, 6/6 BAD  (22/08)
+python bench.py --selftest limite    # t31..t36   6/6 GOOD, 6/6 BAD  (22/08)
+```
+
+**Lire les noms, pas le compte.** Sur t31, le calibrage a affiché
+`known-BAD attrapés 6/6` alors que la mauvaise solution tombait par la *même*
+erreur que la référence — donc sans jamais atteindre son défaut nommé. Un bras
+known-BAD dont on ne lit que le total est d'accord avec l'hypothèse par
+construction. Détail mesuré : log book, 2.7.
+
 ## Prérequis
 
 1. **llama-server** en écoute, servant le modèle sous l'alias attendu
