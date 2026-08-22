@@ -721,6 +721,58 @@ compte passe à 12 sur 12. Lire l'instrument avant sa sortie, encore.
 
 ---
 
+### 3.10 · Le plafond d'un banc gratuit n'est pas le débit, c'est le quota du jour
+
+La campagne externe devait placer un point entre le Qwen local et la référence
+Opus 5. Elle a rendu **1 PASS et 28 échecs**, et pas un seul de ces échecs ne
+porte sur une tâche : ils portent tous sur un quota. C'est une mesure, pas un
+raté — elle dit où est réellement le plafond de cette dorsale.
+
+| modèle épinglé | ce qu'il a fait | comment il est mort |
+|---|---|---|
+| `deepseek-v4-pro` | 1 run témoin PASS (49,8 s) | `out_of_credits`, **HTTP 402** côté HuggingFace, remise à zéro annoncée le 23/08 à 12:59 |
+| `gemini-3.7-flash` | **t21 PASS en 109,4 s** | 429 `rate_limit_exceeded` sur tous les runs suivants, « 1 route checked » |
+| `gemini-3.6-flash` | rien | **502** amont, puis 429, refroidissement ~7 h |
+| `nemotron-3-super-120b` | répond encore à la dernière sonde (1,2 s, sans bascule) | — |
+| `glm-5.2`, `qwen3-coder-480b`, `deepseek-v4-flash`, `kimi-k3`, `llama-4-maverick`, `mimo-v2.5`, `ling-2.6-1t`, `gemini-2.5-flash` | rien | 429 dès la sonde, ou « no usable key configured » |
+
+**Six modèles sur huit sondés étaient déjà morts**, et les deux vivants le sont
+restés le temps d'un run. Le compte final : 29 runs lancés, **1 réussi**,
+452 + 121 secondes de mur.
+
+**Ce que ça règle sur la question « et si on parallélisait ? »** Le banc externe
+tourne aujourd'hui en séquentiel, une tâche après l'autre. Il *pourrait* tourner
+en parallèle — contrairement à la campagne locale, qui partage une seule carte
+et ne doit jamais être découpée en tranches ; le routeur, lui, accepte
+120 requêtes par minute. Mais **paralléliser ne ferait qu'atteindre le mur plus
+vite** : le facteur limitant n'est pas le débit, c'est le plafond **journalier**
+par fournisseur. Un run d'agent sur une tâche dure — plusieurs dizaines d'appels
+à gros contexte — suffit à épuiser un modèle gratuit pour la journée. Douze
+tâches en même temps auraient rendu les mêmes 429 en deux minutes au lieu de
+huit.
+
+**Le levier n'est donc pas la concurrence, c'est le nombre de clefs.** Trois
+routes possibles, par ordre de coût :
+
+1. **attendre la remise à zéro** (~23/08 13:00) et relancer sur un seul modèle
+   épinglé — c'est la mesure propre, un exécutant, comparable d'un bout à
+   l'autre ;
+2. **ajouter des clefs gratuites** dans le tableau de bord FreeLLMAPI : c'est ce
+   qui relève le plafond journalier, et c'est le seul geste qui change l'ordre
+   de grandeur ;
+3. **tourner sur des modèles DISTINCTS**, un run par modèle. Ça finit dans
+   l'heure, mais chaque tâche est alors répondue par un exécutant différent : la
+   campagne ne mesure plus un modèle, elle mesure un mélange. C'est une autre
+   expérience, et elle n'est lisible que parce que chaque ligne porte désormais
+   `provider` et `modele`.
+
+**Le seul point de mesure réel qui en sort** : `t21` (matrice bande, stockage
+LAPACK) réussie en 109 s par Gemini 3.7 Flash, sans recherche web et sans avoir
+exécuté Julia. Une case sur vingt-quatre — c'est peu, mais c'est une case, et
+elle est attribuée.
+
+---
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
@@ -768,6 +820,8 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 | 2026-08-22 | Les identifiants servis sont des **slugs courts** (`deepseek-v4-pro`) ; la forme longue `deepseek-ai/DeepSeek-V4-Pro` est ce que le routeur RENVOIE, et elle est absente de `/v1/models` (1.7). |
 | 2026-08-22 | Le banc respecte `DSH_HOME` : deux campagnes tournent cote a cote au lieu de se reecrire les trois memes lignes de `settings.yaml`. Et chaque ligne de resultat porte desormais `provider` et `modele` (1.7). |
 | 2026-08-22 | **Mur de quota mesure** : les credits HuggingFace gratuits sont a sec (`out_of_credits`, HTTP 402 sur deepseek-v4-pro), remise a zero ~24 h. Sur cinq modeles epingles, un seul repond avec outils **sans bascule** : `gemini-3.7-flash`. 7 runs FAIL archives comme mesure du mur (1.7). |
+| 2026-08-22 | Campagne externe : **29 runs lances, 1 PASS** (t21, Gemini 3.7 Flash, 109 s). Les 28 autres sont des 429/402, pas des echecs de tache. Le plafond d'un banc gratuit est le **quota du jour**, pas le debit : paralleliser atteindrait le mur plus vite (3.10). |
+| 2026-08-22 | Six modeles sur huit sondes etaient deja morts ; les deux vivants le sont restes le temps d'un run. Le levier est le NOMBRE DE CLEFS, pas la concurrence (3.10). |
 
 ---
 
