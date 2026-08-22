@@ -5,9 +5,11 @@ llama-server rend lui-meme, releve par le proxy 8006 entre deux marqueurs.
 Le chrono client ne sert qu'au temps de tache (il inclut l'agent, les outils,
 Julia -- c'est bien ce qu'on veut pour "temps par tache").
 """
-import io, json, os, statistics as st
+import io, json, os, statistics as st, sys
 
-B = os.path.dirname(os.path.abspath(__file__))
+# Une campagne archivee s'analyse la ou elle a ete rangee : `analyse.py <dir>`.
+# Sans ca, comparer deux campagnes obligerait a les ecraser l'une l'autre.
+B = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__))
 
 
 def _charger(nom, pourquoi):
