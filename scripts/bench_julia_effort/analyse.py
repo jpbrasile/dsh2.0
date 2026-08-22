@@ -431,3 +431,38 @@ if tours_joues:
                   % (l['rep'], l['effort'], l['tache'], t['tour'], t.get('why')))
 else:
     print('=== tours coupes par le delai : campagne hors boucle, sans tours ===')
+
+
+print()
+# QUEL ENONCE CES RUNS ONT-ILS REELLEMENT RECU ?
+#
+# Le 23/08 il a fallu retirer a la main une comparaison publiee : le
+# preambule de boucle n'allait qu'au bras avec recherche, et rien dans les
+# enregistrements ne le disait. Une campagne dont l'enonce a change se lisait
+# exactement comme une campagne dont il n'avait pas change.
+#
+# ABSENCE != VALEUR : un run anterieur au 23/08 n'a pas d'empreinte, et il est
+# compte comme SANS EMPREINTE, jamais range avec les autres.
+print('=== empreintes de l enonce ===')
+sha = {}
+sans = 0
+for l in lignes:
+    e = l.get('enonce_sha')
+    if not e:
+        sans += 1
+    else:
+        sha.setdefault(e, []).append(l)
+if sans:
+    print('  %d run(s) SANS empreinte -- enregistres avant le 23/08. Leur enonce'
+          % sans)
+    print('  est inconnu : ils ne se comparent a rien sur cet axe.')
+for e, rs in sorted(sha.items(), key=lambda z: -len(z[1])):
+    bras = sorted({'avec web' if r.get('bras_web') else 'sans web' for r in rs})
+    print('  %s : %d run(s)  [%s]' % (e, len(rs), ', '.join(bras)))
+if len(sha) > 1:
+    print('  ATTENTION : %d enonces differents dans cette campagne. Un ecart de'
+          % len(sha))
+    print('  score entre deux empreintes ne mesure pas ce que la campagne croit')
+    print('  mesurer, sauf si la difference d enonce EST l axe teste.')
+elif len(sha) == 1 and not sans:
+    print('  un seul enonce pour toute la campagne.')

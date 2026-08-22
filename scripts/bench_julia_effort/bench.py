@@ -30,6 +30,7 @@ est meilleur", c'est "a 10 taches ce banc ne separe rien". C'est un resultat.
   python bench.py low t03,t07             sous-ensemble
   python analyse.py                       la table
 """
+import hashlib
 import io
 import json
 import os
@@ -877,6 +878,26 @@ def lancer_borne(cmd, cwd, env, delai):
 # tache, sans executer Julia une seule fois -- la recherche avait remplace le
 # travail. Le compteur `appels_web` reste lu : si le modele cherche quand
 # meme, cela se voit, ce n'est pas une consigne qu'on suppose respectee.
+def empreinte_enonce(texte):
+    """L empreinte de l ENONCE REELLEMENT DONNE au modele.
+
+    Sans elle, "ces deux campagnes sont comparables" est un souvenir. Le
+    23/08 il a fallu retirer a la main une comparaison publiee : le
+    preambule de boucle n allait qu au bras avec recherche, et rien dans
+    les enregistrements ne le disait. Une campagne dont l enonce a change
+    se lit exactement comme une campagne dont il n a pas change.
+
+    C est le PREFIXE STABLE qui est empreint -- l enonce de base plus le
+    preambule -- pas les blocs de retour, qui different par construction
+    d un tour a l autre et d un run a l autre.
+
+    Deux bras d une meme campagne ont deux empreintes DIFFERENTES des lors
+    que leur preambule differe. C est voulu : c est justement la difference
+    qu on veut pouvoir nommer."""
+    h = hashlib.sha1(texte.encode("utf-8")).hexdigest()
+    return h[:12]
+
+
 def preambule_boucle(tours, secondes, web):
     """L entete du mode boucle -- donnee aux DEUX bras.
 
@@ -1313,6 +1334,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
 
     julia_runs = compter_julia(journal_julia)
     rec = {"effort": effort, "tache": tache, "rep": rep, "mode": "boucle",
+           "enonce_sha": empreinte_enonce(base_consigne),
            "verdict": v, "why": why, "wall_s": round(dt, 1),
            "julia_runs": julia_runs, "rc": rc,
            "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")),
@@ -1421,6 +1443,7 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False,
     julia_runs = compter_julia(journal_julia)
     appels_web = compter_web(ws, t0, accueil)
     rec = {"effort": effort, "tache": tache, "rep": rep,
+           "enonce_sha": empreinte_enonce(consigne),
            "mode": "iterate" if iteratif else "oneshot", "verdict": v,
            "why": why, "wall_s": round(dt, 1), "julia_runs": julia_runs,
            "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")), "rc": rc,

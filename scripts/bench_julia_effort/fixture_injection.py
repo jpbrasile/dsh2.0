@@ -248,6 +248,25 @@ exiger("This is attempt" not in muet,
        "KNOWN-BAD : sans plafond connu, le bloc n en invente pas un")
 
 
+print("=== 9quater. l empreinte de l enonce ===")
+# Sans elle, "ces deux campagnes sont comparables" est un souvenir. Le 23/08
+# il a fallu retirer une comparaison publiee pour cette raison exacte.
+pa3 = bench.preambule_boucle(3, 600, web=True)
+ps3 = bench.preambule_boucle(3, 600, web=False)
+exiger(bench.empreinte_enonce(pa3 + base) == bench.empreinte_enonce(pa3 + base),
+       "meme texte -> meme empreinte")
+exiger(bench.empreinte_enonce(pa3 + base) != bench.empreinte_enonce(ps3 + base),
+       "les deux BRAS ont deux empreintes -- la difference est nommable")
+exiger(bench.empreinte_enonce(ps3 + base)
+       != bench.empreinte_enonce(bench.preambule_boucle(2, 600, False) + base),
+       "changer le nombre de tentatives change l empreinte")
+exiger(bench.empreinte_enonce(ps3 + base)
+       != bench.empreinte_enonce(ps3 + base + " "),
+       "KNOWN-BAD : un seul caractere de plus suffit a la faire changer")
+exiger(len(bench.empreinte_enonce(base)) == 12,
+       "l empreinte est courte -- elle se lit dans un tableau")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2
