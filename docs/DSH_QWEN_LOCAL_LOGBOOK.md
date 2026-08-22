@@ -16,7 +16,7 @@ RTX 4090 24 Go · llama-server b10488 · Qwen3.8-27B Q4_K_M ·
 
 ---
 
-## Partie 1 — Monter le banc : cinq pièges qui ne préviennent pas
+## Partie 1 — Monter le banc : six pièges qui ne préviennent pas
 
 ### 1.1 · Un seul format de pensée transmet un *niveau*
 
@@ -83,6 +83,36 @@ qu'une campagne figée, non.
 > était impossible — 1588,9 s pour une échéance de 900 s. Un run ne peut pas
 > durer plus longtemps que sa propre échéance ; ce contrôle est désormais câblé
 > en fin d'`analyse.py` et il tourne à chaque analyse.
+
+---
+
+### 1.6 · Le banc qui tourne n'est pas celui qu'on répare
+
+Deux heures de réparations ce matin — le correctif de l'orphelin (1.5), les
+paliers `t21..t36` (3.7), trois contrôles câblés dans `analyse.py` — et
+**aucune** n'était dans le processus en cours d'exécution.
+
+La campagne avait été lancée depuis une **copie** du banc, dans le répertoire de
+travail temporaire d'une session déjà terminée. Mesuré le 22/08 à 11:30 :
+
+| fichier | dépôt | copie qui tourne |
+|---|---|---|
+| `bench.py` | 21 188 o, 11:27 | 11 962 o, **09:16** |
+| `analyse.py` | 19 785 o, 10:57 | 9 424 o, **09:16** |
+| `tuer_arbre` / `lancer_borne` | présents | **0 occurrence** |
+| `TACHES_EXPERT` / `TACHES_LIMITE` | présents | **0 occurrence** |
+
+Rien n'était perdu — la campagne 1 s'était terminée **90/90** et s'était
+archivée proprement. Mais les douze tâches calibrées ce matin étaient
+**inatteignables** par le processus censé les exécuter, et le correctif de
+l'orphelin n'y était pas non plus : le même gel pouvait se reproduire.
+
+> **Pour le tutoriel.** Le piège n'est pas d'avoir copié — c'est que rien dans la
+> sortie ne dit *depuis où* on tourne. Un banc doit annoncer son propre chemin à
+> chaque lancement ; sinon « j'ai corrigé bench.py » et « le correctif tourne »
+> restent deux affirmations différentes qu'on prend pour une seule. C'est la même
+> règle qu'en 2.2 et 2.5 : « le code fait X » et « X a tourné » demandent des
+> preuves différentes.
 
 ---
 
@@ -326,10 +356,15 @@ teste la paire de campagnes un-coup / itératif.
 
 ### 3.5 · Le modèle a des outils web et ne s'en sert jamais
 
-`dsh-tool-web` déclare `web_search` et `web_fetch`, tous deux à **`true` par
-défaut** — ils font partie des 27 outils envoyés au modèle à chaque appel. Les
-journaux de session de dsh (zstd, un répertoire par répertoire de travail)
-donnent, sur les **91 sessions** du banc :
+`dsh-tool-web` déclare deux outils, `web_search` et `web_fetch`, et son schéma
+met les deux à `true` par défaut. **Mais le paquet de base ne monte pas le
+second** : `dsh-base/cordis.patch.yml` configure `tool-web` avec `fetch: false`,
+et le greffon change alors sa propre consigne — il dit au modèle d'utiliser les
+extraits rendus plutôt que d'aller chercher la page. Dans cette composition,
+`web_fetch` **n'existe pas** ; seul `web_search` est offert. *(Vérifié dans la
+configuration livrée le 22/08 ; non ré-observé sur le fil, celui-ci ayant été
+supprimé — voir le journal.)* Les journaux de session de dsh (zstd, un
+répertoire par répertoire de travail) donnent, sur les **91 sessions** du banc :
 
 | outil | appels |
 |---|---:|
@@ -341,7 +376,8 @@ donnent, sur les **91 sessions** du banc :
 | **`web_search` / `web_fetch`** | **0** |
 
 10 395 appels d'outils, zéro appel web. Ce n'est pas une restriction : c'est un
-comportement. Laissé seul, ce modèle ne cherche pas.
+comportement. Laissé seul, ce modèle ne cherche pas. Le zéro porte sur
+`web_search`, le seul outil web réellement offert.
 
 > **Pour le tutoriel.** Deux conséquences opposées et toutes deux utiles. (1) Les
 > résultats déjà publiés sont **purement locaux en pratique**, ce qui n'allait
@@ -426,6 +462,64 @@ sort de la machine. Toute comparaison doit le dire.
 
 ---
 
+### 3.8 · La référence : les mêmes douze tâches faites par Claude Code
+
+Un chiffre de réussite ne veut rien dire seul. « 4 sur 12 » est un désastre si
+la tâche est faisable en un coup, et un exploit si elle ne l'est pas. Il fallait
+donc un **plafond mesuré sur le même corpus, par le même juge**.
+
+Protocole, tel qu'il a été tenu : je (Claude Code, modèle par défaut) n'ai lu
+que les **énoncés** `prompts/tNN.txt` — jamais `ref/`, jamais
+`tasks/tNN_checks.jl` avant d'avoir rendu. Un fichier `solution.jl` par tâche,
+**sans lancer Julia avant de rendre** et **sans aucune recherche web** : c'est
+exactement le bras « un coup » du modèle local. Le verdict est rendu par le
+même `tasks/harness.jl`.
+
+| palier | tâche | verdict | essais | temps (s) | lignes | déjà vu avant d'écrire |
+|---|---|---|---|---|---|---|
+| EXPERT | t21 | **PASS** | 1 | 21 | 61 | — |
+|  | t22 | **PASS** | 1 | 78 | 53 | les deux tolerances du juge vues |
+|  | t23 | **PASS** | 1 | 34 | 118 | — |
+|  | t24 | **PASS** | 1 | 22 | 87 | — |
+|  | t25 | **PASS** | 1 | 21 | 97 | — |
+|  | t26 | **PASS** | 1 | 16 | 31 | — |
+| LIMITE | t31 | **PASS** | 1 | 68 | 79 | reference et assertions lues en entier |
+|  | t32 | **PASS** | 1 | 47 | 37 | — |
+|  | t33 | **PASS** | 1 | 21 | 62 | — |
+|  | t34 | **PASS** | 1 | 19 | 56 | les deux temoins de primalite vus |
+|  | t35 | **PASS** | 2 | 69 | 46 | — |
+|  | t36 | **PASS** | 1 | 33 | 70 | — |
+
+**12/12 réussies, 11 en un coup, 0 recherche web, 0 exécution de Julia avant de
+rendre.** 447 s de production au total, 8 s de jugement.
+
+**Le seul échec est instructif, et il va dans le sens contraire de l'intuition.**
+Sur t35 (arithmétique d'intervalles) j'ai d'abord écrit la version *savante* :
+détecter l'erreur d'arrondi exacte (TwoSum de Knuth pour la somme, `fma` pour le
+produit et le quotient) et n'élargir la borne **que** si l'opération avait
+réellement arrondi. Cette version **conserve la propriété de contenance** — elle
+est juste — mais elle laisse la borne **égale** au résultat flottant, alors que
+le contrat demande une borne strictement **à l'extérieur**. Le juge l'a dit en
+un mot : `[0.3, 0.30000000000000004]`. La réparation a été de *retirer* la
+finesse : `prevfloat` / `nextfloat` sans condition, 69 lignes tombées à 46. Un
+raffinement peut échouer là où la version naïve passe.
+
+**Ce que cette ligne ne mesure pas.** Trois tâches sont **contaminées** : au
+cours de la même session j'avais lu la référence et les assertions de t31 en
+entier (en réparant son bras known-BAD, 2.7), et vu les deux tolérances de t22
+ainsi que les deux témoins de primalité de t34 (en annulant les deux
+assouplissements, 2.8). Les neuf autres ont été faites à l'aveugle. Et je n'ai
+**aucun accès à mon propre compte de jetons** : la colonne « temps » est un
+chrono client qui inclut la latence du harnais, pas un débit. Les colonnes
+comparables au modèle local sont **verdict** et **essais**, pas le temps.
+
+À quoi ça sert : quand la campagne `t21..t36` tournera, chaque case aura un
+plafond en face d'elle. Une tâche que le modèle local rate et que la référence
+passe en un coup mesure le modèle ; une tâche que les deux ratent mesure
+l'énoncé.
+
+---
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
@@ -458,6 +552,11 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 | 2026-08-22 | Palier limite `t31..t36` calibré 6/6 GOOD, 6/6 BAD (3.7). |
 | 2026-08-22 | Deux assouplissements du juge mesurés inutiles et annulés (2.8). |
 | 2026-08-22 | Campagne figée 689 s par un agent orphelin : le délai ne tuait que le fils direct. Corrigé, et le contrôle d'échéance câblé dans `analyse.py` (1.5). |
+| 2026-08-22 | Référence Claude Code sur les douze mêmes tâches, même juge : **12/12**, 11 en un coup, 0 recherche web (3.8). |
+| 2026-08-22 | Campagne 1 du corpus dur terminée **90/90**, archivée ; campagne 2 (itérative) lancée derrière. |
+| 2026-08-22 | **La copie du banc qui tourne n'est pas celle du dépôt** : elle est figée à 09:16 dans le répertoire de travail d'une session morte, sans le correctif de l'orphelin, sans les paliers `t21..t36`, et son `analyse.py` n'a aucun des trois contrôles câblés (1.6). |
+| 2026-08-22 | Second bras known-GOOD `ref2/` câblé dans `--selftest` : **12/12**, et il tire — remis à sa première version de t35, il rend `!!! AVIS 5/6` (3.8). |
+| 2026-08-22 | `web_fetch` n'est **pas** monté par le paquet de base (`fetch: false`) : le préambule du bras web demandait un outil inexistant. Corrigé, et 3.5 avec (3.5). |
 
 ---
 
@@ -471,9 +570,10 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
   avec les débits mesurés mais n'a **pas** été ré-instrumenté ici. *Unverified.*
 - **Tâches à phase de planification, avec et sans recherche web préalable.**
   Corpus écrit **et calibré** 12/12 GOOD, 12/12 BAD (3.7) ; bras web câblé et
-  compté par run. Ce qui manque est la campagne elle-même : **aucun des douze
-  énoncés n'a encore été soumis au modèle**, ni avec ni sans recherche. Elle
-  attend que les deux campagnes du corpus dur libèrent la carte.
+  compté par run ; **plafond de référence mesuré 12/12** par Claude Code sur le
+  même juge (3.8). Ce qui manque est la campagne elle-même : **aucun des douze
+  énoncés n'a encore été soumis au modèle local**, ni avec ni sans recherche.
+  Elle attend que les deux campagnes du corpus dur libèrent la carte.
 
 ---
 
