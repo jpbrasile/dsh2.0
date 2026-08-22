@@ -119,6 +119,18 @@ exiger(bench._pertinent("Sorting", "https://discourse.julialang.org/t/x", ""),
        "un titre sans le mot mais sur un domaine Julia passe")
 exiger(not bench._pertinent("Recette de tarte", "https://cuisine.example/tarte", ""),
        "un resultat sans rapport ne passe pas")
+# Le defaut INVERSE, mesure le 22/08 sur t31 rep2 : ce resultat repondait a
+# l erreur du tour et il a ete ECARTE. Ni l adresse, ni le titre, ni
+# l extrait ne portent le mot "julia" -- seulement ".jl". Le bras existe
+# pour que le filtre ne puisse plus se resserrer sans qu on le voie.
+exiger(bench._pertinent("Numerical error with ForwardDiff",
+                        "https://github.com/TuringLang/Turing.jl/issues/700", ""),
+       "un depot .jl passe sans que le mot julia soit ecrit")
+exiger(not bench._pertinent("Qqjj Ransomware Removal",
+                            "https://www.enigmasoftware.com/qqjjransomware-removal/", ""),
+       "le charabia du bras known-BAD reste ecarte apres elargissement")
+exiger(not bench._pertinent("Fichier", "https://exemple.test/a.jlpackage", ""),
+       ".jl en plein mot ne suffit pas -- suffixe seulement")
 
 print("=== 8. la requete ne part plus avec le jargon du banc ===")
 brut = ("check: LoadError: AssertionError: float64 gros-boutiste | in "

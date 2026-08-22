@@ -1032,6 +1032,18 @@ def _pertinent(titre, url, extrait):
     tout = " ".join((titre or "", url or "", extrait or "")).lower()
     if "julia" in tout:
         return True
+    # `.jl` est la marque du langage, et elle est plus fiable que son nom.
+    # Mesure du 22/08, t31 rep2 : github.com/TuringLang/Turing.jl/issues/700
+    # a ete ECARTE alors qu il repondait a l erreur du tour -- ni l adresse,
+    # ni le titre, ni l extrait ne portaient le mot "julia", seulement ".jl".
+    # Un filtre trop etroit ne rend pas moins de charabia, il rend moins
+    # d aide, et il le fait aussi silencieusement que le defaut inverse.
+    # Suffixe seul, jamais en plein mot : ".jlsomething" n est pas du Julia.
+    i = tout.find(".jl")
+    while i >= 0:
+        if not tout[i + 3:i + 4].isalpha():
+            return True
+        i = tout.find(".jl", i + 1)
     return any(d in (url or "").lower() for d in SOURCES_CODE)
 
 
