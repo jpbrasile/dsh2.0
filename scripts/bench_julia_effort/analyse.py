@@ -96,8 +96,12 @@ for e in efforts:
               % (l["rep"], e, l["tache"], l["verdict"], l["wall_s"], l["gen"], tps, l["appels"], l["why"][:52]))
 
 print()
+iteratif = any(l.get("mode") == "iterate" for l in lignes)
 print("=== synthese par niveau ===")
-print("%-8s %-8s %9s %9s %10s %10s %9s" % ("effort","reussite","temps_med","temps_moy","gen_tok_moy","dec_t/s","appels_moy"))
+entete = "%-8s %-8s %9s %9s %10s %10s %9s" % ("effort","reussite","temps_med","temps_moy","gen_tok_moy","dec_t/s","appels_moy")
+if iteratif:
+    entete += " %8s %9s" % ("julia_moy", "sans_test")
+print(entete)
 synth = {}
 for e in efforts:
     g = [x for x in lignes if x["effort"] == e]
@@ -107,10 +111,18 @@ for e in efforts:
              med=st.median([x["wall_s"] for x in g]),
              moy=st.mean([x["wall_s"] for x in g]),
              gen=tot_gen/len(g), tps=(tot_gen/tot_dec if tot_dec else 0),
-             ap=st.mean([x["appels"] for x in g]))
+             ap=st.mean([x["appels"] for x in g]),
+             jl=st.mean([x.get("julia_runs", 0) for x in g]),
+             # Un run sans mytest.jl en mode iteratif n'est pas une donnee
+             # manquante : le modele a repondu DONE sans faire ce qu'on lui a
+             # explicitement demande. C'est une mesure d'obeissance.
+             sans=sum(1 for x in g if not x.get("a_teste", False)))
     synth[e] = s
-    print("%-8s %2d/%-5d %9.1f %9.1f %10.0f %10.1f %9.1f"
-          % (e, ok, len(g), s["med"], s["moy"], s["gen"], s["tps"], s["ap"]))
+    ligne = "%-8s %2d/%-5d %9.1f %9.1f %10.0f %10.1f %9.1f" % (
+        e, ok, len(g), s["med"], s["moy"], s["gen"], s["tps"], s["ap"])
+    if iteratif:
+        ligne += " %8.1f %9s" % (s["jl"], "%d/%d" % (s["sans"], len(g)))
+    print(ligne)
 
 if "high" in synth and "xhigh" in synth:
     h, x = synth["high"], synth["xhigh"]

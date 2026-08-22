@@ -54,7 +54,36 @@ MODELE = os.environ.get("BENCH_MODEL", "specdec-q38-plain-vision")
 
 TACHES = ["t%02d" % i for i in range(1, 11)]
 CONSIGNE = "Read the file TASK.md in the current directory and do exactly what it says."
-TIMEOUT = 900
+TIMEOUT = 900        # mode one-shot
+TIMEOUT_ITER = 1800  # mode iteratif : l'agent tourne en boucle, il lui faut de la place
+SHIM = os.path.join(BASE, "_shim")
+
+
+def preparer_shim():
+    """Installe un `julia` intercepteur en tete du PATH de l'agent.
+
+    Compter les iterations en devinant -- nombre d'appels au modele, fichiers
+    laisses derriere -- mesure une correlation. Ici on veut le nombre EXACT
+    d'executions de Julia par l'agent, donc on l'observe la ou il se produit.
+
+    Le shim n'est pose que dans l'environnement passe a dsh. Le verdict, lui,
+    appelle Julia avec le PATH du processus parent : le juge n'est jamais
+    compte comme une iteration du candidat.
+    """
+    reel = shutil.which("julia")
+    if not reel:
+        raise SystemExit("julia introuvable dans le PATH : le shim n'aurait "
+                         "rien a appeler, et les iterations seraient comptees "
+                         "a zero au lieu d'echouer.")
+    os.makedirs(SHIM, exist_ok=True)
+    # .cmd => CRLF (convention du depot), et le journal est optionnel pour que
+    # le shim reste utilisable hors campagne.
+    lignes = ["@echo off",
+              'if defined BENCH_JULIA_LOG >>"%BENCH_JULIA_LOG%" echo %*',
+              '"%s" %%*' % reel]
+    io.open(os.path.join(SHIM, "julia.cmd"), "w", encoding="utf-8",
+            newline="\r\n").write("\n".join(lignes) + "\n")
+    return reel
 
 
 def marquer(tag):
@@ -108,17 +137,23 @@ def selftest():
     return 0 if ok else 1
 
 
-def un_run(effort, tache, rep=1):
+def un_run(effort, tache, rep=1, iteratif=False):
     ws = os.path.join(BASE, "runs", "r%02d" % rep, effort, tache)
     if os.path.isdir(ws):
         shutil.rmtree(ws)
     os.makedirs(ws)
-    consigne = io.open(os.path.join(BASE, "prompts", "%s.txt" % tache),
+    dossier = "prompts_iter" if iteratif else "prompts"
+    consigne = io.open(os.path.join(BASE, dossier, "%s.txt" % tache),
                        encoding="utf-8").read()
     io.open(os.path.join(ws, "TASK.md"), "w", encoding="utf-8",
             newline="\n").write(consigne)
     env = dict(os.environ)
     env.setdefault("DSH_LOCAL_API_KEY", "local-loopback-noauth")
+    journal_julia = os.path.join(ws, "julia_calls.log")
+    if iteratif:
+        env["PATH"] = SHIM + os.pathsep + env.get("PATH", "")
+        env["BENCH_JULIA_LOG"] = journal_julia
+    delai = TIMEOUT_ITER if iteratif else TIMEOUT
 
     # Le marqueur porte la REPETITION. Sans elle, les 3 passages d'une meme
     # tache portent le meme tag, et la regle "derniere fenetre" d'analyse.py
@@ -129,10 +164,10 @@ def un_run(effort, tache, rep=1):
     depasse = False
     try:
         p = subprocess.run([DSH, "--profile", "headless", CONSIGNE], cwd=ws,
-                           env=env, capture_output=True, text=True, timeout=TIMEOUT)
+                           env=env, capture_output=True, text=True, timeout=delai)
         sortie, rc = (p.stdout or "") + (p.stderr or ""), p.returncode
     except subprocess.TimeoutExpired as e:
-        sortie, rc, depasse = "TIMEOUT %ds\n%s" % (TIMEOUT, (e.stdout or b"")[-2000:]), -1, True
+        sortie, rc, depasse = "TIMEOUT %ds\n%s" % (delai, (e.stdout or b"")[-2000:]), -1, True
     dt = time.time() - t0
     marquer("%s|%s|r%d|fin" % (effort, tache, rep))
 
@@ -140,10 +175,21 @@ def un_run(effort, tache, rep=1):
             errors="replace").write(str(sortie))
     v, why = juger(os.path.join(ws, "solution.jl"), tache)
     if depasse:
-        v, why = "FAIL", "timeout %ds" % TIMEOUT
-    rec = {"effort": effort, "tache": tache, "rep": rep, "verdict": v,
-           "why": why, "wall_s": round(dt, 1), "rc": rc}
-    print("  r%d %-6s %s  %-4s  %6.1fs  %s" % (rep, effort, tache, v, dt, why[:70]))
+        v, why = "FAIL", "timeout %ds" % delai
+    # Nombre EXACT d'executions de Julia par l'agent, releve par le shim.
+    # 0 en mode iteratif est un resultat, pas une donnee manquante : cela veut
+    # dire que le modele a repondu DONE sans jamais lancer ce qu'on lui a
+    # explicitement demande de lancer.
+    julia_runs = 0
+    if os.path.exists(journal_julia):
+        julia_runs = sum(1 for _ in io.open(journal_julia, encoding="utf-8",
+                                            errors="replace"))
+    rec = {"effort": effort, "tache": tache, "rep": rep,
+           "mode": "iterate" if iteratif else "oneshot", "verdict": v,
+           "why": why, "wall_s": round(dt, 1), "julia_runs": julia_runs,
+           "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")), "rc": rc}
+    print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-2d  %s"
+          % (rep, effort, tache, v, dt, julia_runs, why[:60]))
     sys.stdout.flush()
     return rec
 
@@ -158,6 +204,14 @@ def main():
         i = argv.index("--reps")
         reps = int(argv[i + 1])
         del argv[i:i + 2]
+
+    iteratif = "--iterate" in argv
+    if iteratif:
+        argv.remove("--iterate")
+        reel = preparer_shim()
+        print("mode ITERATIF : enonces prompts_iter/, l'agent doit ecrire "
+              "mytest.jl et le lancer jusqu'a ce qu'il passe.")
+        print("shim julia -> %s  (les executions de l'agent sont comptees)" % reel)
 
     efforts = argv[0].split(",") if argv else ["off", "low", "medium", "high", "xhigh"]
     taches = argv[1].split(",") if len(argv) > 1 else TACHES
@@ -179,7 +233,7 @@ def main():
             print("--- effort %s ---" % effort)
             sys.stdout.flush()
             for tache in taches:
-                rec = un_run(effort, tache, rep)
+                rec = un_run(effort, tache, rep, iteratif)
                 with io.open(out, "a", encoding="utf-8", newline="\n") as f:
                     f.write(json.dumps(rec) + "\n")
 

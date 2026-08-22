@@ -1,0 +1,18 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `topk(v::AbstractVector, k::Integer)` returning a vector containing the `k` largest elements of `v`, in any order, duplicates preserved. `k <= 0` gives an empty vector of the same element type; `k >= length(v)` gives all elements. It must handle 5000 elements without sorting cost dominating (use a partial selection).
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- `solution.jl` itself must print nothing at top level and must contain no tests.
+
+VERIFY BEFORE YOU FINISH -- this is part of the task, not optional:
+- Write your OWN test file `mytest.jl` next to `solution.jl`. It must
+  `include("solution.jl")` and exercise the required behaviour, including the
+  edge cases and awkward inputs you can think of yourself. Nobody will give you
+  the tests, and nobody will tell you which cases matter.
+- Run it from the shell: `julia --startup-file=no mytest.jl`
+- If it fails, fix `solution.jl` and run it again. Repeat until your own tests
+  pass.
+- Only once your own tests pass, reply with the single word DONE.

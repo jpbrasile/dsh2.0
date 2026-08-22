@@ -1,0 +1,21 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define a parametric struct `Poly{T}` with a single field `c::Vector{T}` holding coefficients in ASCENDING order, so `Poly([1.0, 2.0, 3.0])` is 1 + 2x + 3x^2. Then:
+- make a `Poly` callable: `p(x)` evaluates the polynomial (Horner's method).
+- extend `Base.:+` for two `Poly` (coefficientwise, different lengths allowed).
+- extend `Base.:*` for two `Poly` (polynomial product / convolution).
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- `solution.jl` itself must print nothing at top level and must contain no tests.
+
+VERIFY BEFORE YOU FINISH -- this is part of the task, not optional:
+- Write your OWN test file `mytest.jl` next to `solution.jl`. It must
+  `include("solution.jl")` and exercise the required behaviour, including the
+  edge cases and awkward inputs you can think of yourself. Nobody will give you
+  the tests, and nobody will tell you which cases matter.
+- Run it from the shell: `julia --startup-file=no mytest.jl`
+- If it fails, fix `solution.jl` and run it again. Repeat until your own tests
+  pass.
+- Only once your own tests pass, reply with the single word DONE.
