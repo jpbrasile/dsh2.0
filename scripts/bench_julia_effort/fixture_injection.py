@@ -49,12 +49,18 @@ print("  etat du moteur : %s" % etat)
 print("  %d resultat(s)" % len(trouve))
 for t, u, _ in trouve:
     print("    - %s | %s" % (t[:60], u[:70]))
-exiger(etat in ("ok", "aucun", "bloque") or etat.startswith("erreur"),
-       "le moteur rend un etat nommable")
-exiger(not (etat != "ok" and trouve),
-       "aucun resultat n est rendu quand l etat n est pas ok")
-if etat != "ok":
-    print("  (moteur %s -- on poursuit avec la liste vide, ce que le banc ferait)" % etat)
+# L etat NOMME l etage qui a servi ("zai", "openrouter", eventuellement suivi
+# des replis), ou commence par "aucun etage:" avec la raison de chacun. Un
+# etat qui ne nomme personne serait un resultat sans provenance.
+servi = etat.split(" (")[0]
+exiger(servi in ("zai", "exa", "openrouter") or etat.startswith("aucun etage"),
+       "l etat NOMME l etage qui a servi, ou dit qu aucun n a pu")
+exiger(bool(trouve) == (not etat.startswith("aucun etage")),
+       "des resultats si et seulement si un etage a servi")
+if etat.startswith("aucun etage"):
+    print("  (aucun etage -- on poursuit avec la liste vide, ce que le banc ferait)")
+elif "replis" in etat:
+    print("  ATTENTION : l etage qui a servi n est pas le premier -- %s" % etat)
 
 print("=== 3. le bloc injecte, bras AVEC recherche ===")
 bloc = bench._bloc_retour(1, WHY, trouve, True)

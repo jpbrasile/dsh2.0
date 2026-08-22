@@ -885,52 +885,89 @@ TOURS = 0
 WEB_APRES_JULIA = 2
 
 
+# Les etages de recherche du depot, reutilises tels quels. Ils vivent dans
+# `.opencode/mcp/web_search.py` -- ecrits, mesures et documentes ailleurs dans
+# ce depot -- et le banc n en refait pas une version a lui. L ordre voulu ici :
+# Z.AI `web_search_prime` d abord (gratuit sur l abonnement, resultats BRUTS :
+# titre, url, extrait), OpenRouter ensuite (paye, et il fait resumer un modele
+# par-dessus le meme index). Exa est saute faute de clef, et il le DIT.
+_ETAGES = None
+
+
+def _etages():
+    """Charge les etages une fois. Rend [] si le module est introuvable."""
+    global _ETAGES
+    if _ETAGES is not None:
+        return _ETAGES
+    import importlib.util
+    chemin = os.path.join(BASE, "..", "..", ".opencode", "mcp", "web_search.py")
+    chemin = os.path.abspath(chemin)
+    try:
+        spec = importlib.util.spec_from_file_location("depot_web_search", chemin)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        _ETAGES = [mod.ZaiTier, mod.OpenRouterTier]
+    except Exception as e:
+        print("banc: etages de recherche du depot indisponibles (%s)" % e)
+        _ETAGES = []
+    return _ETAGES
+
+
 def recherche_basique(question, n=3, delai=25):
-    """Recherche web sans clef ni dependance. Rend (resultats, etat).
+    """Recherche web. Rend (resultats, etat), resultats = [(titre, url, extrait)].
 
-    `etat` vaut "ok", "aucun", "bloque" ou "erreur: ...". Il n est PAS
-    decoratif : une recherche qui n a rien rendu, une recherche refusee et
-    une recherche qui n a pas eu lieu sont trois faits differents, et le
-    banc les injecte dans l enonce -- donc il doit savoir lequel il tient.
+    `etat` nomme CE QUI A SERVI : "zai", "openrouter", ou un refus --
+    "aucun etage: <raisons>". Il n est pas decoratif : une recherche qui n a
+    rien rendu, une recherche refusee et une recherche qui n a pas eu lieu
+    sont trois faits differents, et le banc INJECTE le resultat dans l enonce.
+    Il doit donc savoir lequel il tient.
 
-    POURQUOI CETTE FONCTION A ETE REECRITE. Mesure du 22/08 : DuckDuckGo nous
-    a pris pour un robot et a servi une page d avertissement (`anomaly`,
-    `challenge`, canonical vers sa page d accueil). L analyseur a lu les liens
-    de CETTE page comme des resultats, et le banc a colle dans l enonce de
-    t24 un blog de mots croises du New York Times et Google Traduction. Aucune
+    POURQUOI CETTE FONCTION A ETE REECRITE DEUX FOIS LE 22/08.
+    D abord elle grattait la version legere de DuckDuckGo. Mesure : le moteur
+    nous a pris pour un robot et a servi une page d avertissement -- marqueurs
+    `anomaly`, `challenge`, ZERO classe de resultat. L analyseur a lu les liens
+    de CETTE page comme des resultats, et le banc a colle dans l enonce de t24
+    un blog de mots croises du New York Times et Google Traduction. Aucune
     recherche n avait eu lieu ; le banc a fait comme si.
 
-    Le motif d avant attrapait n importe quel lien de redirection, y compris
-    ceux d une page qui n est pas une page de resultats. Un resultat REEL de
-    la version legere porte la classe `result-link`, et son extrait la classe
-    `result-snippet` : sans ces marques, il n y a pas de resultats a lire.
+    On ne rafistole pas le grattage : le depot a deja des etages de recherche
+    avec clef, mesures ailleurs. Un grattage sans clef ne peut pas distinguer
+    un blocage d un resultat sans lire le HTML du bloqueur -- c est une course
+    qu on perd a chaque changement de page.
+
+    CONTEXTE MINIMAL, voulu : trois resultats, extraits coupes a 300
+    caracteres. Ce qui part dans l enonce du modele doit tenir en quelques
+    lignes, sinon la recherche ne debloque pas, elle noie.
     """
-    url = "https://lite.duckduckgo.com/lite/?q=" + urllib.parse.quote(question)
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-    try:
-        page = urllib.request.urlopen(req, timeout=delai).read().decode("utf-8", "replace")
-    except Exception as e:
-        return [], "erreur: %s" % e
-    bas = page.lower()
-    # REFUS EXPLICITE. Sans lui, le blocage se lit comme dix resultats.
-    for marque in ("anomaly", "challenge-form", "unfortunately, bots",
-                   "captcha", "too many requests"):
-        if marque in bas:
-            return [], "bloque"
-    sansbal = lambda t: " ".join(re.sub("<[^>]+>", " ", t).split())
-    liens = []
-    for m in re.finditer(
-            "class=[\"']result-link[\"'][^>]*href=[\"']//duckduckgo.com/l/[?]uddg=([^\"'&]+)[^>]*>(.*?)</a>",
-            page, re.S):
-        liens.append((sansbal(m.group(2)), urllib.parse.unquote(m.group(1))))
-    extraits = [sansbal(m.group(1)) for m in
-                re.finditer("result-snippet[^>]*>(.*?)</td>", page, re.S)]
-    if not liens:
-        return [], "aucun"
-    sortie = []
-    for k, (titre, lien) in enumerate(liens[:n]):
-        sortie.append((titre, lien, extraits[k] if k < len(extraits) else ""))
-    return sortie, "ok"
+    sautes = []
+    for classe in _etages():
+        etage = classe()
+        raison = etage.unavailable()
+        if raison:
+            sautes.append("%s: %s" % (etage.name, raison))
+            continue
+        try:
+            bruts = etage.search(question, n)
+        except Exception as e:
+            sautes.append("%s: echec (%s: %s)" % (etage.name, type(e).__name__,
+                                                  str(e)[:90]))
+            continue
+        sortie = [(r.get("title") or "", r.get("url") or "",
+                   (r.get("snippet") or "")[:300])
+                  for r in bruts if r.get("url")]
+        if not sortie:
+            sautes.append("%s: aucun resultat" % etage.name)
+            continue
+        # L etat porte AUSSI ce qui a ete saute. Sans ca, "openrouter" se lit
+        # comme un choix alors que c est un REPLI : mesure du 22/08, Z.AI rend
+        # "Insufficient balance or no resource package" et seul l etage PAYANT
+        # repond -- 27 a 107 s par recherche. Un journal qui ne le dit pas
+        # laisse croire que la recherche est gratuite et rapide.
+        etat = etage.name
+        if sautes:
+            etat += " (replis : " + "; ".join(sautes) + ")"
+        return sortie[:n], etat
+    return [], "aucun etage: " + "; ".join(sautes or ["aucun etage charge"])
 
 
 def _question_depuis_echec(tache, why):
@@ -965,9 +1002,11 @@ def _question_depuis_echec(tache, why):
     return "Julia " + t
 
 
-SOURCES_CODE = ("julialang.org", "github.com", "gitlab.com", "stackoverflow.com",
-                "stackexchange.com", "jlhub.com", "rosettacode.org",
-                "juliahub.com", "readthedocs.io", "docs.rs", "wikipedia.org")
+# DOMAINES PROPRES A JULIA seulement. Un hebergeur generique ne suffit pas :
+# mesure du 22/08, la requete charabia "xqzptr vlmnk wwzz qqjj" a ramene
+# github.com/WWZZ -- un compte au hasard -- et deux pages sur un rancongiciel.
+# Avec github.com dans cette liste, le compte au hasard passait le filtre.
+SOURCES_CODE = ("julialang.org", "jlhub.com", "juliahub.com", "julialang.slack.com")
 
 
 def _pertinent(titre, url, extrait):
