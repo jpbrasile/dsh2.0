@@ -1008,6 +1008,44 @@ donné dans la chaîne de repli. La participation peut être la **conséquence**
 la boucle et non sa cause. Ce bras-là ne pouvait pas trancher ; seule une
 campagne épinglée le peut.
 
+### 3.17 — Le levier 1 n'a pas mesuré une route, il a mesuré un quota
+
+**Instrument :** `_par/oxalpha/w*/wire.jsonl` et `_par/oxviafree/w*/wire.jsonl`,
+champ `status` de chaque appel ; `resultats_oxalpha.jsonl`,
+`resultats_oxviafree.jsonl`.
+
+Le levier 1 épinglait ox-alpha **à travers FreeLLMAPI** au lieu de l'appeler en
+direct, pour profiter de la mutualisation des 16 plateformes. Les verdicts, à
+première lecture, condamnent la route :
+
+| ox-alpha | sans web | avec web | julia total | runs à julia=0 |
+|---|---|---|---|---|
+| **direct** | 9/12 | 11/12 | 104 / 66 | 0/12 et 0/12 |
+| **via FreeLLMAPI** | 5/12 | 4/12 | 46 / 6 | 6/12 et 9/12 |
+
+Même modèle des deux côtés — `servis` dit `ox-alpha` sur les 420 appels. La
+tentation est de conclure que la route dégrade le modèle, et la signature
+`julia=0` semble le confirmer : l'agent cesse d'exécuter son code.
+
+**Le fil dit autre chose.** Sur 159 appels passés par le routeur, **108 rendent
+429** et 43 seulement rendent 200 ; en direct, 196 appels sur 196 rendent 200.
+Les deux tiers des appels n'ont jamais eu lieu. `julia=0` n'est pas un modèle
+qui renonce à exécuter, c'est un agent coupé au milieu de sa boucle.
+
+Et le fil écarte l'explication qu'on aurait retenue par défaut : les outils
+passent **à l'identique**. `n_tools = 25` sur 184 appels en direct, sur 147 via
+le routeur. Le routeur ne rabote pas les définitions d'outils.
+
+**Ce que le levier 1 établit donc :** rien sur la qualité de la route, et un
+plafond dur sur son usage — la clef OpenRouter du routeur ne tient pas 6
+ouvriers en parallèle. La campagne suivante reste sur l'épinglage direct. La
+question ouverte n'est pas « la route est-elle bonne » mais « à quel
+parallélisme le quota tient-il », et elle se mesure en faisant varier `--par`.
+
+**La forme, une fois de plus :** deux nombres comparables produits par deux
+instruments qui ne l'étaient pas. 5/12 contre 9/12 se lit comme un écart de
+compétence tant qu'on ne regarde pas ce qui est parti sur le fil.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |

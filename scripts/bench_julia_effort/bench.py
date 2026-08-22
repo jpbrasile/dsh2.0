@@ -191,6 +191,66 @@ The task itself follows.
 """
 
 
+# VERSION 3 : RECHERCHE DIFFEREE, sous drapeau `BENCH_WEB_V3=1`.
+#
+# Troisieme condition, pas une amelioration de la v2 : les trois preambules ne
+# se comparent que bras contre bras, jamais par substitution.
+#
+# L'IDEE, et elle est de l'utilisateur : au lieu de chercher A PRIORI, on
+# attend quelques tours infructueux, ce qui permet de poser la BONNE question
+# avant de repartir. Une recherche lancee avant d'avoir ecrit une ligne
+# interroge une incertitude SUPPOSEE ; une recherche lancee apres deux echecs
+# interroge une erreur REELLE, avec son message. La seconde requete est
+# meilleure parce qu'elle est plus tardive.
+#
+# CE QUE LES MESURES DU 22/08 DISENT DEJA, et ce qu'elles ne disent pas.
+#
+# Elles disent que le discriminant n'est pas la recherche, c'est l'EXECUTION.
+# Sur les quatre bras a instrument egal : ox-alpha direct sans web, 9/12 avec
+# 104 executions Julia et aucun run a zero ; auto:smartest sans web, 4/12 avec
+# 7 executions et 11 runs sur 12 a zero. Dix des seize echecs de smartest sont
+# du type qu'UNE execution attrape -- pas de fichier, ne compile pas, import
+# manquant, plante au premier appel.
+#
+# Elles disent aussi que la recherche a priori a un cout visible : dans le bras
+# web, les runs qui ont cherche 1 ou 2 fois et n'ont RIEN execute ont echoue sur
+# des fautes triviales (`aucun solution.jl ecrit`, `UndefVarError`). Le budget
+# de tour est parti dans la recherche au lieu d'aller dans l'execution.
+#
+# Elles ne disent PAS que differer est meilleur : aucune campagne n'a encore
+# tourne sous ce preambule. C'est exactement pourquoi il naît sous drapeau,
+# avec son bras a courir.
+PREAMBULE_WEB_V3 = """Read this before you start. It changes the order you work in.
+
+1. DO NOT SEARCH THE WEB YET. Start from what you know. Write the smallest
+   version of the solution that can actually run, and RUN IT. An execution that
+   fails tells you something true; a search launched before you have written a
+   line only interrogates a doubt you guessed at.
+
+2. RUN, READ THE ERROR, FIX, RUN AGAIN. Keep the loop tight. Most of what goes
+   wrong at this level is caught the first time the code executes.
+
+3. WHEN YOU ARE STUCK, AND ONLY THEN, SEARCH. You are stuck when the same point
+   has defeated you twice: the same error after two genuine fixes, or a result
+   that stays wrong for a reason you cannot name. At that moment stop guessing
+   and call the `web_search` tool -- and use what the failure gave you. Query
+   the exact error text, the exact interface whose behaviour surprised you, the
+   exact constant or convention your output disagrees with. One focused query
+   per point, not one broad query for the task. `web_fetch` is NOT available,
+   so the returned snippets and their URLs are all you get.
+
+4. SAY WHAT CHANGED. In one line, state what the search told you that you had
+   wrong, apply it, and run the code again.
+
+If you are never stuck, you never search, and that is the correct outcome.
+
+The task itself follows.
+
+----------------------------------------------------------------------
+
+"""
+
+
 TIMEOUT = 900        # mode one-shot
 TIMEOUT_ITER = 1800  # mode iteratif : l'agent tourne en boucle, il lui faut de la place
 SHIM = os.path.join(BASE, "_shim")
@@ -689,8 +749,14 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False,
     consigne = io.open(os.path.join(BASE, dossier, "%s.txt" % tache),
                        encoding="utf-8").read()
     if web:
-        consigne = (PREAMBULE_WEB_V2 if os.environ.get("BENCH_WEB_V2") == "1"
-                    else PREAMBULE_WEB) + consigne
+        # Trois conditions distinctes, jamais un remplacement : une campagne
+        # deja lancee garde le preambule sous lequel elle est partie.
+        if os.environ.get("BENCH_WEB_V3") == "1":
+            consigne = PREAMBULE_WEB_V3 + consigne
+        elif os.environ.get("BENCH_WEB_V2") == "1":
+            consigne = PREAMBULE_WEB_V2 + consigne
+        else:
+            consigne = PREAMBULE_WEB + consigne
     io.open(os.path.join(ws, "TASK.md"), "w", encoding="utf-8",
             newline="\n").write(consigne)
     env = dict(os.environ)
