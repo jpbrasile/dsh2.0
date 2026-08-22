@@ -813,8 +813,16 @@ def lancer_borne(cmd, cwd, env, delai):
     kw = {}
     if os.name != "nt":
         kw["start_new_session"] = True
+    # ENCODAGE EXPLICITE. `text=True` seul prend l encodage local -- cp1252
+    # ici -- et l agent ecrit de l UTF-8. Mesure du 22/08, campagne du corpus
+    # dur : "UnicodeDecodeError: 'charmap' codec can't decode byte 0x81" leve
+    # DANS LE FIL LECTEUR de subprocess. Le fil meurt, la sortie du run est
+    # perdue, et le run continue comme si de rien n etait : la trace du tour
+    # disparait sans que le verdict change. errors='replace' pour qu un octet
+    # exotique abime un caractere, jamais un enregistrement.
     proc = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, text=True, **kw)
+                            stderr=subprocess.PIPE, text=True,
+                            encoding="utf-8", errors="replace", **kw)
     try:
         out, err = proc.communicate(timeout=delai)
         return (out or "") + (err or ""), proc.returncode, False
