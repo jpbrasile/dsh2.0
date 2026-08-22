@@ -107,11 +107,24 @@ def sonder(args):
     Un 200 seul ne prouve rien -- le routeur peut avoir bascule sur un autre
     modele. On lit donc `model` dans la reponse."""
     cle = _cle()
-    corps = json.dumps({
+    charge = {
         "model": args.modele,
         "messages": [{"role": "user", "content": "reponds exactement: OK"}],
         "max_tokens": 8,
-    }).encode("utf-8")
+    }
+    if getattr(args, "avec_outils", False):
+        # Un outil REEL, pas un tableau vide : un amont qui ne gere pas l'appel
+        # de fonction rend une erreur ici, et c'est ce qu'on veut savoir.
+        charge["tools"] = [{
+            "type": "function",
+            "function": {
+                "name": "obtenir_heure",
+                "description": "Rend l heure courante.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        }]
+        charge["tool_choice"] = "auto"
+    corps = json.dumps(charge).encode("utf-8")
     req = urllib.request.Request(
         ROUTEUR + "/v1/chat/completions", data=corps, method="POST",
         headers={"Authorization": "Bearer " + cle, "Content-Type": "application/json"})
@@ -333,6 +346,134 @@ def moissonner(args):
     print("  Verifier chaque ajout avec `sonder` : 404 avant, 200 apres, et la route nommee.")
 
 
+# CLASSEMENT PAR USAGE -- releve OpenRouter du 21/08/2026, jetons traites par
+# jour. Source : page publique des rankings, agregee ; pas d'API pour l'obtenir,
+# donc la donnee est FIGEE ICI avec sa date, et elle vieillira. La redater est un
+# geste manuel assume, pas une synchronisation.
+#
+# Pourquoi ce classement compte, alors que "l'usage n'est pas la qualite" :
+# l'objection vaut quand on compare du gratuit a du payant, ou le prix explique
+# le volume. A L'INTERIEUR du vivier gratuit le prix est CONSTANT, donc ce qui
+# reste dans le volume est une preference revelee -- des gens qui ne paient rien
+# choisissent quand meme celui-la. Et pour un modele sorti depuis deux jours,
+# c'est le seul signal qui existe : aucun banc public ne l'a encore mesure.
+#
+# Le trafic dominant d'OpenRouter est de l'assistance au code. Un agent de code
+# ne tourne pas sans outils : un modele massivement utilise LA-BAS gere donc les
+# outils. L'inference est bonne, mais elle reste une inference -- d'ou
+# `sonder --avec-outils`, qui la transforme en mesure en envoyant un vrai outil.
+USAGE_20260821 = [
+    ("ox-alpha", 2000, {"ox-alpha", "x-preview-f-free"}),
+    ("deepseek-v4-flash", 1800, {"deepseek-v4-flash", "deepseek-v4-flash-free",
+                                "deepseek-v4-flash-0731"}),
+    ("mimo-v2.5", 1700, {"mimo-v2.5", "mimo-v2.5-free"}),
+    ("hy3", 1100, {"hy3", "hy3-free"}),
+]
+
+
+def usage(args):
+    """Porter en TETE du bareme les gratuits massivement utilises.
+
+    Le rang du routeur est ordinal, petit = prefere. On donne 1..N aux modeles
+    du releve, dans l'ordre du volume. Rien n'est retrograde : les autres lignes
+    gardent leur rang."""
+    c = sqlite3.connect(_uri(DB, ro=True), uri=True)
+    lignes = list(c.execute(
+        "select id, platform, model_id, intelligence_rank, supports_tools, enabled from models"))
+    c.close()
+
+    plans, absents = [], []
+    for rang, (nom, jetons, alias) in enumerate(USAGE_20260821, start=1):
+        vus = [l for l in lignes if _normalise(l[2]) in alias]
+        if not vus:
+            absents.append(nom)
+            continue
+        for (mid_db, plat, mid, ri, outils, actif) in vus:
+            if ri != rang:
+                plans.append((mid_db, plat, mid, ri, rang, nom, jetons, outils, actif))
+    print("  releve OpenRouter du 21/08/2026, jetons/jour, vivier a cout nul :")
+    for rang, (nom, jetons, _a) in enumerate(USAGE_20260821, start=1):
+        print("    %d. %-22s %5d Md/j" % (rang, nom, jetons))
+    print()
+    print("  A RECLASSER (%d ligne(s))" % len(plans))
+    for (_i, plat, mid, ri, neuf, nom, _j, outils, actif) in plans:
+        note = "" if outils else "   [outils=0 au catalogue -- a verifier par sonde]"
+        note += "" if actif else "   [ligne desactivee]"
+        print("    %-12s %-40s rang %-3s -> %-3s (%s)%s" % (plat, mid, ri, neuf, nom, note))
+    if absents:
+        print()
+        print("  ABSENTS du catalogue, a ajouter avant de pouvoir les classer : %s"
+              % ", ".join(absents))
+    if not args.appliquer:
+        print()
+        print("  (affichage seul -- relancer avec --appliquer pour ecrire)")
+        return
+    horo = time.strftime("%Y%m%d-%H%M%S")
+    sauve = DB + ".bak-" + horo
+    shutil.copy2(DB, sauve)
+    print()
+    print("  sauvegarde : %s" % sauve)
+    c = sqlite3.connect(_uri(DB), uri=True)
+    n = 0
+    for (mid_db, _p, _m, _ri, neuf, _nom, _j, _o, _a) in plans:
+        n += c.execute("update models set intelligence_rank = ? where id = ?",
+                       (neuf, mid_db)).rowcount or 0
+    c.commit()
+    c.close()
+    print("  ECRIT : %d ligne(s) reclassee(s)." % n)
+
+
+class _Args(object):
+    def __init__(self, **kw):
+        self.__dict__.update(kw)
+
+
+def demarrage(args):
+    """ROUTINE DE DEBUT DE SESSION. Trois gestes, dans cet ordre.
+
+    1. MOISSONNER -- ce qui est apparu en amont a cout nul et outille.
+    2. CLASSER PAR USAGE -- porter en tete les gratuits massivement utilises.
+    3. SONDER AVEC UN VRAI OUTIL -- transformer l'inference en mesure.
+
+    Le troisieme geste n'est pas decoratif. Mesure du 22/08, sur quatre modeles
+    supposes outilles parce que massivement utilises : deux confirmes (hy3-free
+    et nemotron-3.5-lightning-free repondent 200 avec un outil reel), un
+    INFIRME (muse-spark rend un 400 depuis OpenCode Zen lui-meme), un
+    indecidable ce jour-la (quota epuise). L'inference etait bonne trois fois
+    sur quatre -- ce qui veut dire qu'elle est fausse une fois sur quatre, et
+    qu'une fiche fausse se paie en runs qui echouent sur la mauvaise cause.
+
+    Et un piege a connaitre : tant que la fiche du routeur dit `outils=0`, il
+    REFUSE la requete outillee en citant sa propre fiche. Le refus ne mesure
+    alors rien du tout -- il faut lever le drapeau pour pouvoir mesurer."""
+    print("=" * 68)
+    print("1/3  MOISSON -- nouveautes a cout nul ET outillees")
+    print("=" * 68)
+    moissonner(_Args(plateforme=args.plateforme, appliquer=args.appliquer, delai=90))
+    print()
+    print("=" * 68)
+    print("2/3  CLASSEMENT PAR USAGE -- releve fige, voir USAGE_20260821")
+    print("=" * 68)
+    usage(_Args(appliquer=args.appliquer))
+    if not args.appliquer:
+        print()
+        print("(affichage seul de bout en bout -- --appliquer pour ecrire et sonder)")
+        return
+    print()
+    print("=" * 68)
+    print("3/3  SONDES OUTILLEES -- l'inference devient une mesure")
+    print("=" * 68)
+    c = sqlite3.connect(_uri(DB, ro=True), uri=True)
+    cibles = [r[0] for r in c.execute(
+        "select distinct model_id from models "
+        "where enabled = 1 and supports_tools = 1 and intelligence_rank <= ? "
+        "and platform in ('openrouter', 'opencode') order by intelligence_rank",
+        (args.jusqu_au_rang,))]
+    c.close()
+    for mid in cibles:
+        sonder(_Args(modele=mid, delai=args.delai, avec_outils=True))
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -369,9 +510,25 @@ def main():
     f.add_argument("--delai", type=int, default=60)
     f.set_defaults(fn=moissonner)
 
+    g = sp.add_parser("usage", help="porter en tete du bareme les gratuits massivement utilises")
+    g.add_argument("--appliquer", action="store_true")
+    g.set_defaults(fn=usage)
+
+    h = sp.add_parser("demarrage",
+                      help="routine de debut de session : moissonner, classer par usage, sonder outille")
+    h.add_argument("--plateforme", default="openrouter")
+    h.add_argument("--appliquer", action="store_true",
+                   help="ecrire ET sonder ; sans ce drapeau, affichage seul")
+    h.add_argument("--jusqu-au-rang", type=int, default=4, dest="jusqu_au_rang",
+                   help="sonder les modeles jusqu a ce rang (defaut 4)")
+    h.add_argument("--delai", type=int, default=90)
+    h.set_defaults(fn=demarrage)
+
     d = sp.add_parser("sonder", help="404 avant / 200 apres, et QUI a repondu")
     d.add_argument("modele")
     d.add_argument("--delai", type=int, default=60)
+    d.add_argument("--avec-outils", action="store_true", dest="avec_outils",
+                   help="envoyer un vrai outil : mesure le support des tools au lieu de le supposer")
     d.set_defaults(fn=sonder)
 
     args = p.parse_args()
