@@ -50,7 +50,7 @@ def _cle(t):
     return None, None
 
 
-par_run, courant, rejoues = {}, None, 0
+par_run, bornes, courant, rejoues = {}, {}, None, 0
 for r in wire:
     if r.get("kind") == "mark":
         cle, bout = _cle(r["tag"].split("|"))
@@ -59,7 +59,10 @@ for r in wire:
             if courant in par_run:
                 rejoues += 1
             par_run[courant] = []
+            bornes[courant] = [r.get("t", 0), None]
         else:
+            if courant in bornes:
+                bornes[courant][1] = r.get("t", 0)
             courant = None
         continue
     if courant and r.get("kind") == "call":
@@ -241,10 +244,39 @@ if len(bras) > 1 or any(l.get("appels_web", -1) > 0 for l in lignes):
 # cette ligne sont faux -- sans que le nombre ait l'air faux. C'est le seul
 # controle du fichier qui puisse contredire l'attribution ; les autres nombres
 # sont d'accord avec elle par construction.
+def _union_s(calls):
+    """Duree COUVERTE par les appels, en union d'intervalles -- pas leur somme.
+
+    Un run passe legitimement plusieurs appels en meme temps : dsh emet une
+    requete de titre de session en parallele du premier tour de l'agent.
+    Sommer les durees comptait deux fois le meme instant et faisait crier le
+    controle sur des runs sains. Ce qui est impossible, ce n'est pas que la
+    somme depasse la duree du run, c'est que le TEMPS COUVERT la depasse.
+    """
+    iv = sorted((c["t0"], c["t0"] + c.get("ms", 0)) for c in calls if "t0" in c)
+    total, fin = 0, None
+    for a, b in iv:
+        if fin is None or a > fin:
+            total += b - a
+            fin = b
+        elif b > fin:
+            total += b - fin
+            fin = b
+    return total / 1000.0
+
+
+# CLE A TROIS CHAMPS. Le 22/08, quand le marqueur a pris la repetition, la cle
+# de `par_run` est passee a (effort, tache, rep) -- mais CE controle est reste
+# sur (effort, tache). Une cle qui ne correspond a rien rend une liste vide,
+# donc une somme nulle, donc la condition n'a plus jamais pu etre vraie : le
+# controle a imprime "N/N runs coherents" pendant toute la campagne suivante
+# sans regarder un seul appel. Un compte egal a la population est exactement ce
+# que produit une porte qui ne mesure rien. Bras known-BAD :
+# `python analyse.py fixtures/horloge_bad`.
 print()
 impossibles = []
 for l in lignes:
-    somme_s = sum(c.get("ms", 0) for c in par_run.get((l["effort"], l["tache"]), [])) / 1000.0
+    somme_s = _union_s(par_run.get((l["effort"], l["tache"], l.get("rep", 1)), []))
     if somme_s > l["wall_s"] * 1.15 + 2:
         impossibles.append((l["effort"], l["tache"], l["wall_s"], somme_s))
 if impossibles:
@@ -294,3 +326,77 @@ if debordements:
 else:
     print("controle d'echeance : %d/%d runs sous leur echeance (le delai a bien "
           "ferme l'arbre)." % (len(lignes), len(lignes)))
+
+# --- CONTROLE DE PARTAGE DU SERVEUR, cable ------------------------------------
+# Un agent ETRANGER qui parle au meme serveur pendant la campagne est invisible
+# pour les deux controles ci-dessus : ses appels tombent DANS la fenetre du run
+# ouvert, ils se chevauchent avec ceux du run, donc ni la somme ni l'union ne
+# denoncent quoi que ce soit. Ils sont pourtant comptes dans le debit du run, et
+# ils lui volent la carte -- sur un serveur `--parallel 1` le run attend derriere.
+#
+# Le signal qui le trahit vient d'ailleurs : une conversation d'agent APPARTIENT
+# a un run. Elle commence a 2-3 messages, grandit de 2 par tour, et meurt avec
+# lui. Une conversation qui TRAVERSE plusieurs fenetres n'appartient donc a
+# aucune -- c'est un agent d'ailleurs, ou un orphelin d'avant.
+#
+# PRISE REELLE, 22/08 : quatre segments (la compaction remet le compteur a zero)
+# de 09:16:08 a 09:54:59, 91 appels, ~2010 s de decodage, traversant 22 fenetres
+# de la repetition 1. Les debits de ces runs incluent un agent qui n'etait pas
+# la campagne. Bras known-BAD : `python analyse.py fixtures/intrus_bad`.
+def _conversations(wire):
+    """Chaine les appels en conversations : n messages prolonge n-2.
+
+    Les appels de titre de session (`n_tools == 0`) sont ecartes : ils sont
+    seuls, portent toujours 2 messages, et se raccrocheraient a tort.
+    """
+    convs, ouverts = [], {}
+    for r in wire:
+        if r.get("kind") != "call":
+            continue
+        env = r.get("sent") or {}
+        n = env.get("n_messages")
+        if n is None or (env.get("n_tools") or 0) == 0:
+            continue
+        c = ouverts.pop(n - 2, None)
+        if c is None:
+            c = {"n0": n, "calls": []}
+            convs.append(c)
+        c["calls"].append(r)
+        c["n1"] = n
+        ouverts[n] = c
+    return convs
+
+
+def _fenetre_de(ts, bornes):
+    for cle, (a, b) in bornes.items():
+        if a and a <= ts and (b is None or ts <= b):
+            return cle
+    return None
+
+
+print()
+intrus = []
+for c in _conversations(wire):
+    vues = {_fenetre_de(x["t0"], bornes) for x in c["calls"]}
+    vues.discard(None)
+    if len(vues) > 1:
+        intrus.append((c, vues))
+if intrus:
+    runs = set()
+    for c, vues in intrus:
+        runs |= vues
+    dec = sum(x.get("ms", 0) for c, _ in intrus for x in c["calls"]) / 1000.0
+    print("!!! SERVEUR PARTAGE -- %d conversation(s) traversent plusieurs runs."
+          % len(intrus))
+    for c, vues in sorted(intrus, key=lambda z: -len(z[1]))[:6]:
+        print("      messages %d -> %d : %d appels, %.0f s de decodage, "
+              "%d fenetres traversees"
+              % (c["n0"], c["n1"], len(c["calls"]),
+                 sum(x.get("ms", 0) for x in c["calls"]) / 1000.0, len(vues)))
+    print("      %d run(s) touches, %.0f s de decodage etranger au total."
+          % (len(runs), dec))
+    print("      Les debits de ces runs comptent un agent qui n'est pas la "
+          "campagne, et leurs temps par tache incluent l'attente derriere lui.")
+else:
+    print("controle de partage : aucune conversation ne traverse deux runs "
+          "(le serveur n'a servi que la campagne).")
