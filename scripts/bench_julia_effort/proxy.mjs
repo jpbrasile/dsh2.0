@@ -15,10 +15,30 @@ const LOG = process.env.PROXY_LOG || './wire.jsonl';
 
 const append = (rec) => fs.appendFileSync(LOG, JSON.stringify(rec) + '\n', 'utf8');
 
+// VOIES. En campagne parallele, N agents parlent au MEME routeur en meme
+// temps : les fenetres de temps se chevauchent, et attribuer un appel a un run
+// par son horodatage devient faux sans en avoir l'air. Chaque ouvrier appelle
+// donc sa propre voie -- baseURL .../wK/v1 -- et l'enregistreur note K avant de
+// retirer le prefixe. L'attribution est alors exacte par CONSTRUCTION, pas par
+// coincidence temporelle. Un seul processus proxy suffit pour N ouvriers.
+// PROXY_SLOT, et pas seulement un prefixe d'URL : mesure du 22/08, le client
+// dsh NORMALISE la baseURL et jette le chemin. Les 47 appels d'un essai a
+// trois ouvriers sont tous arrives sans voie -- attribution perdue en silence,
+// avec un proxy pourtant correct (le meme prefixe passe en curl). Le seul
+// discriminant qu'un client ne peut pas normaliser est le PORT : un
+// enregistreur par ouvrier, et l'appartenance devient vraie par construction.
+// Le prefixe reste accepte : il sert aux marques, posees par le banc lui-meme.
+const SLOT = process.env.PROXY_SLOT === undefined ? null : Number(process.env.PROXY_SLOT);
+const voie = (u) => {
+  const m = /^\/w([0-9]+)(\/.*)$/.exec(u);
+  return m ? { slot: Number(m[1]), url: m[2] } : { slot: SLOT, url: u };
+};
+
 const server = http.createServer((req, res) => {
-  if (req.url.startsWith('/__mark')) {
-    const tag = new URL(req.url, 'http://x').searchParams.get('tag') || '';
-    append({ kind: 'mark', tag, t: Date.now() });
+  const { slot, url } = voie(req.url);
+  if (url.startsWith('/__mark')) {
+    const tag = new URL(url, 'http://x').searchParams.get('tag') || '';
+    append({ kind: 'mark', tag, slot, t: Date.now() });
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('ok\n');
     return;
@@ -29,7 +49,7 @@ const server = http.createServer((req, res) => {
     const body = Buffer.concat(chunks);
     const t0 = Date.now();
     let sent = null;
-    if (req.method === 'POST' && req.url.includes('chat/completions')) {
+    if (req.method === 'POST' && url.includes('chat/completions')) {
       try {
         const p = JSON.parse(body.toString('utf8'));
         sent = {
@@ -47,7 +67,7 @@ const server = http.createServer((req, res) => {
       } catch (e) { sent = { parse_error: String(e) }; }
     }
     const up = http.request({
-      host: UP_HOST, port: UP_PORT, path: req.url, method: req.method,
+      host: UP_HOST, port: UP_PORT, path: url, method: req.method,
       headers: { ...req.headers, host: `${UP_HOST}:${UP_PORT}` },
     }, (ur) => {
       res.writeHead(ur.statusCode, ur.headers);
@@ -57,7 +77,10 @@ const server = http.createServer((req, res) => {
         res.end();
         if (!sent) return;
         const raw = Buffer.concat(out).toString('utf8');
-        const rec = { kind: 'call', t0, ms: Date.now() - t0, status: ur.statusCode, sent };
+        // `slot` sur l'APPEL, pas seulement sur la marque : sans lui le
+        // filtre par ouvrier rejetait tout et `servis` sortait vide alors que
+        // le journal contenait bien les modeles. Mesure du 22/08.
+        const rec = { kind: 'call', slot, t0, ms: Date.now() - t0, status: ur.statusCode, sent };
         // `sent.model` est ce qu'on a DEMANDE ('auto') ; `servi` est ce qui a
         // REPONDU. Les deux differents, c'est tout l'interet du mode auto.
         // Le modele servi est sur CHAQUE fragment SSE, pas seulement sur celui

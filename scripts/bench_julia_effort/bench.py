@@ -33,12 +33,17 @@ est meilleur", c'est "a 10 taches ce banc ne separe rien". C'est un resultat.
 import io
 import json
 import os
+import queue
+import re
 import shutil
 import signal
+import socket
 import subprocess
 import sys
+import threading
 import time
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE)
@@ -55,6 +60,22 @@ PROXY = os.environ.get("BENCH_PROXY", "http://127.0.0.1:8006")
 WIRE = os.environ.get("BENCH_WIRE")
 PROVIDER = os.environ.get("BENCH_PROVIDER", "local-think")
 MODELE = os.environ.get("BENCH_MODEL", "specdec-q38-plain-vision")
+
+# --- campagne PARALLELE ---------------------------------------------------
+# Pourquoi le parallelisme n'a de sens que sur la dorsale EXTERNE : le Qwen
+# local est UN serveur sur UNE carte -- douze agents simultanes s'y mettraient
+# en file, et le chrono par tache mesurerait la file d'attente, pas le modele.
+# FreeLLMAPI agrege 16 fournisseurs derriere un endpoint et bascule tout seul
+# sur 429/5xx : le parallelisme y est le mode NORMAL, et la bascule est
+# exactement ce qui empeche un quota epuise d'arreter la campagne -- la
+# campagne epinglee du 22/08 en est morte, 29 lancements pour 1 reussite.
+PORT_PAR = int(os.environ.get("BENCH_PAR_PORT", "8020"))
+AMONT_PAR = os.environ.get("BENCH_PAR_AMONT", "127.0.0.1:31415")
+VERROU = threading.Lock()
+# Le JUGE est serialise meme quand les agents ne le sont pas : douze harnais
+# Julia lances ensemble se battent pour le CPU de la campagne locale voisine.
+N_JUGES = int(os.environ.get("BENCH_JUGES", "4"))
+SEM_JUGE = threading.Semaphore(N_JUGES)
 
 TACHES = ["t%02d" % i for i in range(1, 11)]
 # Palier DUR. Ajoute le 22/08 : sur la campagne one-shot de 50 runs, SIX des dix
@@ -136,7 +157,7 @@ def preparer_shim():
     return reel
 
 
-def marquer(tag):
+def marquer(tag, slot=None, base=None):
     """Pose une borne dans le journal du proxy. Sans borne, les appels du
     modele ne peuvent etre attribues a AUCUNE tache et le debit par niveau
     n'existe pas."""
@@ -144,9 +165,12 @@ def marquer(tag):
     # en a pas, et marquer celui du modele local injecterait des bornes
     # etrangeres dans le journal d'une AUTRE campagne : analyse.py y lit
     # des fenetres, elle croirait a des appels qui n'ont jamais eu lieu.
-    if not PROXY:
+    base = base or PROXY
+    if not base:
         return
-    urllib.request.urlopen("%s/__mark?tag=%s" % (PROXY, tag), timeout=30).read()
+    voie = "" if slot is None else "/w%d" % slot
+    urllib.request.urlopen("%s%s/__mark?tag=%s" % (base, voie, tag),
+                           timeout=30).read()
 
 
 def juger(fichier_solution, tache):
@@ -227,9 +251,15 @@ def selftest(taches=None):
 
 # meme accueil que celui ou dsh_effort ecrit : sinon on compterait les
 # recherches web dans les sessions d'une AUTRE campagne.
-SESSIONS = os.path.join(
-    os.environ.get("DSH_HOME") or os.path.join(os.path.expanduser("~"), ".dsh"),
-    "sessions")
+#
+# CALCULE PAR APPEL, plus en constante de module : en campagne parallele chaque
+# ouvrier a SON accueil dsh, donc son propre repertoire de sessions. Une
+# constante figee a l'import ferait compter les recherches web de l'ouvrier 0
+# pour les douze.
+def sessions_de(accueil=None):
+    accueil = accueil or os.environ.get("DSH_HOME") or os.path.join(
+        os.path.expanduser("~"), ".dsh")
+    return os.path.join(accueil, "sessions")
 
 
 def cle_freellm():
@@ -247,16 +277,22 @@ def cle_freellm():
     return k
 
 
-def modeles_servis(t0, t1):
+def modeles_servis(t0, t1, wire=None, slot=None):
     """Rend ({modele: nb appels}, nb appels ayant bascule) sur la fenetre du run.
 
     Sans ca, une campagne en mode `auto` rend douze lignes toutes etiquetees
     "auto" : le verdict existe, l'executant non.
+
+    `slot` est la VOIE de l'ouvrier. En parallele, la fenetre de temps ne
+    suffit plus -- douze runs se chevauchent et chacun ramasserait les appels
+    des onze autres. Filtrer sur la voie rend l'attribution exacte : une voie
+    ne porte qu'un run a la fois.
     """
-    if not WIRE or not os.path.exists(WIRE):
+    wire = wire or WIRE
+    if not wire or not os.path.exists(wire):
         return None, None
     vus, casc = {}, 0
-    for l in io.open(WIRE, encoding="utf-8", errors="replace"):
+    for l in io.open(wire, encoding="utf-8", errors="replace"):
         l = l.strip()
         if not l:
             continue
@@ -265,6 +301,8 @@ def modeles_servis(t0, t1):
         except ValueError:
             continue
         if r.get("kind") != "call":
+            continue
+        if slot is not None and r.get("slot") != slot:
             continue
         t = (r.get("t0") or 0) / 1000.0
         if not (t0 <= t <= t1):
@@ -277,7 +315,7 @@ def modeles_servis(t0, t1):
     return vus, casc
 
 
-def compter_web(ws, depuis):
+def compter_web(ws, depuis, accueil=None):
     """Nombre d'appels REELS a web_search / web_fetch pendant ce run.
 
     Le bras "sans web" ne desactive pas les outils : il ne les demande pas. La
@@ -294,14 +332,15 @@ def compter_web(ws, depuis):
         import zstandard
     except ImportError:
         return -1
-    if not os.path.isdir(SESSIONS):
+    sessions = sessions_de(accueil)
+    if not os.path.isdir(sessions):
         return -1
     d = zstandard.ZstdDecompressor()
     cible = os.path.abspath(ws)
     n = 0
     trouve = False
-    for nom in os.listdir(SESSIONS):
-        chemin = os.path.join(SESSIONS, nom)
+    for nom in os.listdir(sessions):
+        chemin = os.path.join(sessions, nom)
         try:
             if os.path.getmtime(chemin) < depuis - 5:
                 continue
@@ -340,6 +379,117 @@ def compter_web(ws, depuis):
                 if nom_outil.startswith("web_"):
                     n += 1
     return n if trouve else -1
+
+
+def _reecrire_baseurl(s, provider, url):
+    """Remplace la ligne `baseURL:` DU provider nomme, ancree en texte.
+
+    Ancre en texte et pas parse-and-dump : charger le YAML et le re-serialiser
+    reecrit tout le document et perd les commentaires -- ceux-ci portent les
+    pieges mesures (slugs courts, `off` booleen, apiKeyEnv), c'est-a-dire ce
+    qui evite de repayer une demi-journee. Meme raison que dsh_effort.py.
+    """
+    lignes = s.split("\n")
+    debut = None
+    for i, l in enumerate(lignes):
+        if re.match(r"^    " + re.escape(provider) + r":\s*$", l):
+            debut = i
+            break
+    if debut is None:
+        raise AssertionError(
+            "provider `%s` introuvable : refus de router a l'aveugle." % provider)
+    for j in range(debut + 1, len(lignes)):
+        if re.match(r"^    \S", lignes[j]):   # provider suivant, meme indentation
+            break
+        if re.match(r"^\s+baseURL:", lignes[j]):
+            lignes[j] = "      baseURL: %s" % url
+            return "\n".join(lignes)
+    raise AssertionError(
+        "aucune ligne baseURL sous `%s` : refus d'en ajouter une a l'aveugle."
+        % provider)
+
+
+def preparer_voies(n, effort):
+    """Cree n accueils dsh isoles ; l'ouvrier k parle a la voie /wk.
+
+    Deux etats partages rendaient le parallelisme faux, chacun repare ici :
+      - `agent-default-model` est UNE ligne globale. N ouvriers dessus, et
+        chacun change le modele des autres en plein run. => un settings.yaml
+        par ouvrier, via DSH_HOME.
+      - l'attribution des appels se faisait par fenetre de temps. En parallele
+        les fenetres se chevauchent : chaque run ramasserait les appels des
+        autres. => une VOIE par ouvrier dans l'enregistreur.
+    Rend [(accueil, slot, wire)].
+    """
+    src = os.path.join(
+        os.environ.get("DSH_HOME") or os.path.join(os.path.expanduser("~"), ".dsh"),
+        "settings.yaml")
+    s = io.open(src, encoding="utf-8").read()
+    racine = os.path.join(BASE, "_par")
+    os.makedirs(racine, exist_ok=True)
+    voies = []
+    for k in range(n):
+        acc = os.path.join(racine, "w%d" % k)
+        os.makedirs(acc, exist_ok=True)
+        cible = os.path.join(acc, "settings.yaml")
+        # UN PORT PAR OUVRIER. Le prefixe de chemin (.../wK/v1) a ete essaye et
+        # mesure faux : dsh normalise la baseURL et le jette, 47 appels sur 47
+        # sont arrives sans voie. Le port, lui, ne se normalise pas.
+        io.open(cible, "w", encoding="utf-8", newline="\n").write(
+            _reecrire_baseurl(s, PROVIDER,
+                              "http://127.0.0.1:%d/v1" % (PORT_PAR + k)))
+        set_default(PROVIDER, MODELE, effort, cible)
+        voies.append((acc, k, os.path.join(acc, "wire.jsonl"),
+                      "http://127.0.0.1:%d" % (PORT_PAR + k)))
+    return voies
+
+
+def _ecoute(port, delai=15):
+    """Attente ACTIVE de l'ecoute, jamais un sleep : un proxy pas encore ouvert
+    donne N runs qui echouent en 2 s sur ECONNREFUSED, et la campagne rend N
+    FAIL avec la mauvaise cause."""
+    fin = time.time() + delai
+    while time.time() < fin:
+        s = socket.socket()
+        s.settimeout(0.5)
+        try:
+            s.connect(("127.0.0.1", port))
+            return True
+        except OSError:
+            pass
+        finally:
+            s.close()
+        time.sleep(0.3)
+    return False
+
+
+def lancer_enregistreurs(voies):
+    """Un enregistreur par ouvrier, chacun sur SON port et SON journal."""
+    hote, port = AMONT_PAR.split(":")
+    procs = []
+    for acc, k, wire, base in voies:
+        if os.path.exists(wire):
+            os.remove(wire)
+        env = dict(os.environ)
+        env["PROXY_PORT"] = str(PORT_PAR + k)
+        env["PROXY_LOG"] = wire
+        env["PROXY_SLOT"] = str(k)
+        env["UP_HOST"] = hote
+        env["UP_PORT"] = port
+        p = subprocess.Popen(["node", os.path.join(BASE, "proxy.mjs")],
+                             cwd=BASE, env=env, stdout=subprocess.DEVNULL,
+                             stderr=subprocess.DEVNULL)
+        if p.poll() is not None or not _ecoute(PORT_PAR + k):
+            for q in procs:
+                tuer_arbre(q)
+            raise SystemExit(
+                "enregistreur w%d muet sur le port %d (deja occupe ?) -- refus "
+                "de partir : la campagne rendrait des FAIL de connexion."
+                % (k, PORT_PAR + k))
+        procs.append(p)
+    print("enregistreurs %d..%d -> %s"
+          % (PORT_PAR, PORT_PAR + len(voies) - 1, AMONT_PAR))
+    return procs
 
 
 def tuer_arbre(p):
@@ -399,7 +549,8 @@ def lancer_borne(cmd, cwd, env, delai):
                 + ((out or "") + (err or ""))[-2000:], -1, True)
 
 
-def un_run(effort, tache, rep=1, iteratif=False, web=False):
+def un_run(effort, tache, rep=1, iteratif=False, web=False,
+           slot=None, accueil=None, wire=None, proxy_base=None):
     ws = os.path.join(BASE, "runs", "r%02d" % rep, effort, tache)
     if os.path.isdir(ws):
         shutil.rmtree(ws)
@@ -413,6 +564,11 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False):
             newline="\n").write(consigne)
     env = dict(os.environ)
     env.setdefault("DSH_LOCAL_API_KEY", "local-loopback-noauth")
+    # Accueil dsh de l'ouvrier : sa configuration, ses sessions, sa voie vers
+    # l'enregistreur. Sans lui, les N ouvriers se disputent les trois lignes de
+    # `agent-default-model` et chacun change le modele des autres en plein run.
+    if accueil:
+        env["DSH_HOME"] = accueil
     if PROVIDER == "freellm":
         # `apiKeyEnv` DECLARE n'est pas `apiKeyEnv` DEFINI. Une variable vide
         # ne casse qu'au PREMIER APPEL, et sous une forme trompeuse :
@@ -420,25 +576,37 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False):
         # partir plutot que de rendre 90 runs FAIL avec la mauvaise cause.
         env["DSH_FREELLM_API_KEY"] = cle_freellm()
     journal_julia = os.path.join(ws, "julia_calls.log")
-    if iteratif:
-        env["PATH"] = SHIM + os.pathsep + env.get("PATH", "")
-        env["BENCH_JULIA_LOG"] = journal_julia
+    # SHIM DANS LES DEUX MODES (repare le 22/08). Il n'etait pose qu'en mode
+    # iteratif : en un coup, `BENCH_JULIA_LOG` n'existait pas, le shim n'etait
+    # pas dans le PATH, et `julia_runs` valait donc 0 PAR CONSTRUCTION pour
+    # toute la population -- quoi qu'ait fait le modele. Un compteur qui rend
+    # la meme valeur pour tous les runs ne mesure rien, et celui-la a ete
+    # publie comme "zero execution de Julia", c'est-a-dire comme un resultat.
+    # Le mode un coup ne DEMANDE pas de lancer Julia ; savoir si le modele le
+    # fait quand meme est precisement ce qui separe "il a verifie" de "il
+    # affirme avoir verifie".
+    env["PATH"] = SHIM + os.pathsep + env.get("PATH", "")
+    env["BENCH_JULIA_LOG"] = journal_julia
     delai = TIMEOUT_ITER if iteratif else TIMEOUT
 
     # Le marqueur porte la REPETITION. Sans elle, les 3 passages d'une meme
     # tache portent le meme tag, et la regle "derniere fenetre" d'analyse.py
     # n'en garde qu'un : deux tiers des appels deviennent orphelins et les
     # debits de ces lignes sont faux sans en avoir l'air.
-    marquer("%s|%s|r%d|debut" % (effort, tache, rep))
+    marquer("%s|%s|r%d|debut" % (effort, tache, rep), slot, proxy_base)
     t0 = time.time()
     sortie, rc, depasse = lancer_borne(
         [DSH, "--profile", "headless", CONSIGNE], ws, env, delai)
     dt = time.time() - t0
-    marquer("%s|%s|r%d|fin" % (effort, tache, rep))
+    marquer("%s|%s|r%d|fin" % (effort, tache, rep), slot, proxy_base)
 
     io.open(os.path.join(ws, "_dsh.out"), "w", encoding="utf-8",
             errors="replace").write(str(sortie))
-    v, why = juger(os.path.join(ws, "solution.jl"), tache)
+    # Le juge est SERIALISE, pas l'agent. Douze harnais Julia lances ensemble
+    # se battent pour le meme CPU que la campagne locale qui tourne a cote --
+    # et un juge qui rame allonge le chrono qu'il est cense mesurer.
+    with SEM_JUGE:
+        v, why = juger(os.path.join(ws, "solution.jl"), tache)
     if depasse:
         v, why = "FAIL", "timeout %ds" % delai
     # Nombre EXACT d'executions de Julia par l'agent, releve par le shim.
@@ -449,7 +617,7 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False):
     if os.path.exists(journal_julia):
         julia_runs = sum(1 for _ in io.open(journal_julia, encoding="utf-8",
                                             errors="replace"))
-    appels_web = compter_web(ws, t0)
+    appels_web = compter_web(ws, t0, accueil)
     rec = {"effort": effort, "tache": tache, "rep": rep,
            "mode": "iterate" if iteratif else "oneshot", "verdict": v,
            "why": why, "wall_s": round(dt, 1), "julia_runs": julia_runs,
@@ -460,14 +628,18 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False):
            # sans provider/modele n'est attribuable a aucun executant, et
            # deux campagnes deviennent un seul tas de chiffres.
            "provider": PROVIDER, "modele": MODELE}
-    servis, casc = modeles_servis(t0, time.time())
+    if slot is not None:
+        rec["slot"] = slot
+    servis, casc = modeles_servis(t0, time.time(), wire, slot)
     if servis is not None:
         rec["servis"] = servis          # qui a REPONDU, et combien de fois
         rec["appels_bascules"] = casc   # appels ou le routeur a du changer de route
-    print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-2d  web=%-3s %s"
-          % (rep, effort, tache, v, dt, julia_runs,
-             "n/a" if appels_web < 0 else appels_web, why[:52]))
-    sys.stdout.flush()
+    with VERROU:
+        print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-2d  web=%-3s %s%s"
+              % (rep, effort, tache, v, dt, julia_runs,
+                 "n/a" if appels_web < 0 else appels_web,
+                 "" if slot is None else "w%d " % slot, why[:52]))
+        sys.stdout.flush()
     return rec
 
 
@@ -496,13 +668,22 @@ def main():
         reps = int(argv[i + 1])
         del argv[i:i + 2]
 
+    par = 1
+    if "--par" in argv:
+        i = argv.index("--par")
+        par = int(argv[i + 1])
+        del argv[i:i + 2]
+
     iteratif = "--iterate" in argv
     if iteratif:
         argv.remove("--iterate")
-        reel = preparer_shim()
         print("mode ITERATIF : enonces prompts_iter/, l'agent doit ecrire "
               "mytest.jl et le lancer jusqu'a ce qu'il passe.")
-        print("shim julia -> %s  (les executions de l'agent sont comptees)" % reel)
+    # Le shim est pose DANS LES DEUX MODES : en un coup, son absence rendait
+    # julia_runs = 0 pour toute la population, ce qui se lisait comme une
+    # mesure alors que c'etait une impossibilite structurelle.
+    reel = preparer_shim()
+    print("shim julia -> %s  (les executions de l'agent sont comptees)" % reel)
 
     defaut = TACHES
     for drapeau, liste, nom in (("--dur", TACHES_DUR, "DUR"),
@@ -524,6 +705,31 @@ def main():
     taches = argv[1].split(",") if len(argv) > 1 else defaut
     out = os.path.join(BASE, "resultats.jsonl")
 
+    def ecrire(rec):
+        with VERROU:
+            with io.open(out, "a", encoding="utf-8", newline="\n") as f:
+                f.write(json.dumps(rec) + "\n")
+
+    voies, procs = None, []
+    if par > 1:
+        if PROVIDER == "local-think":
+            print("!!! AVIS -- %d ouvriers sur la dorsale LOCALE : un seul "
+                  "serveur, une seule carte. Le chrono par tache mesurerait la "
+                  "file d'attente, pas le modele." % par)
+        voies = preparer_voies(par, efforts[0])
+        procs = lancer_enregistreurs(voies)
+        print("campagne PARALLELE : %d ouvriers, un port et un journal chacun, "
+              "%d juges Julia au plus." % (par, N_JUGES))
+    sys.stdout.flush()
+
+    try:
+        boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies)
+    finally:
+        for q in procs:
+            tuer_arbre(q)
+
+
+def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None):
     for rep in range(1, reps + 1):
         # La REPETITION est la boucle EXTERIEURE, et le sens alterne.
         # Repeter une tache 3 fois d'affilee mesurerait 3 fois le meme instant
@@ -536,13 +742,49 @@ def main():
         print("=== repetition %d/%d  (ordre : %s) ===" % (rep, reps, ",".join(ordre)))
         sys.stdout.flush()
         for effort in ordre:
-            set_default(PROVIDER, MODELE, effort)
             print("--- effort %s ---" % effort)
             sys.stdout.flush()
-            for tache in taches:
-                rec = un_run(effort, tache, rep, iteratif, web)
-                with io.open(out, "a", encoding="utf-8", newline="\n") as f:
-                    f.write(json.dumps(rec) + "\n")
+            if par > 1:
+                # Le niveau d'effort reste la boucle EXTERIEURE, meme en
+                # parallele : il vit dans le settings.yaml de chaque ouvrier,
+                # donc melanger deux niveaux dans un meme lot demanderait de
+                # reecrire la configuration sous un run en cours.
+                # Les ports et les journaux sont poses une fois pour toute
+                # la campagne ; seul le NIVEAU change d'un lot a l'autre, et il
+                # se reecrit dans le settings.yaml de chaque ouvrier -- jamais
+                # sous un run en cours, puisque le lot precedent est joint.
+                for acc, _k, _w, _b in voies:
+                    set_default(PROVIDER, MODELE, effort,
+                                os.path.join(acc, "settings.yaml"))
+                libres = queue.Queue()
+                for v in voies:
+                    libres.put(v)
+
+                def travail(tache, _e=effort, _r=rep):
+                    acc, slot, wire, base = libres.get()
+                    try:
+                        return un_run(_e, tache, _r, iteratif, web,
+                                      slot, acc, wire, base)
+                    finally:
+                        libres.put((acc, slot, wire, base))
+
+                with ThreadPoolExecutor(max_workers=par) as ex:
+                    futurs = {ex.submit(travail, t): t for t in taches}
+                    for f, t in futurs.items():
+                        try:
+                            ecrire(f.result())
+                        except Exception as e:
+                            # Un run qui explose ne doit pas emporter le lot :
+                            # il se remesure, une campagne perdue non.
+                            with VERROU:
+                                print("  %s ERREUR OUVRIER %s" % (t, e))
+                            ecrire({"effort": effort, "tache": t, "rep": rep,
+                                    "verdict": "FAIL", "why": "ouvrier: %s" % e,
+                                    "provider": PROVIDER, "modele": MODELE})
+            else:
+                set_default(PROVIDER, MODELE, effort)
+                for tache in taches:
+                    ecrire(un_run(effort, tache, rep, iteratif, web))
 
 
 if __name__ == "__main__":
