@@ -773,6 +773,59 @@ elle est attribuée.
 
 ---
 
+### 3.11 · Douze ouvriers en parallèle : ce que ça achète, et ce que ça casse
+
+**Instrument.** `bench.py --par 12`, dorsale FreeLLMAPI en mode `auto`. Chaque
+ouvrier a son propre accueil dsh (`DSH_HOME`), donc son propre `settings.yaml`,
+ses propres sessions, **son propre port d'enregistreur**. 24 runs, corpus dur
+t21..t36, deux bras, `medium`.
+
+**Le port, pas le chemin.** Première tentative d'attribution : une voie dans
+l'URL, `http://127.0.0.1:8020/w3/v1`. **Mesurée fausse** — le client dsh
+normalise la `baseURL` et jette le chemin : 47 appels sur 47 sont arrivés sans
+voie, avec un proxy pourtant correct (le même préfixe passe en `curl`). Le seul
+discriminant qu'un client ne peut pas normaliser est le **port**. Vérifié à la
+sonde : `PROXY_SLOT=7`, l'enregistrement porte `slot: 7`.
+
+**Ce que ça achète.** 4 308 s de temps machine cumulé, rendus en ~20 min de mur
+(second bras : 526 s du premier au dernier appel). Facteur ~3,5, borné par la
+tâche la plus lente de chaque lot (609 s). 55 bascules de fournisseur sur les 24
+runs : sans elles, la campagne serait morte au premier quota, comme la campagne
+épinglée du même jour (29 lancements, 1 réussite).
+
+**Ce que ça casse, et c'est le résultat principal.** En `auto`, le routeur sert
+ce qui est libre — et sous charge parallèle, ce qui est libre est ce qui est
+faible. Huit modèles différents ont répondu :
+
+| modèle réellement servi | PASS |
+|---|---|
+| nemotron-3-ultra | **5/5** |
+| agnes-2.5-flash | 2/4 |
+| gemini-3.1-flash-lite | 1/3 |
+| dots-3-note-preview | **1/8** |
+| quatre autres | 0/4 |
+
+Le bras « avec web » sort à 6/12 contre 3/12 pour « sans web ». **Cet écart n'est
+pas un effet du web** : le bras avec web a tiré `nemotron-3-ultra` cinq fois, le
+bras sans web zéro fois. En mode `auto`, **la comparaison entre bras n'est pas
+interprétable** — c'est le tirage de l'exécutant qui domine, et seul le journal
+du fil le montre. Un banc parallèle sans attribution aurait publié « la
+recherche web double la réussite ».
+
+**Et le même axe que partout ailleurs.** Sur les 24 runs, avec le shim désormais
+posé dans les deux modes :
+
+| | runs | PASS |
+|---|---|---|
+| a lancé Julia avant de rendre | 9 | **7 (78 %)** |
+| ne l'a pas lancé | 15 | **2 (13 %)** |
+
+**Défaut d'instrument réparé au passage.** Le shim n'était posé qu'en mode
+itératif : en un coup, `BENCH_JULIA_LOG` n'existait pas, et `julia_runs` valait
+0 **par construction** pour toute la population. Ce zéro avait été publié comme
+un résultat (« les modèles frontière n'exécutent jamais Julia »). Calibré depuis
+aux deux bras : shim dans le PATH, 1 ligne journalisée ; sans, 0.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
