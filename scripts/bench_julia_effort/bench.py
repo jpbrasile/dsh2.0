@@ -877,15 +877,39 @@ def lancer_borne(cmd, cwd, env, delai):
 # tache, sans executer Julia une seule fois -- la recherche avait remplace le
 # travail. Le compteur `appels_web` reste lu : si le modele cherche quand
 # meme, cela se voit, ce n'est pas une consigne qu'on suppose respectee.
-PREAMBULE_BOUCLE = (
-    "Tu travailles par tours. Ne lance PAS de recherche web : si tu bloques,"
-    + chr(10) +
-    "le banc en lancera une pour toi et te donnera les extraits dans l enonce"
-    + chr(10) +
-    "du tour suivant. Passe tes tours a ECRIRE du code et a le LANCER avec"
-    + chr(10) +
-    "julia -- une tentative executee vaut mieux qu une lecture de plus."
-    + chr(10) + chr(10))
+def preambule_boucle(tours, secondes, web):
+    """L entete du mode boucle -- donnee aux DEUX bras.
+
+    Elle n allait qu au bras AVEC recherche jusqu au 22/08. La comparaison
+    avec/sans opposait donc aussi "sait qu il travaille par tours" a "ne le
+    sait pas" : deux differences pour un seul axe mesure. Seule la phrase
+    sur la recherche depend du bras, maintenant.
+
+    Elle DIT LE BUDGET, parce que le banc le connait et que le modele ne
+    l apprenait par aucun moyen. Mesure du 22/08 sur t31 repete six fois :
+    6 tours sur 16 coupes au delai, 4 runs sur 6 perdant leur premier tour,
+    et un run jamais juge une seule fois sur ses trois tours. Cacher une
+    contrainte du banc ne mesure pas le modele, cela mesure sa capacite a
+    deviner le banc.
+
+    En anglais, comme le reste de l enonce : la version francaise etait la
+    seule phrase d une autre langue dans un texte anglais.
+
+    ATTENTION A LA COMPARABILITE : ce preambule change l enonce des deux
+    bras. Les campagnes anterieures au 22/08 ne se comparent pas aux
+    suivantes sur cet axe."""
+    L = ["You work in ATTEMPTS. You get at most %d attempt(s) at this task."
+         % tours,
+         "Each attempt is CUT OFF after %d minutes. A cut-off attempt is not"
+         % (secondes // 60),
+         "judged at all -- it gets no verdict, and its work only survives as the",
+         "files you left on disk. So write something that RUNS early, run it with",
+         "julia, and improve it -- do not spend the attempt on one perfect draft."]
+    if web:
+        L += ["",
+              "Do NOT run a web search yourself. If you get stuck, the harness runs",
+              "one for you and puts the excerpts in the next attempt statement."]
+    return chr(10).join(L) + chr(10) + chr(10)
 
 TIMEOUT_TOUR = int(os.environ.get("BENCH_TIMEOUT_TOUR", "600"))
 MAX_RECH = int(os.environ.get("BENCH_MAX_RECH", "2"))
@@ -1076,7 +1100,7 @@ def _fin_journal_julia(journal, n=1):
     return lignes[-n:]
 
 
-def _bloc_retour(tour, historique, trouvailles, cherche, journal=None):
+def _bloc_retour(tour, historique, trouvailles, cherche, journal=None, tours=None):
     """L enonce du tour suivant. Le banc DIT ce qu il a fait, et pourquoi.
 
     LE BLOC EST APPENDU A UN PREFIXE STABLE, jamais insere dedans. L enonce
@@ -1150,6 +1174,16 @@ def _bloc_retour(tour, historique, trouvailles, cherche, journal=None):
                   % ", ".join(str(m) for m in memes),
                   "not affect it. Do not adjust the same line again -- change",
                   "your approach, or test a smaller case first to locate it."]
+    # OU ON EN EST DANS LE BUDGET. Le preambule dit combien de tentatives il
+    # y a en tout ; ce bloc dit laquelle commence, et surtout SI C EST LA
+    # DERNIERE. Un modele qui ignore que c est sa derniere tentative peut
+    # tres raisonnablement partir sur une refonte qu il ne finira pas.
+    if tours:
+        L += ["", "This is attempt %d of at most %d." % (tour + 1, tours)]
+        if tour + 1 >= tours:
+            L += ["IT IS YOUR LAST ONE. Whatever else you do, make sure you leave a",
+                  "solution.jl that RUNS -- a partial answer that runs beats a",
+                  "rewrite you do not finish."]
     if cherche:
         L += ["",
               "The harness itself ran a web search on that failure -- you did not",
@@ -1182,8 +1216,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
     os.makedirs(ws)
     base_consigne = io.open(os.path.join(BASE, "prompts", "%s.txt" % tache),
                             encoding="utf-8").read()
-    if web:
-        base_consigne = PREAMBULE_BOUCLE + base_consigne
+    base_consigne = preambule_boucle(tours, TIMEOUT_TOUR, web) + base_consigne
 
     env = dict(os.environ)
     env.setdefault("DSH_LOCAL_API_KEY", "local-loopback-noauth")
@@ -1274,7 +1307,8 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
                                "etat_moteur": etat,
                                "resultats": [{"titre": t, "url": u} for t, u, _ in trouve],
                                "ecartes": [{"titre": t, "url": u} for t, u, _ in ecartes]})
-        retour = _bloc_retour(tour, historique, trouve, cherche, journal_julia)
+        retour = _bloc_retour(tour, historique, trouve, cherche,
+                              journal_julia, tours)
     dt = time.time() - t0
 
     julia_runs = compter_julia(journal_julia)

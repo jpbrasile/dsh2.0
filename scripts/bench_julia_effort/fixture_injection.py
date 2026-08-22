@@ -75,14 +75,16 @@ if not os.path.isdir(ws):
     os.makedirs(ws)
 base = io.open(os.path.join(bench.BASE, "prompts", "%s.txt" % TACHE),
                encoding="utf-8").read()
-base = bench.PREAMBULE_BOUCLE + base
+base = bench.preambule_boucle(3, bench.TIMEOUT_TOUR, web=True) + base
 cible = os.path.join(ws, "TASK.md")
 io.open(cible, "w", encoding="utf-8", newline=chr(10)).write(base + bloc)
 relu = io.open(cible, encoding="utf-8").read()
 exiger(relu.endswith(bloc), "TASK.md se termine par le bloc")
 exiger(all(u in relu for _, u, _ in trouve), "les URL sont dans le FICHIER relu")
-exiger("Ne lance PAS de recherche web" in relu,
-       "le preambule de boucle est present")
+exiger("Do NOT run a web search" in relu,
+       "le preambule de boucle est present dans le FICHIER relu")
+exiger("CUT OFF after" in relu and "at most 3 attempt(s)" in relu,
+       "le budget arrive jusqu au fichier que le modele lira")
 
 print("=== 5. bras KNOWN-BAD : pas de recherche => pas d extrait ===")
 muet = bench._bloc_retour(1, HIST, [], False)
@@ -210,6 +212,40 @@ exiger("SAME FAILURE" not in deux,
        "KNOWN-BAD : deux coupures ne sont pas deux fois la meme erreur")
 exiger("cut off by the time limit -- no verdict" in deux,
        "l historique etiquette la coupure au lieu de la lister comme essai")
+
+
+print("=== 9ter. le budget est DIT, et il est dit aux deux bras ===")
+# Mesure du 22/08, t31 six fois : 6 tours sur 16 coupes au delai et 4 runs
+# sur 6 perdant leur premier tour, alors que RIEN dans l enonce ne disait au
+# modele qu il avait 10 minutes. Et le preambule de boucle n allait qu au
+# bras AVEC recherche : la comparaison portait deux differences, pas une.
+pa = bench.preambule_boucle(3, 600, web=True)
+ps = bench.preambule_boucle(3, 600, web=False)
+exiger("at most 3 attempt(s)" in pa and "at most 3 attempt(s)" in ps,
+       "le nombre de tentatives est dit aux DEUX bras")
+exiger("CUT OFF after 10 minutes" in ps,
+       "le budget en minutes est dit au bras SANS recherche aussi")
+exiger("no verdict" in ps,
+       "et ce qu une coupure signifie -- pas un echec, une absence de verdict")
+exiger("Do NOT run a web search" in pa and "Do NOT run a web search" not in ps,
+       "KNOWN-BAD : seule la phrase sur la recherche depend du bras")
+exiger(pa.replace(pa[pa.index("Do NOT run a web search") - 2:], "") == ps.rstrip(chr(10)),
+       "hors cette phrase, les deux bras lisent le MEME preambule")
+p20 = bench.preambule_boucle(2, 1200, web=False)
+exiger("at most 2 attempt(s)" in p20 and "CUT OFF after 20 minutes" in p20,
+       "les nombres viennent des reglages, ils ne sont pas ecrits en dur")
+
+H = [{"tour": 1, "why": "check: LoadError: X", "cle": "check: loaderror: x"}]
+b2 = bench._bloc_retour(1, H, [], False, None, 3)
+b3 = bench._bloc_retour(2, H + [{"tour": 2, "why": "check: Y", "cle": "check: y"}],
+                        [], False, None, 3)
+exiger("This is attempt 2 of at most 3." in b2, "le bloc dit ou on en est")
+exiger("LAST ONE" not in b2, "KNOWN-BAD : la 2e sur 3 n est pas la derniere")
+exiger("This is attempt 3 of at most 3." in b3 and "LAST ONE" in b3,
+       "la derniere tentative est annoncee comme telle")
+muet = bench._bloc_retour(1, H, [], False, None, None)
+exiger("This is attempt" not in muet,
+       "KNOWN-BAD : sans plafond connu, le bloc n en invente pas un")
 
 
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
