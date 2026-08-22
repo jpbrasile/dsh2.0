@@ -691,6 +691,79 @@ def _usage_manquants(delai):
     return sortie
 
 
+def autotest(args):
+    """FIXTURE : faire PARCOURIR la branche d'ajout automatique.
+
+    Elle ne s'etait jamais executee, et pour une raison qui la rendait
+    invisible : les modeles du releve d'usage etaient DEJA au catalogue, donc
+    `_usage_manquants` rendait une liste vide a chaque appel. Une branche
+    jamais parcourue ne prouve rien -- elle passe en silence, et le jour ou un
+    stealth se perime pour de bon, c'est la premiere fois qu'elle tourne.
+
+    On la parcourt donc a la demande, sur une COPIE de la base, dont on retire
+    le modele de tete. Rien n'est ecrit dans la base de l'application."""
+    import tempfile
+    global DB
+    if not os.path.exists(DB):
+        raise SystemExit("autotest: base introuvable -- %s" % DB)
+    tete = USAGE_20260821[0]
+    dossier = tempfile.mkdtemp(prefix="fc_autotest_")
+    copie = os.path.join(dossier, "essai.db")
+    shutil.copy2(DB, copie)
+    c = sqlite3.connect(copie)
+    ids = [r[0] for r in c.execute("select id, model_id from models")
+           if _normalise(r[1]) in {_normalise(a) for a in tete[2]}]
+    for i in ids:
+        c.execute("delete from models where id = ?", (i,))
+    c.commit()
+    reste = c.execute("select count(*) from models").fetchone()[0]
+    c.close()
+    print("  COPIE : %s" % copie)
+    print("  retire %d ligne(s) de tete (%s) ; %d lignes restantes."
+          % (len(ids), tete[0], reste))
+    if not ids:
+        raise SystemExit("autotest: le modele de tete n'etait pas au catalogue -- "
+                         "fixture sans objet, la branche n'a pas ete parcourue.")
+
+    vrai_db = DB
+    DB = copie
+    try:
+        manquants = _usage_manquants(args.delai)
+        vus = [m for m in manquants if m[0] == tete[0]]
+        if not vus:
+            raise SystemExit("autotest: ECHEC -- le modele de tete a ete retire et "
+                             "n'est PAS signale manquant. La detection ne detecte rien.")
+        nom, jetons, ou, ctx = vus[0]
+        print("  detecte manquant : %s (%d Md/j)" % (nom, jetons))
+        if ou is None:
+            print("  amont ne l'annonce pas -- SIGNALE, pas ajoute. Branche d'ajout")
+            print("  non parcourue : c'est le comportement voulu, pas une reussite.")
+            return
+        print("  amont annonce %s (ctx=%s) -- ajout." % (ou, ctx))
+        ajouter(_Args(plateforme="openrouter", modele=ou, nom=nom,
+                      ctx=ctx or 131072, outils=True, vision=False,
+                      rang_intel=1, rang_vitesse=3, taille="Frontier",
+                      rpm=20, rpd=200, budget="apercu gratuit",
+                      source=SOURCE_STEALTH))
+        c = sqlite3.connect(copie)
+        l = c.execute("select intelligence_rank, enabled, supports_tools, source "
+                      "from models where model_id = ?", (ou,)).fetchone()
+        c.close()
+        if l is None:
+            raise SystemExit("autotest: ECHEC -- l'ajout n'a laisse aucune ligne.")
+        if (l[0], l[1], l[2], l[3]) != (1, 1, 1, SOURCE_STEALTH):
+            raise SystemExit("autotest: ECHEC -- ligne posee mais mal formee : "
+                             "rang=%s actif=%s outils=%s src=%s" % l)
+        print("  VERIFIE : rang=1, active, outillee, src=%s." % SOURCE_STEALTH)
+        print("  AUTOTEST OK -- la branche d'ajout a ete parcourue de bout en bout.")
+    finally:
+        DB = vrai_db
+        if not args.garder:
+            shutil.rmtree(dossier, ignore_errors=True)
+        else:
+            print("  copie conservee : %s" % dossier)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -752,6 +825,12 @@ def main():
     h.add_argument("--moissonner", action="store_true",
                    help="ajouter le versement en masse OpenRouter -- HORS routine, il pollue")
     h.set_defaults(fn=demarrage)
+
+    j = sp.add_parser("autotest",
+                      help="faire PARCOURIR la branche d ajout, sur une copie de la base")
+    j.add_argument("--delai", type=int, default=30)
+    j.add_argument("--garder", action="store_true", help="ne pas effacer la copie")
+    j.set_defaults(fn=autotest)
 
     d = sp.add_parser("sonder", help="404 avant / 200 apres, et QUI a repondu")
     d.add_argument("modele")
