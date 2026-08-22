@@ -424,25 +424,46 @@ Calibrage mesuré le 22/08 : 6/6 GOOD, 6/6 BAD, chacune par son défaut.
 
 Le corpus dur `t11..t16` vise des pièges d'écriture. Les douze tâches suivantes
 visent autre chose : il faut **décider plusieurs composants avant d'écrire**.
-Deux paliers, et sur chacun la moitié des tâches dépend d'un fait **externe
-vérifiable** — là où une recherche web peut aider — et l'autre moitié n'en
-dépend pas du tout. Sans ces témoins, « le web aide » serait indistinguable de
-« un énoncé plus long aide ».
+Deux paliers, et l'intention était que sur chacun la moitié des tâches dépende
+d'un fait **externe vérifiable** — là où une recherche web peut aider — et
+l'autre moitié pas du tout. Sans ces témoins, « le web aide » serait
+indistinguable de « un énoncé plus long aide ». **L'étiquetage s'est révélé faux
+sur deux tâches** : voir la correction sous la table.
 
-| | tâche | piège nommé | fait externe |
-|---|---|---|---|
-| EXPERT | t21 | matrice bande : écriture non nulle hors bande | non |
-| | t22 | RK adaptatif : le pas doit vraiment s'adapter | **oui** |
-| | t23 | analyseur de Pratt : `^` associe à DROITE | non |
-| | t24 | décodeur MessagePack : entiers gros-boutistes | **oui** |
-| | t25 | Tarjan + condensation : pas d'auto-boucle | non |
-| | t26 | `gemm` 5 arguments : `beta = 0` écrase `C` **sans le lire** | **oui** |
-| LIMITE | t31 | confusion de perturbation en dérivation imbriquée | non |
-| | t32 | `BroadcastStyle` + `similar(::Broadcasted)` | **oui** |
-| | t33 | tri radix conforme à `isless` (`-0.0` et `NaN` compris) | **oui** |
-| | t34 | Miller-Rabin déterministe 64 bits : jeu de témoins | **oui** |
-| | t35 | arithmétique d'intervalles : produit sur **quatre** coins | non |
-| | t36 | vecteur persistant : partage de structure réel | non |
+| | tâche | piège nommé | fait externe | le fait est-il **dans l'énoncé** ? |
+|---|---|---|---|---|
+| EXPERT | t21 | matrice bande : écriture non nulle hors bande | non | — |
+| | t22 | RK adaptatif : le pas doit vraiment s'adapter | **oui** | non — le tableau de coefficients manque |
+| | t23 | analyseur de Pratt : `^` associe à DROITE | non | — |
+| | t24 | décodeur MessagePack : entiers gros-boutistes | **oui** | non — ni les octets de type, ni le boutisme |
+| | t25 | Tarjan + condensation : pas d'auto-boucle | non | — |
+| | t26 | `gemm` 5 arguments : `beta = 0` écrase `C` **sans le lire** | ~~oui~~ **retiré** | **OUI, en entier** — les deux clauses du contrat sont écrites |
+| LIMITE | t31 | confusion de perturbation en dérivation imbriquée | non | — |
+| | t32 | `BroadcastStyle` + `similar(::Broadcasted)` | **oui**, faible | non, mais la voie est signalée |
+| | t33 | tri radix conforme à `isless` (`-0.0` et `NaN` compris) | ~~oui~~ **retiré** | **OUI, en entier** — les quatre règles sont listées |
+| | t34 | Miller-Rabin déterministe 64 bits : jeu de témoins | **oui**, partiel | le mode d'échec oui, le jeu de bases non |
+| | t35 | arithmétique d'intervalles : produit sur **quatre** coins | non | — |
+| | t36 | vecteur persistant : partage de structure réel | non | — |
+
+**Correction du 22/08, mesurée après coup.** La colonne « fait externe » avait
+été **décidée**, jamais vérifiée. Le contrôle est pourtant à deux minutes :
+*le fait est-il imprimé dans la question ?* Relecture des six énoncés étiquetés
+« oui » : **deux d'entre eux donnent la réponse en entier**. Sur `t26` le contrat
+de `mul!` à cinq arguments est écrit clause par clause ; sur `t33` les quatre
+règles de la conversion motif → clé sont listées. Aucune recherche web ne peut
+rien y apporter, pour aucun modèle — ces deux tâches sont **structurellement
+muettes sur l'axe web**. Le corpus a donc **quatre** tâches à fait externe, pas
+six, et l'une est faible (`t32`) et une autre partielle (`t34`).
+
+Les quatre faits qu'une recherche doit réellement apporter, nommément — c'est
+l'attente vérifiable du bras web, et pas seulement « a-t-il cherché » :
+
+| tâche | ce qu'une recherche doit rapporter |
+|---|---|
+| `t22` | un tableau emboîté (Dormand-Prince 5(4), Bogacki-Shampine 3(2)…) |
+| `t24` | la table des octets de type MessagePack **et** le gros-boutisme |
+| `t32` | `Base.BroadcastStyle` et `similar(::Broadcasted, ::Type)` |
+| `t34` | un jeu de témoins prouvé suffisant sous 2⁶⁴ (les 12 premiers premiers) |
 
 Calibrage mesuré le 22/08 : **12/12 known-GOOD, 12/12 known-BAD**, chacune par
 son propre défaut nommé. Le chemin pour y arriver est en 2.7 et 2.8 : le premier
@@ -462,7 +483,7 @@ sort de la machine. Toute comparaison doit le dire.
 
 ---
 
-### 3.8 · La référence : les mêmes douze tâches faites par Claude Code
+### 3.8 · Une seule case sur quatre : le plafond « un coup, sans web »
 
 Un chiffre de réussite ne veut rien dire seul. « 4 sur 12 » est un désastre si
 la tâche est faisable en un coup, et un exploit si elle ne l'est pas. Il fallait
@@ -514,9 +535,33 @@ chrono client qui inclut la latence du harnais, pas un débit. Les colonnes
 comparables au modèle local sont **verdict** et **essais**, pas le temps.
 
 À quoi ça sert : quand la campagne `t21..t36` tournera, chaque case aura un
-plafond en face d'elle. Une tâche que le modèle local rate et que la référence
-passe en un coup mesure le modèle ; une tâche que les deux ratent mesure
-l'énoncé.
+plafond en face d'elle. Une tâche que le modèle local rate et que ce plafond
+passe en un coup mesure le **modèle** ; une tâche que les deux ratent mesure
+l'**énoncé**.
+
+**Et ce que ça ne sert pas, dit sans détour.** Le banc a quatre cases — un coup
+ou itératif, croisé avec sans web ou avec web. Cette ligne n'en remplit **qu'une**.
+Elle a d'abord été publiée sous le titre « la référence », ce qui était trop
+large : trois écarts la séparent de ce que reçoit l'agent dsh.
+
+| | agent dsh | cette ligne |
+|---|---|---|
+| plan écrit avant le code | imposé par le préambule | aucun |
+| exécution de Julia | shim + shell, boucle jusqu'à passer | jamais avant de rendre |
+| `web_search` | disponible | non appelé |
+
+Pire, **le bras « avec web » n'est plus courable sur ce même exécutant** : ayant
+résolu les douze tâches sans chercher, le contrefactuel « aurais-je eu besoin
+d'une recherche ? » est détruit. L'ordre correct était de courir le bras web
+**d'abord**, ou de couper le corpus en deux moitiés disjointes. C'est une faute
+d'ordonnancement, pas un oubli, et elle ne se rattrape pas après coup.
+
+Ce qu'il en reste d'utilisable est réel mais borné : à 12/12 le plafond
+**sature**. Il ne laisse aucune marge pour qu'un effet du web se voie sur la
+réussite de cet exécutant-là — il ne sert qu'à attribuer les échecs du modèle
+local. Ce qui a survécu de plus utile, c'est la **liste nominative des quatre
+faits qu'une recherche doit rapporter** (3.7) : elle transforme la question
+« a-t-il cherché ? » en « a-t-il cherché la bonne chose ? ».
 
 ---
 
@@ -557,6 +602,7 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 | 2026-08-22 | **La copie du banc qui tourne n'est pas celle du dépôt** : elle est figée à 09:16 dans le répertoire de travail d'une session morte, sans le correctif de l'orphelin, sans les paliers `t21..t36`, et son `analyse.py` n'a aucun des trois contrôles câblés (1.6). |
 | 2026-08-22 | Second bras known-GOOD `ref2/` câblé dans `--selftest` : **12/12**, et il tire — remis à sa première version de t35, il rend `!!! AVIS 5/6` (3.8). |
 | 2026-08-22 | `web_fetch` n'est **pas** monté par le paquet de base (`fetch: false`) : le préambule du bras web demandait un outil inexistant. Corrigé, et 3.5 avec (3.5). |
+| 2026-08-22 | L'étiquette « fait externe » n'avait jamais été vérifiée : sur les six tâches marquées, **deux impriment la réponse dans la question** (`t26`, `t33`) et ne peuvent rien mesurer sur l'axe web. Le corpus a quatre tâches à fait externe, pas six (3.7). |
 
 ---
 
