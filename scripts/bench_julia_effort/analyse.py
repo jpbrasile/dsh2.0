@@ -23,15 +23,37 @@ res = _charger("resultats.jsonl", "C'est le journal des verdicts, ecrit par benc
 wire = _charger("wire.jsonl", "C'est le journal du proxy : sans lui il n'y a AUCUN "
                               "debit par niveau, seulement des chronos client.")
 
-# attribution des appels a un run, par marqueurs
-par_run, courant = {}, None
+# Attribution des appels a un run, par marqueurs.
+#
+# On garde la DERNIERE fenetre [debut, fin] de chaque tag, pas la premiere ni
+# leur union. Le proxy ecrit `wire.jsonl` en ajout et ne sait rien des
+# campagnes : deux campagnes successives y deposent deux fenetres portant le
+# MEME tag, et un parcours naif attribuait au premier bras les appels de la
+# campagne precedente. Defaut mesure le 22/08 -- 6 runs sur 50, tous dans le
+# premier bras, annoncaient 226.9 s de decodage dans un run de 47.5 s.
+#
+# Le controle qui l'a attrape est en bas de ce fichier et il TOURNE : un run ne
+# peut pas passer plus de temps en appels qu'il n'a dure. Une attribution
+# faussee est indetectable sur les nombres eux-memes -- 55 t/s au lieu de 73
+# reste parfaitement lisible -- et ne se voit que confrontee a l'horloge.
+par_run, courant, rejoues = {}, None, 0
 for r in wire:
     if r.get("kind") == "mark":
         t = r["tag"].split("|")
-        courant = (t[0], t[1]) if len(t) == 3 and t[2] == "debut" else None
+        if len(t) == 3 and t[2] == "debut":
+            courant = (t[0], t[1])
+            if courant in par_run:
+                rejoues += 1
+            par_run[courant] = []
+        else:
+            courant = None
         continue
     if courant and r.get("kind") == "call":
-        par_run.setdefault(courant, []).append(r)
+        par_run[courant].append(r)
+if rejoues:
+    print("NOTE : %d tache(s) apparaissent plusieurs fois dans wire.jsonl "
+          "(campagnes successives). Seule la DERNIERE fenetre de chacune est "
+          "retenue.\n" % rejoues)
 
 def agrege(calls):
     gen = dec_ms = pre_n = pre_ms = 0
@@ -91,3 +113,25 @@ for t in sorted({l["tache"] for l in lignes}):
     g = [x for x in lignes if x["tache"] == t]
     print("  %-5s %d/%d  %s" % (t, sum(1 for x in g if x["verdict"]=="PASS"), len(g),
                                 " ".join("%s:%s" % (x["effort"][:2], "O" if x["verdict"]=="PASS" else ".") for x in g)))
+
+# --- CONTROLE D'HORLOGE, cable : il tourne a chaque analyse -------------------
+# Un run ne peut pas passer en appels reseau plus de temps qu'il n'a dure. Si
+# c'est le cas, des appels lui ont ete attribues a tort et TOUS les debits de
+# cette ligne sont faux -- sans que le nombre ait l'air faux. C'est le seul
+# controle du fichier qui puisse contredire l'attribution ; les autres nombres
+# sont d'accord avec elle par construction.
+print()
+impossibles = []
+for l in lignes:
+    somme_s = sum(c.get("ms", 0) for c in par_run.get((l["effort"], l["tache"]), [])) / 1000.0
+    if somme_s > l["wall_s"] * 1.15 + 2:
+        impossibles.append((l["effort"], l["tache"], l["wall_s"], somme_s))
+if impossibles:
+    print("!!! ATTRIBUTION FAUSSEE -- %d run(s) passent plus de temps en appels "
+          "qu'ils n'ont dure." % len(impossibles))
+    for e, t, w, s in impossibles:
+        print("      %-6s %-5s  duree %.1f s  mais %.1f s d'appels" % (e, t, w, s))
+    print("      Les debits ci-dessus sont FAUX pour ces lignes. Ne pas les citer.")
+else:
+    print("controle d'horloge : %d/%d runs coherents (aucun ne passe plus de temps "
+          "en appels qu'il n'a dure)." % (len(lignes), len(lignes)))

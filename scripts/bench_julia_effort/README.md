@@ -112,3 +112,63 @@ Variables d'environnement : `DSH_BIN`, `JULIA_BIN`, `BENCH_PROXY`,
 | `tasks/tNN_checks.jl` | assertions — **le modèle ne les voit jamais** |
 | `tasks/harness.jl` | charge la solution, exécute les checks, imprime un verdict |
 | `ref/`, `bad/` | bras known-GOOD et known-BAD du vérificateur |
+
+## Résultats mesurés — 2026-08-22
+
+Qwen3.8-27B Q4_K_M local, llama-server b10488, ctx 65536, KV f16, **MTP activé**
+(`--spec-type draft-mtp`), sans projecteur vision. 50 runs, une répétition par
+case. Débits pris dans le bloc `timings` du serveur.
+
+| effort | réussite | temps méd. | temps moy. | jetons/tâche | débit | appels |
+|---|---:|---:|---:|---:|---:|---:|
+| off | 9/10 | 10,1 s | 15,1 s | 624 | **88,0 t/s** | 5,8 |
+| low | 9/10 | 17,5 s | 35,5 s | 1 599 | 72,5 t/s | 6,2 |
+| medium | **10/10** | 41,0 s | 68,9 s | 3 940 | 73,2 t/s | 10,9 |
+| high | 9/10 | 36,5 s | 74,6 s | 4 357 | 75,4 t/s | 12,1 |
+| xhigh | 7/10 | 45,4 s | 69,0 s | 4 012 | 75,1 t/s | 12,3 |
+
+**Lire le témoin avant la table.** `high` et `xhigh` envoient un prompt identique
+au caractère près. Leur écart mesuré est donc le plancher de bruit :
+
+| grandeur | plancher de bruit | écart off → medium | rapport |
+|---|---:|---:|---:|
+| réussite | **2 / 10** | 1 / 10 | **< 1** |
+| jetons | 8 % | +531 % | 66× |
+| temps moyen | 8 % | +356 % | 45× |
+| débit | 0,4 % | −17 % | 42× |
+
+Trois conclusions, dans cet ordre :
+
+1. **Sur la réussite, ce banc ne sépare rien.** Deux configurations *identiques*
+   diffèrent de 2 sur 10 ; l'étendue entre les cinq niveaux est de 3 sur 10.
+   Aucun niveau ne peut être déclaré meilleur qu'un autre à n=10. Le `10/10` de
+   `medium` et le `7/10` de `xhigh` sont dans le bruit.
+2. **Sur le coût, il sépare massivement.** Activer le raisonnement multiplie les
+   jetons par 2,6 à 7 et le temps par tâche par 2,4 à 5. C'est 45 à 66 fois le
+   plancher de bruit — ce n'est pas discutable.
+3. **Le raisonnement coûte aussi 17 % de débit** : 88,0 t/s sans, 72–75 t/s avec.
+   Sous MTP, le gain vient des jetons que la tête brouillon devine juste ; du
+   code court et contraint s'accepte presque toujours, une réflexion en texte
+   libre beaucoup moins. Le débit chute là où le texte devient imprévisible.
+   *Mécanisme cohérent avec les taux d'acceptation mesurés ailleurs, non
+   ré-instrumenté ici.*
+
+Autrement dit : sur ce corpus, l'effort de raisonnement **achète du coût sans
+acheter de réussite mesurable**. Ce qu'il faudrait pour trancher la réussite —
+soit des tâches assez dures pour que `off` décroche, soit assez de répétitions
+pour descendre le plancher de bruit sous 1 sur 10.
+
+### Un défaut d'attribution attrapé par le contrôle d'horloge
+
+La première lecture de cette table donnait `off` à **55,2 t/s**, le plus lent.
+C'était faux. `wire.jsonl` contenait **deux campagnes** — le proxy écrit en
+ajout et ignore tout des campagnes — et les six premiers runs du premier bras
+recevaient les appels de la précédente. Rien dans les nombres ne le montrait :
+55 t/s au lieu de 88 se lit parfaitement.
+
+Ce qui l'a attrapé est le seul contrôle capable de contredire l'attribution :
+**un run ne peut pas passer plus de temps en appels qu'il n'a duré.**
+`off/t06` annonçait 226,9 s de décodage dans un run de 47,5 s. Le contrôle est
+désormais câblé en fin d'`analyse.py` et tourne à chaque analyse ; l'attribution
+retient la **dernière** fenêtre de chaque tâche. Après correction : 50/50 runs
+cohérents, et `off` passe de 55,2 à 88,0 t/s.
