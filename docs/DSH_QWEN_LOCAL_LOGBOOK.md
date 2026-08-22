@@ -16,7 +16,7 @@ RTX 4090 24 Go · llama-server b10488 · Qwen3.8-27B Q4_K_M ·
 
 ---
 
-## Partie 1 — Monter le banc : six pièges qui ne préviennent pas
+## Partie 1 — Monter le banc : sept pièges qui ne préviennent pas
 
 ### 1.1 · Un seul format de pensée transmet un *niveau*
 
@@ -113,6 +113,71 @@ l'orphelin n'y était pas non plus : le même gel pouvait se reproduire.
 > restent deux affirmations différentes qu'on prend pour une seule. C'est la même
 > règle qu'en 2.2 et 2.5 : « le code fait X » et « X a tourné » demandent des
 > preuves différentes.
+
+---
+
+### 1.7 · Un routeur qui agrège BASCULE — et une route montée n'est pas une route qui répond
+
+Le 22/08 le banc a reçu une **seconde dorsale** : FreeLLMAPI, un routeur local
+qui met 16 fournisseurs gratuits derrière un seul point d'entrée compatible
+OpenAI. Il ouvre `deepseek-v4-pro` — le modèle natif de dsh — sans clef
+DeepSeek. Sept choses ont dû être mesurées avant que le premier run passe, et
+aucune ne prévient.
+
+**Le port n'est pas celui de la documentation.** L'amont annonce partout 3001 ;
+c'est le port du déploiement serveur. L'application de bureau lit
+`%APPDATA%\FreeLLMAPI\config.json`, qui porte `{"port": 31415}`. J'ai d'abord
+démarré un conteneur Docker **vide** sur 3001 avant de sonder : il n'avait
+aucune clef, pendant que l'instance réelle en avait seize. Démonté. Sonder
+l'application avant de la réinstaller coûtait une commande.
+
+**Les identifiants servis sont des slugs courts, et la forme longue est celle
+qui REVIENT.** `/v1/models` sert `deepseek-v4-pro` ; `deepseek-ai/DeepSeek-V4-Pro`
+est **absent** de la liste — c'est ce que le routeur écrit dans `body["model"]`
+en réponse, pas ce qu'il accepte en entrée. Recopier la forme de la réponse dans
+la configuration donne une route qui se monte et ne sert jamais.
+
+**`auto` bascule, donc `auto` ne mesure rien.** Appel témoin du 22/08, avec
+outils : parti sur le premier fournisseur, revenu servi par **DeepSeek-V4-Flash**,
+en-tête `x-fallback-trail: huggingface/deepseek-ai/DeepSeek-V4-Flash-0731
+key1=rate_limited`. Le modèle a changé sous la mesure sans qu'aucun code ne le
+demande. Pour mesurer, on **épingle** un identifiant et on lit
+`x-fallback-trail` pour prouver qu'aucune bascule n'a eu lieu. Le témoin nomme
+donc le modèle **réellement servi**, jamais un HTTP 200.
+
+**`apiKeyEnv` DÉCLARÉ n'est pas `apiKeyEnv` DÉFINI.** Une variable vide ne casse
+qu'au premier appel, et sous une forme qui envoie chercher ailleurs :
+`PI_AI_ERROR: No API key for provider`. La route est montée, visible dans
+`/model`, et **échoue en permissif**. Le banc lit donc la clef au lancement et
+**refuse de partir** si elle est illisible — garde câblé dans le même
+changement, ses deux bras tirés : clef lue (59 caractères, préfixe
+`freellmapi-`), base déplacée (`base introuvable`, code 1).
+
+**dsh refuse un niveau d'effort que le modèle ne déclare pas.** Premier run
+mort en **1,1 s** sur `UNSUPPORTED_REASONING_EFFORT`. Le routeur, lui, annonce
+`reasoning_effort` dans `supported_parameters` : il fallait écrire la carte des
+niveaux côté dsh. `xhigh` n'y est pas — l'ensemble accepté en amont n'est pas
+vérifié, et un niveau refusé ferait 400 au premier appel. *Que le fournisseur
+gratuit HONORE l'effort reste non vérifié : declarer n'est pas mesurer.*
+
+**Marquer le proxy d'une autre campagne fabrique des appels qui n'ont pas eu
+lieu.** `marquer()` pose des bornes dans `wire.jsonl` pour attribuer les appels
+à une tâche. Sur une API externe il n'y a pas de proxy à marquer — et marquer
+celui du modèle local aurait injecté des bornes étrangères dans le journal de la
+campagne en cours, où `analyse.py` lit des fenêtres. `BENCH_PROXY` vide rend
+maintenant `marquer()` muet.
+
+**Deux campagnes se battaient pour les mêmes trois lignes.** `dsh_effort.py`
+réécrit `provider` / `model` / `reasoningEffort` dans `~/.dsh/settings.yaml` ;
+deux campagnes simultanées changent donc le modèle l'une de l'autre **en cours
+de run**. dsh lit sa configuration sous `$DSH_HOME` : le banc respecte
+maintenant cette variable, pour la configuration **et** pour les sessions d'où
+sont comptées les recherches web. La campagne externe tourne dans
+`~/.dsh-freellm`, à côté de la campagne locale, sans la toucher.
+
+**Et chaque ligne de résultat porte désormais `provider` et `modele`.** Un banc
+qui sert deux dorsales et n'écrit pas qui a répondu produit un seul tas de
+chiffres.
 
 ---
 
@@ -698,6 +763,11 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 | 2026-08-22 | Le bras web a cherché **la bonne chose** sur les quatre tâches à fait externe (tableau Dormand-Prince, octets MessagePack, `similar(::Broadcasted, ::Type)`, témoins de Miller-Rabin) — et le bras sans web a réussi quand même (3.9). |
 | 2026-08-22 | Une **marque d'ordre d'octets** en tête d'un journal rendait sa première clé illisible : le juge annonçait 11 runs sur 12 ayant cherché, la réalité était 12. Lecture en `utf-8-sig` (3.9). |
 | 2026-08-22 | `prompts_iter/` ne contient que `t01..t16`, dépôt **et** copie qui tourne : le corpus dur `t21..t36` ne peut courir qu'en un coup sur dsh (3.9). |
+| 2026-08-22 | **Seconde dorsale cablee** : FreeLLMAPI (routeur local, 16 fournisseurs gratuits, 380 modeles servis) monte dans dsh comme fournisseur `freellm`. Clef unifiee lue en base au lancement, jamais ecrite dans la configuration ; garde de lecture cable et **ses deux bras tires** (1.7). |
+| 2026-08-22 | Le modele virtuel `auto` a **bascule sous la mesure** : appel temoin parti sur un fournisseur, revenu servi par DeepSeek-V4-Flash apres `key1=rate_limited`. Pour mesurer, epingler et lire `x-fallback-trail` (1.7). |
+| 2026-08-22 | Les identifiants servis sont des **slugs courts** (`deepseek-v4-pro`) ; la forme longue `deepseek-ai/DeepSeek-V4-Pro` est ce que le routeur RENVOIE, et elle est absente de `/v1/models` (1.7). |
+| 2026-08-22 | Le banc respecte `DSH_HOME` : deux campagnes tournent cote a cote au lieu de se reecrire les trois memes lignes de `settings.yaml`. Et chaque ligne de resultat porte desormais `provider` et `modele` (1.7). |
+| 2026-08-22 | **Mur de quota mesure** : les credits HuggingFace gratuits sont a sec (`out_of_credits`, HTTP 402 sur deepseek-v4-pro), remise a zero ~24 h. Sur cinq modeles epingles, un seul repond avec outils **sans bascule** : `gemini-3.7-flash`. 7 runs FAIL archives comme mesure du mur (1.7). |
 
 ---
 

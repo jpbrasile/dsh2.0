@@ -137,6 +137,12 @@ def marquer(tag):
     """Pose une borne dans le journal du proxy. Sans borne, les appels du
     modele ne peuvent etre attribues a AUCUNE tache et le debit par niveau
     n'existe pas."""
+    # BENCH_PROXY vide = pas de proxy a marquer. Sur une API EXTERNE il n'y
+    # en a pas, et marquer celui du modele local injecterait des bornes
+    # etrangeres dans le journal d'une AUTRE campagne : analyse.py y lit
+    # des fenetres, elle croirait a des appels qui n'ont jamais eu lieu.
+    if not PROXY:
+        return
     urllib.request.urlopen("%s/__mark?tag=%s" % (PROXY, tag), timeout=30).read()
 
 
@@ -216,7 +222,26 @@ def selftest(taches=None):
     return 0 if ok else 1
 
 
-SESSIONS = os.path.join(os.path.expanduser("~"), ".dsh", "sessions")
+# meme accueil que celui ou dsh_effort ecrit : sinon on compterait les
+# recherches web dans les sessions d'une AUTRE campagne.
+SESSIONS = os.path.join(
+    os.environ.get("DSH_HOME") or os.path.join(os.path.expanduser("~"), ".dsh"),
+    "sessions")
+
+
+def cle_freellm():
+    """Rend la clef unifiee de FreeLLMAPI, ou leve. Jamais imprimee."""
+    lecteur = os.path.join(os.path.dirname(os.path.dirname(BASE)),
+                           "scripts", "freellm_key.py")
+    p = subprocess.run([sys.executable, lecteur], capture_output=True, text=True)
+    k = (p.stdout or "").strip()
+    if p.returncode != 0 or not k.startswith("freellmapi-"):
+        raise SystemExit(
+            "banc: clef FreeLLMAPI illisible (%s). L'app Desktop tourne-t-elle ? "
+            "Sonder `Get-Process FreeLLMAPI`. Refus de partir : une clef vide "
+            "casserait qu'au premier appel, en disant 'No API key for provider'."
+            % ((p.stderr or "").strip()[:120] or "code %d" % p.returncode))
+    return k
 
 
 def compter_web(ws, depuis):
@@ -355,6 +380,12 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False):
             newline="\n").write(consigne)
     env = dict(os.environ)
     env.setdefault("DSH_LOCAL_API_KEY", "local-loopback-noauth")
+    if PROVIDER == "freellm":
+        # `apiKeyEnv` DECLARE n'est pas `apiKeyEnv` DEFINI. Une variable vide
+        # ne casse qu'au PREMIER APPEL, et sous une forme trompeuse :
+        # "PI_AI_ERROR: No API key for provider". Le banc refuse donc de
+        # partir plutot que de rendre 90 runs FAIL avec la mauvaise cause.
+        env["DSH_FREELLM_API_KEY"] = cle_freellm()
     journal_julia = os.path.join(ws, "julia_calls.log")
     if iteratif:
         env["PATH"] = SHIM + os.pathsep + env.get("PATH", "")
@@ -390,7 +421,12 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False):
            "mode": "iterate" if iteratif else "oneshot", "verdict": v,
            "why": why, "wall_s": round(dt, 1), "julia_runs": julia_runs,
            "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")), "rc": rc,
-           "bras_web": bool(web), "appels_web": appels_web}
+           "bras_web": bool(web), "appels_web": appels_web,
+           # QUI a repondu. Depuis le 22/08 le banc sert deux dorsales --
+           # le Qwen local et une API externe via FreeLLMAPI. Une ligne
+           # sans provider/modele n'est attribuable a aucun executant, et
+           # deux campagnes deviennent un seul tas de chiffres.
+           "provider": PROVIDER, "modele": MODELE}
     print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-2d  web=%-3s %s"
           % (rep, effort, tache, v, dt, julia_runs,
              "n/a" if appels_web < 0 else appels_web, why[:52]))

@@ -23,7 +23,14 @@ import os
 import re
 import sys
 
-CHEMIN = os.path.join(os.path.expanduser("~"), ".dsh", "settings.yaml")
+# dsh lit sa configuration sous $DSH_HOME quand la variable est posee. Sans ce
+# respect, deux campagnes simultanees se battent pour les MEMES trois lignes de
+# ~/.dsh/settings.yaml : la seconde change le modele de la premiere en cours de
+# run, et les deux mesurent un melange. Avec, une campagne sur une API externe
+# tourne a cote de la campagne locale sans la toucher.
+ACCUEIL = os.environ.get("DSH_HOME") or os.path.join(
+    os.path.expanduser("~"), ".dsh")
+CHEMIN = os.path.join(ACCUEIL, "settings.yaml")
 
 
 def set_default(provider, model, effort, chemin=CHEMIN):
