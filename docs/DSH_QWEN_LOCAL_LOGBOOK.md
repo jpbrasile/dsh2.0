@@ -1224,6 +1224,97 @@ décision du banc.
 **Instrument :** `bench.py::un_run_boucle`, `PREAMBULE_BOUCLE`,
 `fixture_injection.py`. Commit `bff4e3f3`.
 
+### §3.22 — La recherche du banc a injecté un blog de mots croisés, et le score l'a validée
+
+**Ce qui est arrivé.** Boucle locale, t24, tour 2, après 42 exécutions : le banc
+cherche et colle dans l'énoncé du tour suivant
+
+```
+requête : Julia check: LoadError: AssertionError: float64 gros-boutiste | in expression starting at
+   - https://github.com/JuliaLang/julia/issues
+   - https://connectionssports.com/blog/nyt-connections-words-meaning-august-20-2026
+   - https://translate.google.com/
+```
+
+**Le run a réussi au tour 3.** Lu par le score seul — « une recherche, puis
+PASS » — cette injection passait pour de l'aide.
+
+**La cause n'était pas la requête.** Rejouée telle quelle, la page reçue ne
+contient **aucune** classe de résultat, et porte les marqueurs `anomaly`,
+`challenge`, « Unfortunately, bots use DuckDuckGo too », avec un canonical vers
+la page d'accueil. **Le moteur nous avait bloqués comme robot.** L'analyseur a
+lu les liens de *cette page-là* — Google Traduction, Coach, le festival de
+Sundance — comme des résultats. Aucune recherche n'avait eu lieu ; le banc a
+fait comme si.
+
+> Troisième fois dans la même journée qu'une **absence de mesure est rendue
+> comme un résultat**, après `julia=0` (§3.20) et `rech=1` (§3.21). Les trois
+> fois, le nombre était lisible, plausible, et faux par construction.
+
+**Réparation, en deux temps.** D'abord un refus explicite : le moteur rend
+`(résultats, état)` et un blocage donne une liste **vide** plus l'état `bloque`.
+Puis l'abandon du grattage : sans clef, on ne peut distinguer un blocage d'un
+résultat qu'en lisant le HTML du bloqueur — course perdue à chaque changement
+de page.
+
+**Ce qui l'a remplacé existait déjà dans le dépôt** : les étages de
+`.opencode/mcp/web_search.py`, mesurés ailleurs. Ordre retenu : **Z.AI
+`web_search_prime`** (gratuit sur l'abonnement, résultats bruts) puis
+**OpenRouter** (payé, il fait résumer un modèle par-dessus le même index Exa).
+Le banc les réutilise au lieu d'en refaire une version à lui.
+
+| message d'échec réel | ce que le nouvel étage rend |
+|---|---|
+| `AssertionError: float64 gros-boutiste` | StackOverflow-Julia · docs Julia · jlHub |
+| `MethodError: no method matching similar` | **JuliaLang/julia#34661** (l'erreur exacte) · #31426 · discourse |
+| `les négatifs sortent avant les positifs` | discourse **« Negative zeros and sorting »** |
+
+**Deux faits que l'instrument porte désormais lui-même.** Z.AI répond
+`Insufficient balance or no resource package` : c'est l'étage **payant** qui
+sert, entre 27 et 107 s par recherche. L'état enregistré n'est donc pas
+`openrouter` mais `openrouter (replis : zai: …)` — sans quoi un repli se lit
+comme un choix, et le journal laisse croire que la recherche est gratuite.
+
+**Le filtre a dû être resserré deux fois.** Un résultat n'est retenu que s'il
+nomme Julia, ou vient d'un domaine propre à Julia. Un hébergeur générique ne
+suffit pas : le charabia `xqzptr vlmnk wwzz qqjj` ramène `github.com/WWZZ` — un
+compte au hasard — et deux pages sur un rançongiciel. Tant que `github.com`
+figurait dans les sources acceptées, le compte au hasard passait le filtre.
+Les écartés sont **enregistrés à côté des retenus** : un filtre qui jette sans
+le dire remplace un défaut visible par un défaut invisible.
+
+**Instrument :** `bench.py::recherche_basique`, `_pertinent`, `_etages` ;
+`fixture_injection.py` §7 et §8, tenus sur les cinq résultats réels.
+Commits `a7284afe`, `3e3a346f`.
+
+### §3.23 — Sur le corpus difficile, la relance débloque un exercice que la tentative unique ne débloque pas
+
+**Instrument égal :** même modèle (`stealth/ox-alpha`, effort `medium`), même
+correcteur, même corpus t31–t36, `--par 3`. Une seule différence : une
+tentative contre trois.
+
+| bras | PASS | détail |
+|---|---|---|
+| une seule tentative | **5/6** | t31 meurt au plafond de 900 s après 9 exécutions |
+| **boucle du banc** | **6/6** | t31 passe au **tour 2**, 11 exécutions |
+
+**Ce n'est pas la recherche qui l'a débloqué.** Le tour 1 de t31 échoue sur
+`AssertionError: derivee d'une constante` ; la recherche part et injecte trois
+vraies pages Julia — `julia#27770`, `PackageCompiler.jl#277`, `PETSc.jl#176` —
+dont **aucune ne parle de dérivée d'une constante**. Le moteur a accroché
+« AssertionError » et « Julia », pas le fond : la requête est en français,
+l'index ne l'est pas.
+
+> Piège sous sa forme la plus convaincante : un vrai déclenchement, de vraies
+> sources, un vrai succès derrière. Le score seul aurait crédité la recherche.
+
+**Le bras qui tranche** est la même boucle sans recherche. S'il rend 6/6, le
+gain entier vient de la relance, et l'apport de la recherche est nul sur ce
+corpus — résultat utile, pas échec.
+
+**Instrument :** `resultats_dur_uncoup.jsonl`, `resultats_dur_boucle.jsonl`,
+`resultats_dur_bcl_noweb.jsonl`.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
