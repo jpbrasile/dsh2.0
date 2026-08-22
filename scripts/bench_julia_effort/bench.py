@@ -653,7 +653,16 @@ def _ports_libres(voies):
 def lancer_enregistreurs(voies):
     """Un enregistreur par ouvrier, chacun sur SON port et SON journal."""
     _ports_libres(voies)
-    hote, port = AMONT_PAR.split(":")
+    # Le port de l amont est DEDUIT quand il manque -- proxy.mjs le fait
+    # deja (443 en TLS, 8005 sinon) et l exiger ici tuait la campagne au
+    # lancement sur un amont ecrit sans port. Mesure du 22/08 : le bras V3
+    # est mort en 2 s sur `openrouter.ai`, avant le premier run.
+    if ":" in AMONT_PAR:
+        hote, port = AMONT_PAR.split(":", 1)
+    else:
+        hote, port = AMONT_PAR, ("443" if TLS_PAR else "80")
+        print("amont sans port : %s -> %s:%s (TLS=%s)"
+              % (AMONT_PAR, hote, port, TLS_PAR))
     procs = []
     for acc, k, wire, base in voies:
         if os.path.exists(wire):
@@ -894,7 +903,12 @@ def main():
     web = "--web" in argv
     if web:
         argv.remove("--web")
-        print("bras AVEC RECHERCHE WEB : le preambule impose search puis plan.")
+        _v = ("V3 -- recherche DIFFEREE : ne cherche qu apres deux echecs"
+              if os.environ.get("BENCH_WEB_V3") == "1" else
+              "V2 -- une recherche PAR fait inconnu, puis plan cite"
+              if os.environ.get("BENCH_WEB_V2") == "1" else
+              "V1 -- search puis plan, avant d ecrire")
+        print("bras AVEC RECHERCHE WEB, preambule %s." % _v)
         print("  Les appels web reellement passes sont comptes par run "
               "(colonne web=) -- un bras 'sans' qui cherche quand meme se voit.")
 
