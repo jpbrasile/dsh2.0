@@ -400,3 +400,34 @@ if intrus:
 else:
     print("controle de partage : aucune conversation ne traverse deux runs "
           "(le serveur n'a servi que la campagne).")
+
+
+print()
+# TOURS COUPES PAR LE DELAI -- comptes A PART des echecs.
+#
+# Un tour coupe n'a pas ete juge : le verificateur n'a jamais tourne, donc il
+# n'y a ni PASS ni FAIL. Les melanger aux echecs produit deux lectures
+# fausses a la fois -- une coupure lue comme un refus du juge, et un budget
+# trop court lu comme une incapacite du modele.
+#
+# Mesure du 22/08 sur les 34 runs en boucle enregistres : 12 tours coupes sur
+# 58 joues (21 %), et 7 runs sur 34 perdent leur PREMIER tour -- celui qui ne
+# transmet rien au suivant. La LISTE NOMINATIVE, pas le seul total : un
+# compte de coupures depend de ce qu'on appelle une coupure.
+coupes = [(l, t) for l in lignes for t in (l.get('par_tour') or [])
+          if (t.get('why') or '').startswith('timeout')]
+tours_joues = sum(len(l.get('par_tour') or []) for l in lignes)
+if tours_joues:
+    print('=== tours coupes par le delai (aucun verdict rendu) ===')
+    if not coupes:
+        print('  aucun -- les %d tours joues ont tous ete juges.' % tours_joues)
+    else:
+        t1 = {(l['effort'], l['tache'], l['rep']) for l, t in coupes if t['tour'] == 1}
+        print('  %d tour(s) coupe(s) sur %d joues ; %d run(s) sur %d perdent'
+              % (len(coupes), tours_joues, len(t1), len(lignes)))
+        print('  leur PREMIER tour -- le seul qui ne transmet rien au suivant.')
+        for l, t in sorted(coupes, key=lambda z: (z[0]['tache'], z[0]['rep'], z[1]['tour'])):
+            print('    r%-2d %-6s %-5s tour %d : %s'
+                  % (l['rep'], l['effort'], l['tache'], t['tour'], t.get('why')))
+else:
+    print('=== tours coupes par le delai : campagne hors boucle, sans tours ===')
