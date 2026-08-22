@@ -1035,14 +1035,54 @@ def _pertinent(titre, url, extrait):
     return any(d in (url or "").lower() for d in SOURCES_CODE)
 
 
-def _bloc_retour(tour, why, trouvailles, cherche):
-    """L'enonce du tour suivant. Le banc DIT ce qu'il a fait, et pourquoi."""
+def _cle_echec(why):
+    """Empreinte d un echec, pour reconnaitre DEUX FOIS LE MEME.
+
+    On retire ce qui change d une execution a l autre sans que le probleme
+    change : chemins, numeros de ligne, adresses. Ce qui reste est la CAUSE.
+    Sans empreinte, deux tours peuvent retenter le meme correctif rate et le
+    banc ne voit qu une suite d echecs distincts."""
+    t = (why or "").lower()
+    t = re.sub("(^| )[a-z]:[^ ]*", " ", t)
+    t = re.sub(":[0-9]+", " ", t)
+    t = re.sub("0x[0-9a-f]+", " ", t)
+    return " ".join(t.split())[:110]
+
+
+def _bloc_retour(tour, historique, trouvailles, cherche):
+    """L enonce du tour suivant. Le banc DIT ce qu il a fait, et pourquoi.
+
+    LE BLOC EST APPENDU A UN PREFIXE STABLE, jamais insere dedans. L enonce
+    de base ne bouge pas d un tour a l autre, donc le cache d amorce du
+    fournisseur le relit au lieu de le refacturer : mesure du 22/08 sur les
+    deux bras du corpus dur, 85,3 % et 84,0 % des jetons d entree relus du
+    cache. Toucher au prefixe couterait ces 85 %.
+
+    ET IL PORTE L HISTORIQUE, pas seulement le dernier echec. Sans lui, un
+    tour ne sait pas qu il vient de retenter ce qui a deja rate au tour
+    precedent -- et la boucle tourne sur elle-meme jusqu au plafond."""
+    why = historique[-1]["why"] if historique else ""
     L = ["", "-" * 70, "",
          "HARNESS FEEDBACK -- attempt %d failed." % tour, "",
          "The checker ran your solution.jl and reported:", "",
          "    " + (why or "(no message)"), "",
          "Your workspace still contains your previous solution.jl. Fix it, and",
          "RUN IT before you finish."]
+    if len(historique) > 1:
+        L += ["", "Already tried, and still failing -- do not repeat these:"]
+        for h in historique[:-1]:
+            L += ["  - attempt %d: %s" % (h["tour"], (h["why"] or "")[:120])]
+        # LA REPETITION EST NOMMEE. Un modele qui relit trois echecs
+        # differents cherche trois causes ; s ils sont IDENTIQUES, la cause
+        # est que le correctif n a rien change, et c est ca qu il faut dire.
+        cle = historique[-1]["cle"]
+        memes = [h["tour"] for h in historique[:-1] if h["cle"] == cle]
+        if memes:
+            L += ["",
+                  "THIS IS THE SAME FAILURE AS ATTEMPT %s. Your last change did"
+                  % ", ".join(str(m) for m in memes),
+                  "not affect it. Do not adjust the same line again -- change",
+                  "your approach, or test a smaller case first to locate it."]
     if cherche:
         L += ["",
               "The harness itself ran a web search on that failure -- you did not",
@@ -1089,8 +1129,8 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
     env["BENCH_JULIA_LOG"] = journal_julia
 
     t0 = time.time()
-    retour, recherches, par_tour = "", [], []
-    v, why, rc = "FAIL", "aucun tour", None
+    retour, recherches, par_tour, historique = "", [], [], []
+    v, why, rc, cycle = "FAIL", "aucun tour", None, None
     for tour in range(1, tours + 1):
         io.open(os.path.join(ws, "TASK.md"), "w", encoding="utf-8",
                 newline=chr(10)).write(base_consigne + retour)
@@ -1107,7 +1147,16 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
         par_tour.append({"tour": tour, "verdict": v, "why": why})
         if v == "PASS":
             break
+        historique.append({"tour": tour, "why": why, "cle": _cle_echec(why)})
         if tour == tours:
+            break
+        # ARRET SUR CYCLE. Trois fois la MEME cause : les relances ne font
+        # plus avancer, elles refacturent. On s arrete et on le DIT -- une
+        # troncature silencieuse se lirait comme un plafond de tours atteint.
+        cle = historique[-1]["cle"]
+        if cle and sum(1 for h in historique if h["cle"] == cle) >= 3:
+            cycle = cle
+            why = "cycle: meme echec 3 fois -- %s" % why
             break
         # LE BANC compte les tours, et LE BANC decide de chercher. Le modele
         # n'est ni consulte sur le moment, ni sur la requete.
@@ -1158,7 +1207,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
                                "etat_moteur": etat,
                                "resultats": [{"titre": t, "url": u} for t, u, _ in trouve],
                                "ecartes": [{"titre": t, "url": u} for t, u, _ in ecartes]})
-        retour = _bloc_retour(tour, why, trouve, cherche)
+        retour = _bloc_retour(tour, historique, trouve, cherche)
     dt = time.time() - t0
 
     julia_runs = compter_julia(journal_julia)
@@ -1172,6 +1221,8 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
            "rech_faites": sum(1 for x in recherches if x.get("requete")),
            "rech_refusees": sum(1 for x in recherches if not x.get("requete")),
            "web_apres_julia": web_apres_julia, "max_rech": max_rech,
+           "cycle": cycle,
+           "echecs": [{"tour": h["tour"], "cle": h["cle"]} for h in historique],
            "provider": PROVIDER, "modele": MODELE}
     if slot is not None:
         rec["slot"] = slot
