@@ -902,6 +902,112 @@ le 22/08 (une campagne tournant depuis une copie figée où aucun correctif du j
 n'existait). `BENCH_ETIQUETTE` isole donc `runs/<étiquette>/` et
 `resultats_<étiquette>.jsonl`, **jamais le code**.
 
+### 3.14 · Deux campagnes qui partagent un répertoire ne partagent pas que des journaux
+
+`BENCH_ETIQUETTE` isolait `runs/` et le fichier de résultats. Pas la racine des
+ouvriers. Le 22/08, une campagne épinglée sur `stealth/ox-alpha` (OpenRouter en
+direct, ports 8050-8053) et une campagne FreeLLMAPI en `auto:smartest` (douze
+ouvriers, ports 8020-8031) se sont donc partagé `_par/w0..w3`.
+
+Ce n'était pas seulement les journaux de fil qui se mélangeaient. `preparer_voies`
+**écrit** un `settings.yaml` par ouvrier. La seconde campagne a donc basculé les
+ouvriers 0 à 3 de la première sur le fournisseur `freellm`, **en pleine course**.
+Trois runs épinglés (t22, t31, t36) ont été servis par nemotron-3-super,
+mistral-small et laguna — et j'avais publié cela comme « OpenRouter bascule tout
+seul ». Il ne basculait pas. Sa configuration avait été remplacée sous lui.
+
+Puis, en nettoyant `_par/w*`, j'ai retiré leur configuration aux ouvriers encore
+en vol : sept runs morts en 1,3 s sur `MISSING_CREDENTIAL`, une connexion coupée.
+
+Les **verdicts** restaient justes — ils viennent des espaces de travail, qui
+étaient bien isolés. Seule l'attribution était fausse. La leçon n'est pas
+« isoler les journaux » mais : **un répertoire de travail partagé partage tout ce
+qu'on y écrit, y compris ce qu'on n'avait pas prévu d'y écrire.**
+
+Deux réparations, la seconde née câblée :
+
+- La racine des ouvriers porte l'étiquette. Calibré : deux étiquettes rendent
+  deux journaux distincts ; l'ancien code n'en rendait qu'un.
+- Garde `_ports_libres`, appelée depuis `lancer_enregistreurs` dans le même
+  commit : refuse de démarrer si un port d'enregistreur est déjà en écoute.
+  Sans elle, `_ecoute` répond vrai sur le proxy de l'**autre** campagne et les
+  appels sont journalisés sous le mauvais nom. Calibration 5/5 — trois bras
+  known-BAD (deux campagnes réellement en cours, un port tenu par le test),
+  deux known-GOOD. Fatale d'emblée : bras known-BAD **plus** une prise réelle.
+
+### 3.15 · Le routeur ne sert que ce qu'il a en catalogue — et il le dit
+
+`stealth/ox-alpha` demandé au routeur FreeLLMAPI sous quatre formes de nom :
+quatre fois 404, avec un message explicite, « is not in the catalog ». La clé de
+plateforme `openrouter` était pourtant saine et le modèle bien vivant en amont.
+**Le catalogue est la porte, pas la clé.**
+
+Ce qui m'avait fait croire l'inverse la veille — « `auto:smartest` sert de
+l'ox-alpha » — était le même artefact de journal partagé que §3.14.
+
+Le catalogue est une table SQLite de l'application de bureau. Deux lignes
+ajoutées, et **le routeur les a prises à chaud, sans redémarrage** :
+
+| plateforme | identifiant | vérifié par |
+|---|---|---|
+| `openrouter` | `stealth/ox-alpha` | `X-Routed-Via: openrouter/stealth/ox-alpha` |
+| `opencode` | `x-preview-f-free` | `X-Routed-Via: opencode/x-preview-f-free` |
+
+`X-Routed-Via` est le champ décisif, et le corps ne le remplace pas : une demande
+`x-preview-f-free` a répondu 200 en se **nommant** `stealth/ox-alpha`. Sur le seul
+corps, impossible de dire si OpenCode Zen renvoyait l'identifiant canonique ou si
+le routeur avait basculé de plateforme. Il avait basculé — et la bascule inverse
+a été observée ensuite. Les deux routes vivent : même modèle, deux files.
+
+Relevé du catalogue amont, lu par l'API OpenRouter et non par une page : 421
+modèles annoncés, 22 à coût nul, **19 à coût nul et outillés**. Le routeur en
+avait déjà 17. Le critère retenu est « coût nul ET outils », pas « les plus
+utilisés » : le classement d'usage d'OpenRouter mesure du volume, et un modèle
+gratuit y monte mécaniquement.
+
+### 3.16 · Ce que mesure le compteur `julia=`, et le seul écart qui compte
+
+`julia=` compte les fois où **l'agent** a lancé Julia pendant son run, via un
+substitut placé en tête du `PATH`. `julia=0` ne dit pas « le code est faux ». Il
+dit : *l'agent a rendu sa solution sans jamais l'exécuter.*
+
+Bras sans web, 12 tâches du corpus expert+limite, même banc, même jeu d'outils
+(25 outils offerts des deux côtés), campagnes simultanées :
+
+| | `auto:smartest` | ox-alpha épinglé |
+|---|---|---|
+| réussites | 4/12 | **9/12** |
+| exécutions de Julia | 7 | **104** |
+| runs n'ayant jamais lancé Julia | **11/12** | **0/12** |
+| tours d'agent par tâche | 3,6 (de 1 à 8) | **17,3** (de 8 à 32) |
+| modèle dominant | nemotron-3-super, 33 % | lui-même, **100 %** |
+
+Un appel d'outil relance un tour : le nombre d'appels **est** la longueur de la
+boucle. Ox-alpha lit, écrit, exécute, lit l'erreur, corrige. Smartest écrit et se
+déclare fini — sur t31, t33 et t35, en **un seul tour**, sans même produire de
+fichier.
+
+Ce n'est donc pas dsh qui refuse de lancer Julia. **Dsh n'a jamais reçu l'ordre
+de le lancer.**
+
+Conséquence sur le banc, qui compte plus que le classement : tant qu'une dorsale
+ne boucle pas, l'axe « avec ou sans recherche web » **ne mesure rien** chez elle.
+On ne compare pas deux stratégies de recherche, on compare un agent qui itère à
+un agent qui fait un tour.
+
+**Hypothèse avancée puis retirée** : j'ai cru voir le préambule web pousser ces
+modèles à boucler (le bras web montrait 20 exécutions de Julia contre 7). Une
+fois retirés les runs touchés par ox-alpha — arrivé dans le tirage parce que je
+venais de l'ajouter au catalogue en pleine campagne — il reste 5 exécutions sur
+8 runs contre 7 sur 12. L'effet disparaît. C'était ox-alpha, pas le préambule.
+
+Et le piège de lecture qui allait avec, noté parce qu'il resservira : les runs
+touchés par ox-alpha étaient les runs **longs** (41, 30 et 26 appels). Plus un
+agent boucle, plus il appelle, donc plus il a de chances de tomber sur un modèle
+donné dans la chaîne de repli. La participation peut être la **conséquence** de
+la boucle et non sa cause. Ce bras-là ne pouvait pas trancher ; seule une
+campagne épinglée le peut.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
