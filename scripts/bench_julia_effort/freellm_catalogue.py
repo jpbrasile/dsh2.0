@@ -25,7 +25,8 @@ import urllib.error
 import urllib.request
 
 BASE = os.path.dirname(os.path.abspath(__file__))
-DB = os.path.join(os.environ.get("APPDATA", ""), "FreeLLMAPI", "freeapi.db")
+DB = os.environ.get("FREELLM_DB") or os.path.join(
+    os.environ.get("APPDATA", ""), "FreeLLMAPI", "freeapi.db")
 ROUTEUR = os.environ.get("FREELLM_URL", "http://127.0.0.1:31415")
 
 
@@ -175,6 +176,163 @@ def desactiver(args):
              "  (deja desactivee)" if avant[0] == 0 else ""))
 
 
+AMONT_OR = "https://openrouter.ai/api/v1/models"
+
+
+def _normalise(mid):
+    """`z-ai/glm-5.2:free` et `zai-org/GLM-5.2` designent le meme modele. On
+    compare sur le dernier segment, sans suffixe de gratuite, en minuscules."""
+    mid = mid.split(":")[0]
+    mid = mid.split("/")[-1]
+    return mid.lower().replace("_", "-")
+
+
+def _rangs_connus(c):
+    """Le rang n'est JAMAIS invente. Le routeur note deja la plupart de ces
+    modeles sur d'AUTRES plateformes ; on reprend son propre bareme.
+
+    Un modele qu'il ne connait nulle part prend la MEDIANE de sa plateforme.
+    Pas le fond de classement : corrige le 22/08, parce que le fond n'est pas
+    neutre -- c'est l'affirmation "moins bon que tout ce qu'on connait", et elle
+    se referme sur elle-meme. `smartest` choisit par le rang, donc un modele mis
+    dernier n'est jamais tire, donc jamais mesure, donc jamais promu. Le cas qui
+    l'a montre : stealth/ox-alpha etait inconnu du routeur, et il fait 9/12 la
+    ou le tirage `auto:smartest` fait 4/12 sur le meme corpus. La regle prudente
+    l'aurait enterre. Mettre un inconnu HAUT fabriquerait un classement ; le
+    mettre DERNIER en fabrique un autre. La mediane n'en fabrique aucun : le
+    modele entre dans le tirage et gagne son rang sur des mesures."""
+    connus = {}
+    for mid, ri, rv, taille in c.execute(
+            "select model_id, intelligence_rank, speed_rank, size_label from models"):
+        k = _normalise(mid)
+        # le MEILLEUR rang connu pour ce modele, tous fournisseurs confondus
+        if k not in connus or ri < connus[k][0]:
+            connus[k] = (ri, rv, taille)
+    return connus
+
+
+def moissonner(args):
+    """Synchroniser le catalogue avec les modeles a COUT NUL ET OUTILLES
+    d'OpenRouter. Deux criteres, pas un : un modele gratuit sans outils ne peut
+    pas mener une boucle d'agent -- mesure du 22/08, les dorsales qui
+    n'executent jamais leur code echouent sur des fautes qu'une seule execution
+    attrape. Le classement d'USAGE d'OpenRouter n'est pas un critere : il
+    mesure du volume, et un modele gratuit y monte mecaniquement.
+
+    Par defaut, ne fait qu'AFFICHER. `--appliquer` ecrit."""
+    with urllib.request.urlopen(AMONT_OR, timeout=args.delai) as r:
+        d = json.loads(r.read().decode("utf-8", "replace"))
+    ms = d.get("data", [])
+
+    def cout_nul(m):
+        pr = m.get("pricing") or {}
+        try:
+            return float(pr.get("prompt", 1)) == 0.0 and float(pr.get("completion", 1)) == 0.0
+        except (TypeError, ValueError):
+            return False
+
+    amont = {}
+    for m in ms:
+        sp = m.get("supported_parameters") or []
+        if cout_nul(m) and "tools" in sp:
+            amont[m["id"]] = m
+    print("  OpenRouter annonce %d modeles ; %d a cout nul ET outilles." % (len(ms), len(amont)))
+
+    c = sqlite3.connect(_uri(DB, ro=True), uri=True)
+    deja = {r[0]: r[1] for r in c.execute(
+        "select model_id, enabled from models where platform = ?", (args.plateforme,))}
+    connus = _rangs_connus(c)
+    _rangs = [r[0] for r in c.execute(
+        "select intelligence_rank from models where platform = ? order by intelligence_rank",
+        (args.plateforme,))]
+    neutre = _rangs[len(_rangs) // 2] if _rangs else 15
+    c.close()
+
+    # `openrouter/free` est un ROUTEUR, pas un modele. Mesure du 22/08 : une
+    # campagne servie par un routeur ne compare pas des modeles, elle compare
+    # des tirages. On l'ecarte a dessein plutot que de le laisser passer.
+    routeurs = {"openrouter/free", "openrouter/auto"}
+
+    a_ajouter, a_depingler, deja_la, ecartes = [], [], [], []
+    for mid, m in sorted(amont.items()):
+        if mid in routeurs:
+            ecartes.append(mid)
+        elif mid in deja:
+            deja_la.append(mid)
+        else:
+            a_ajouter.append((mid, m))
+    tous_amont = {m["id"] for m in ms}
+    sans_outils = []
+    for mid, actif in sorted(deja.items()):
+        if mid in tous_amont:
+            # Encore annonce en amont. S'il n'est pas dans `amont`, c'est qu'il
+            # a perdu les outils ou la gratuite -- on le SIGNALE, on ne le
+            # depingle pas. Repondre a "on rejette trop" par un rejet de plus
+            # est le reflexe a ne pas avoir ; un rapport ne refuse rien.
+            if mid not in amont:
+                sans_outils.append(mid)
+        elif actif:
+            a_depingler.append(mid)
+
+    print()
+    print("  DEJA au catalogue         : %d" % len(deja_la))
+    print("  ECARTES (routeurs)        : %s" % (", ".join(ecartes) or "aucun"))
+    print()
+    print("  A AJOUTER (%d) -- rang repris du bareme du routeur quand il connait" % len(a_ajouter))
+    plans = []
+    for mid, m in a_ajouter:
+        k = _normalise(mid)
+        if k in connus:
+            ri, rv, taille = connus[k]
+            src = "bareme routeur"
+        else:
+            ri, rv, taille = neutre, 5, "Medium"
+            src = "MEDIANE de la plateforme (inconnu du routeur, NON MESURE)"
+        vision = 1 if "image" in ((m.get("architecture") or {}).get("input_modalities") or []) else 0
+        plans.append((mid, m, ri, rv, taille, vision, src))
+        print("    %-50s intel=%-3s vit=%-3s %-9s vision=%s  <- %s"
+              % (mid, ri, rv, taille, vision, src))
+    print()
+    print("  A DEPINGLER (%d) -- DISPARUS du catalogue amont" % len(a_depingler))
+    for mid in a_depingler:
+        print("    %s" % mid)
+    print()
+    print("  SIGNALES, non touches (%d) -- encore en amont mais plus gratuits+outilles" % len(sans_outils))
+    for mid in sans_outils:
+        print("    %s" % mid)
+
+    if not args.appliquer:
+        print()
+        print("  (affichage seul -- relancer avec --appliquer pour ecrire)")
+        return
+
+    horo = time.strftime("%Y%m%d-%H%M%S")
+    sauve = DB + ".bak-" + horo
+    shutil.copy2(DB, sauve)
+    print()
+    print("  sauvegarde : %s" % sauve)
+    c = sqlite3.connect(_uri(DB), uri=True)
+    n_add = n_off = 0
+    for mid, m, ri, rv, taille, vision, _src in plans:
+        cur = c.execute(
+            "insert or ignore into models "
+            "(platform, model_id, display_name, intelligence_rank, speed_rank, "
+            " size_label, rpm_limit, rpd_limit, monthly_token_budget, context_window, "
+            " enabled, supports_vision, supports_tools, source, endpoint_scope) "
+            "values (?,?,?,?,?,?,20,200,'gratuit OpenRouter',?,1,?,1,'catalog','')",
+            (args.plateforme, mid, (m.get("name") or mid)[:80], ri, rv, taille,
+             m.get("context_length"), vision))
+        n_add += cur.rowcount or 0
+    for mid in a_depingler:
+        cur = c.execute("update models set enabled = 0 where platform = ? and model_id = ?",
+                        (args.plateforme, mid))
+        n_off += cur.rowcount or 0
+    c.commit()
+    c.close()
+    print("  ECRIT : %d ligne(s) ajoutee(s), %d depinglee(s)." % (n_add, n_off))
+    print("  Verifier chaque ajout avec `sonder` : 404 avant, 200 apres, et la route nommee.")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     sp = p.add_subparsers(dest="cmd", required=True)
@@ -202,6 +360,14 @@ def main():
     e.add_argument("plateforme")
     e.add_argument("modele")
     e.set_defaults(fn=desactiver)
+
+    f = sp.add_parser("moissonner",
+                      help="synchroniser depuis OpenRouter les modeles a cout nul ET outilles")
+    f.add_argument("--plateforme", default="openrouter")
+    f.add_argument("--appliquer", action="store_true",
+                   help="ecrire ; sans ce drapeau l outil ne fait qu afficher")
+    f.add_argument("--delai", type=int, default=60)
+    f.set_defaults(fn=moissonner)
 
     d = sp.add_parser("sonder", help="404 avant / 200 apres, et QUI a repondu")
     d.add_argument("modele")
