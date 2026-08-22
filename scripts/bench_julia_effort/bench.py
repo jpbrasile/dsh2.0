@@ -886,28 +886,51 @@ WEB_APRES_JULIA = 2
 
 
 def recherche_basique(question, n=3, delai=25):
-    """Recherche web sans clef ni dependance. Rend [(titre, url, extrait)].
+    """Recherche web sans clef ni dependance. Rend (resultats, etat).
 
-    Rend une LISTE VIDE en cas d'echec, et l'appelant l'ecrit dans le run :
-    une recherche qui n'a rien rendu doit se distinguer d'une recherche qui
-    n'a pas eu lieu."""
+    `etat` vaut "ok", "aucun", "bloque" ou "erreur: ...". Il n est PAS
+    decoratif : une recherche qui n a rien rendu, une recherche refusee et
+    une recherche qui n a pas eu lieu sont trois faits differents, et le
+    banc les injecte dans l enonce -- donc il doit savoir lequel il tient.
+
+    POURQUOI CETTE FONCTION A ETE REECRITE. Mesure du 22/08 : DuckDuckGo nous
+    a pris pour un robot et a servi une page d avertissement (`anomaly`,
+    `challenge`, canonical vers sa page d accueil). L analyseur a lu les liens
+    de CETTE page comme des resultats, et le banc a colle dans l enonce de
+    t24 un blog de mots croises du New York Times et Google Traduction. Aucune
+    recherche n avait eu lieu ; le banc a fait comme si.
+
+    Le motif d avant attrapait n importe quel lien de redirection, y compris
+    ceux d une page qui n est pas une page de resultats. Un resultat REEL de
+    la version legere porte la classe `result-link`, et son extrait la classe
+    `result-snippet` : sans ces marques, il n y a pas de resultats a lire.
+    """
     url = "https://lite.duckduckgo.com/lite/?q=" + urllib.parse.quote(question)
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     try:
         page = urllib.request.urlopen(req, timeout=delai).read().decode("utf-8", "replace")
-    except Exception:
-        return []
+    except Exception as e:
+        return [], "erreur: %s" % e
+    bas = page.lower()
+    # REFUS EXPLICITE. Sans lui, le blocage se lit comme dix resultats.
+    for marque in ("anomaly", "challenge-form", "unfortunately, bots",
+                   "captcha", "too many requests"):
+        if marque in bas:
+            return [], "bloque"
     sansbal = lambda t: " ".join(re.sub("<[^>]+>", " ", t).split())
     liens = []
-    for m in re.finditer("href=[\"']//duckduckgo.com/l/[?]uddg=([^\"'&]+)[^>]*>(.*?)</a>",
-                         page, re.S):
+    for m in re.finditer(
+            "class=[\"']result-link[\"'][^>]*href=[\"']//duckduckgo.com/l/[?]uddg=([^\"'&]+)[^>]*>(.*?)</a>",
+            page, re.S):
         liens.append((sansbal(m.group(2)), urllib.parse.unquote(m.group(1))))
     extraits = [sansbal(m.group(1)) for m in
                 re.finditer("result-snippet[^>]*>(.*?)</td>", page, re.S)]
+    if not liens:
+        return [], "aucun"
     sortie = []
-    for i, (titre, lien) in enumerate(liens[:n]):
-        sortie.append((titre, lien, extraits[i] if i < len(extraits) else ""))
-    return sortie
+    for k, (titre, lien) in enumerate(liens[:n]):
+        sortie.append((titre, lien, extraits[k] if k < len(extraits) else ""))
+    return sortie, "ok"
 
 
 def _question_depuis_echec(tache, why):
@@ -1075,7 +1098,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
         trouve = []
         if cherche:
             q = _question_depuis_echec(tache, why)
-            brut = recherche_basique(q)
+            brut, etat = recherche_basique(q)
             trouve = [x for x in brut if _pertinent(x[0], x[1], x[2])]
             ecartes = [x for x in brut if not _pertinent(x[0], x[1], x[2])]
             # On ENREGISTRE ce qui a ete injecte. Ce moteur rend trois
@@ -1085,6 +1108,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
             # elle, une injection hors sujet passerait pour de l'aide.
             recherches.append({"tour": tour, "requete": q,
                                "julia_a_ce_stade": faits,
+                               "etat_moteur": etat,
                                "resultats": [{"titre": t, "url": u} for t, u, _ in trouve],
                                "ecartes": [{"titre": t, "url": u} for t, u, _ in ecartes]})
         retour = _bloc_retour(tour, why, trouve, cherche)

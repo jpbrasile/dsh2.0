@@ -44,11 +44,17 @@ exiger("AssertionError" in q, "le type d erreur SURVIT au nettoyage")
 exiger("negatifs" in q, "les mots de l assertion survivent")
 
 print("=== 2. la recherche ===")
-trouve = bench.recherche_basique(q)
+trouve, etat = bench.recherche_basique(q)
+print("  etat du moteur : %s" % etat)
 print("  %d resultat(s)" % len(trouve))
 for t, u, _ in trouve:
     print("    - %s | %s" % (t[:60], u[:70]))
-exiger(len(trouve) > 0, "le moteur repond")
+exiger(etat in ("ok", "aucun", "bloque") or etat.startswith("erreur"),
+       "le moteur rend un etat nommable")
+exiger(not (etat != "ok" and trouve),
+       "aucun resultat n est rendu quand l etat n est pas ok")
+if etat != "ok":
+    print("  (moteur %s -- on poursuit avec la liste vide, ce que le banc ferait)" % etat)
 
 print("=== 3. le bloc injecte, bras AVEC recherche ===")
 bloc = bench._bloc_retour(1, WHY, trouve, True)
