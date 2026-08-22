@@ -691,6 +691,30 @@ def _ecoute(port, delai=15):
     return False
 
 
+def _qui_tient(port):
+    """QUI ecoute sur ce port, mesure -- pas devine.
+
+    Le message d avant affirmait "une autre campagne tourne, ou un
+    enregistreur precedent survit". Mesure du 22/08 : le port 8080 etait tenu
+    par Apache (`httpd`), qui n a rien a voir avec le banc, et les deux bras
+    FreeLLMAPI d une campagne ont ete perdus sur un diagnostic faux. Un garde
+    qui refuse a raison peut quand meme nommer la mauvaise cause, et c est la
+    cause qu on lit pour agir."""
+    try:
+        out = subprocess.run(
+            ["powershell", "-NoProfile", "-Command",
+             "(Get-NetTCPConnection -LocalPort %d -State Listen"
+             " -ErrorAction SilentlyContinue | Select-Object -First 1"
+             " | ForEach-Object { (Get-Process -Id $_.OwningProcess"
+             " -ErrorAction SilentlyContinue).ProcessName"
+             " + ' pid=' + $_.OwningProcess })" % port],
+            capture_output=True, text=True, timeout=25)
+        nom = (out.stdout or "").strip()
+        return nom if nom else "processus inconnu"
+    except Exception as e:
+        return "detenteur non mesurable (%s)" % e
+
+
 def _ports_libres(voies):
     """GARDE. Refuse de demarrer si un port d enregistreur est DEJA en ecoute.
     Sans elle, une seconde campagne trouve le port ouvert, `_ecoute` repond
@@ -704,9 +728,9 @@ def _ports_libres(voies):
     occupes = [PORT_PAR + k for _, k, _, _ in voies if _ecoute(PORT_PAR + k, delai=0.4)]
     if occupes:
         raise SystemExit(
-            "banc: ports d enregistreur deja en ecoute %r -- une autre campagne "
-            "tourne, ou un enregistreur precedent survit. Arretez-la, ou donnez "
-            "un BENCH_PAR_PORT distinct." % occupes)
+            "banc: ports d enregistreur deja en ecoute -- %s. Donnez un "
+            "BENCH_PAR_PORT distinct, ou liberez le port."
+            % "; ".join("%d tenu par %s" % (pt, _qui_tient(pt)) for pt in occupes))
     return True
 
 
