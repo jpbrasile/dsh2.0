@@ -1,0 +1,16 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `struct Chunks{V<:AbstractVector}` with fields `v::V` and `k::Int`, in that
+order, holding a vector and a chunk size. Implement `Base.iterate`, `Base.length` and
+`Base.eltype` so that iterating a `Chunks` yields the successive slices of `v` of length `k`,
+the last one being shorter when `k` does not divide the length.
+
+Each yielded chunk must be a `Vector`. `collect(Chunks(1:7, 3))` must give `[[1,2,3],[4,5,6],[7]]`,
+`length` must equal the number of chunks actually produced, and `for c in Chunks(...)` must work.
+Do not use `Iterators.partition`.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

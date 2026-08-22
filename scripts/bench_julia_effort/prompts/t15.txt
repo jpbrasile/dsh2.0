@@ -1,0 +1,14 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `horner(x::Number, c::AbstractVector)` evaluating the polynomial
+`c[1] + c[2]*x + c[3]*x^2 + ...` by Horner's rule.
+
+It must be TYPE STABLE: the element type must be carried through, so a Float32 point and
+Float32 coefficients must give a `Float32` back, and integer inputs must give an integer back.
+A hard-coded Float64 accumulator is not acceptable.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

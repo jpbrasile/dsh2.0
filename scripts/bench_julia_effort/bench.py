@@ -53,6 +53,13 @@ PROVIDER = os.environ.get("BENCH_PROVIDER", "local-think")
 MODELE = os.environ.get("BENCH_MODEL", "specdec-q38-plain-vision")
 
 TACHES = ["t%02d" % i for i in range(1, 11)]
+# Palier DUR. Ajoute le 22/08 : sur la campagne one-shot de 50 runs, SIX des dix
+# taches de base n'ont echoue a AUCUN niveau d'effort. Une tache que tout le
+# monde reussit n'informe pas, elle dilue. Les six ci-dessous visent des pieges
+# qui separent -- instabilite numerique, allocations, contrats d'interface,
+# stabilite de type. Corpus SEPARE, jamais melange au corpus de base : melanger
+# les deux rendrait les deux campagnes incomparables.
+TACHES_DUR = ["t%02d" % i for i in range(11, 17)]
 CONSIGNE = "Read the file TASK.md in the current directory and do exactly what it says."
 TIMEOUT = 900        # mode one-shot
 TIMEOUT_ITER = 1800  # mode iteratif : l'agent tourne en boucle, il lui faut de la place
@@ -113,27 +120,29 @@ def juger(fichier_solution, tache):
     return "FAIL", "aucun verdict (rc=%d) %s" % (p.returncode, (p.stderr or "")[:200])
 
 
-def selftest():
+def selftest(taches=None):
     """Bras known-GOOD et bras known-BAD. Un verificateur dont on n'a jamais vu
     l'echec n'a pas ete montre mesurer quoi que ce soit : les 10 solutions de
     `bad/` portent chacune UN defaut nomme, et le banc exige que chacune soit
     attrapee -- et imprime PAR QUOI, parce qu'un compte egal a la population est
     exactement ce qu'un verificateur casse produit aussi."""
-    print("=== known-GOOD : ref/ doit passer 10/10 ===")
+    taches = taches or TACHES
+    n = len(taches)
+    print("=== known-GOOD : ref/ doit passer %d/%d ===" % (n, n))
     bons = 0
-    for t in TACHES:
+    for t in taches:
         v, why = juger(os.path.join(BASE, "ref", "%s.jl" % t), t)
         bons += v == "PASS"
         print("  %s %s %s" % (t, v, why[:90]))
-    print("=== known-BAD : bad/ doit ECHOUER 10/10, chacune par son defaut ===")
+    print("=== known-BAD : bad/ doit ECHOUER %d/%d, chacune par son defaut ===" % (n, n))
     pris = 0
-    for t in TACHES:
+    for t in taches:
         v, why = juger(os.path.join(BASE, "bad", "%s.jl" % t), t)
         pris += v == "FAIL"
         print("  %s %-4s %s" % (t, v, why[:90]))
-    ok = bons == len(TACHES) and pris == len(TACHES)
+    ok = bons == len(taches) and pris == len(taches)
     print("\nknown-GOOD %d/%d   known-BAD attrapes %d/%d   =>  %s"
-          % (bons, len(TACHES), pris, len(TACHES), "CALIBRE" if ok else "NON CALIBRE"))
+          % (bons, len(taches), pris, len(taches), "CALIBRE" if ok else "NON CALIBRE"))
     return 0 if ok else 1
 
 
@@ -197,7 +206,11 @@ def un_run(effort, tache, rep=1, iteratif=False):
 def main():
     argv = list(sys.argv[1:])
     if argv and argv[0] == "--selftest":
-        raise SystemExit(selftest())
+        if len(argv) > 1:
+            liste = TACHES_DUR if argv[1] == "dur" else argv[1].split(",")
+        else:
+            liste = TACHES
+        raise SystemExit(selftest(liste))
 
     reps = 1
     if "--reps" in argv:
@@ -213,8 +226,14 @@ def main():
               "mytest.jl et le lancer jusqu'a ce qu'il passe.")
         print("shim julia -> %s  (les executions de l'agent sont comptees)" % reel)
 
+    defaut = TACHES
+    if "--dur" in argv:
+        argv.remove("--dur")
+        defaut = TACHES_DUR
+        print("corpus DUR : %s" % ",".join(defaut))
+
     efforts = argv[0].split(",") if argv else ["off", "low", "medium", "high", "xhigh"]
-    taches = argv[1].split(",") if len(argv) > 1 else TACHES
+    taches = argv[1].split(",") if len(argv) > 1 else defaut
     out = os.path.join(BASE, "resultats.jsonl")
 
     for rep in range(1, reps + 1):

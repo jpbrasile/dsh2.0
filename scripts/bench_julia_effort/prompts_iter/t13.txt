@@ -1,0 +1,25 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `struct Chunks{V<:AbstractVector}` with fields `v::V` and `k::Int`, in that
+order, holding a vector and a chunk size. Implement `Base.iterate`, `Base.length` and
+`Base.eltype` so that iterating a `Chunks` yields the successive slices of `v` of length `k`,
+the last one being shorter when `k` does not divide the length.
+
+Each yielded chunk must be a `Vector`. `collect(Chunks(1:7, 3))` must give `[[1,2,3],[4,5,6],[7]]`,
+`length` must equal the number of chunks actually produced, and `for c in Chunks(...)` must work.
+Do not use `Iterators.partition`.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- `solution.jl` itself must print nothing at top level and must contain no tests.
+
+VERIFY BEFORE YOU FINISH -- this is part of the task, not optional:
+- Write your OWN test file `mytest.jl` next to `solution.jl`. It must
+  `include("solution.jl")` and exercise the required behaviour, including the
+  edge cases and awkward inputs you can think of yourself. Nobody will give you
+  the tests, and nobody will tell you which cases matter.
+- Run it from the shell: `julia --startup-file=no mytest.jl`
+- If it fails, fix `solution.jl` and run it again. Repeat until your own tests
+  pass.
+- Only once your own tests pass, reply with the single word DONE.

@@ -1,0 +1,11 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `struct CIStr` with a single field `s::String`, a string wrapper that compares
+WITHOUT regard to case. Two `CIStr` holding the same letters in different cases must be fully
+interchangeable: as `Dict` keys, as `Set` members, and under `isequal`.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

@@ -1,0 +1,26 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define a mutable struct `Welford` with a zero-argument constructor `Welford()`
+starting empty, a function `update!(w::Welford, x::Real)` that folds one more value in and
+returns `w`, and a function `variance(w::Welford)` returning the SAMPLE variance (divide by
+n-1) of every value pushed so far, or 0.0 when fewer than two values have been pushed.
+
+`Welford` must NOT store the values: none of its fields may be an array, and its memory must
+not grow with the number of updates. The result must stay accurate when the values are large
+and close together -- computing the variance from the running sum and the running sum of
+squares loses all precision there and is not acceptable.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- `solution.jl` itself must print nothing at top level and must contain no tests.
+
+VERIFY BEFORE YOU FINISH -- this is part of the task, not optional:
+- Write your OWN test file `mytest.jl` next to `solution.jl`. It must
+  `include("solution.jl")` and exercise the required behaviour, including the
+  edge cases and awkward inputs you can think of yourself. Nobody will give you
+  the tests, and nobody will tell you which cases matter.
+- Run it from the shell: `julia --startup-file=no mytest.jl`
+- If it fails, fix `solution.jl` and run it again. Repeat until your own tests
+  pass.
+- Only once your own tests pass, reply with the single word DONE.

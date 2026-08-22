@@ -1,0 +1,23 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `axpy!(y::AbstractVector, a::Number, x::AbstractVector)` which adds `a * x`
+into `y` ELEMENTWISE AND IN PLACE, then returns `y` itself (the same object, not a copy).
+
+It must allocate ZERO bytes when called on vectors of the same element type, it must work for
+Float32 as well as Float64, and it must work when `y` or `x` is a `view` into a larger array.
+Do not call BLAS.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- `solution.jl` itself must print nothing at top level and must contain no tests.
+
+VERIFY BEFORE YOU FINISH -- this is part of the task, not optional:
+- Write your OWN test file `mytest.jl` next to `solution.jl`. It must
+  `include("solution.jl")` and exercise the required behaviour, including the
+  edge cases and awkward inputs you can think of yourself. Nobody will give you
+  the tests, and nobody will tell you which cases matter.
+- Run it from the shell: `julia --startup-file=no mytest.jl`
+- If it fails, fix `solution.jl` and run it again. Repeat until your own tests
+  pass.
+- Only once your own tests pass, reply with the single word DONE.

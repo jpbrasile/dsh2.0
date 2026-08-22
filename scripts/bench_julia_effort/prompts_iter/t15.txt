@@ -1,0 +1,23 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `horner(x::Number, c::AbstractVector)` evaluating the polynomial
+`c[1] + c[2]*x + c[3]*x^2 + ...` by Horner's rule.
+
+It must be TYPE STABLE: the element type must be carried through, so a Float32 point and
+Float32 coefficients must give a `Float32` back, and integer inputs must give an integer back.
+A hard-coded Float64 accumulator is not acceptable.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- `solution.jl` itself must print nothing at top level and must contain no tests.
+
+VERIFY BEFORE YOU FINISH -- this is part of the task, not optional:
+- Write your OWN test file `mytest.jl` next to `solution.jl`. It must
+  `include("solution.jl")` and exercise the required behaviour, including the
+  edge cases and awkward inputs you can think of yourself. Nobody will give you
+  the tests, and nobody will tell you which cases matter.
+- Run it from the shell: `julia --startup-file=no mytest.jl`
+- If it fails, fix `solution.jl` and run it again. Repeat until your own tests
+  pass.
+- Only once your own tests pass, reply with the single word DONE.
