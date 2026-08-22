@@ -230,7 +230,37 @@ peut découvrir ça — c'est une croyance sur le monde, pas un raisonnement —
 **une seule exécution** le révèle instantanément. C'est l'hypothèse centrale que
 teste la paire de campagnes un-coup / itératif.
 
-### 3.5 · Le corpus de base était trop facile
+### 3.5 · Le modèle a des outils web et ne s'en sert jamais
+
+`dsh-tool-web` déclare `web_search` et `web_fetch`, tous deux à **`true` par
+défaut** — ils font partie des 27 outils envoyés au modèle à chaque appel. Les
+journaux de session de dsh (zstd, un répertoire par répertoire de travail)
+donnent, sur les **91 sessions** du banc :
+
+| outil | appels |
+|---|---:|
+| `write` | 6 308 |
+| `pwsh` | 2 429 |
+| `edit` | 1 057 |
+| `read` | 597 |
+| `glob` | 4 |
+| **`web_search` / `web_fetch`** | **0** |
+
+10 395 appels d'outils, zéro appel web. Ce n'est pas une restriction : c'est un
+comportement. Laissé seul, ce modèle ne cherche pas.
+
+> **Pour le tutoriel.** Deux conséquences opposées et toutes deux utiles. (1) Les
+> résultats déjà publiés sont **purement locaux en pratique**, ce qui n'allait
+> pas de soi et qu'il fallait vérifier. (2) Une campagne « avec / sans recherche
+> web » ne peut pas se contenter d'activer l'outil : sans instruction explicite,
+> les deux bras sont le même bras. Et le seul moyen de le savoir est de
+> **compter les appels réellement passés**, par run.
+
+Attention au piège de mesure sur le chemin : un `grep web_search` sur les
+fichiers de session rend **0**, parce qu'ils sont compressés. Un zéro qui ne
+mesure rien ressemble exactement à un zéro qui mesure.
+
+### 3.6 · Le corpus de base était trop facile
 
 Mesuré avant de durcir : **6 des 10 tâches ne tombent à aucun niveau d'effort**.
 Une tâche qui réussit partout ne contribue rien à une étude paramétrique — elle
@@ -301,9 +331,11 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 - **Taux d'acceptation MTP par type de texte.** Le mécanisme de 2.4 est cohérent
   avec les débits mesurés mais n'a **pas** été ré-instrumenté ici. *Unverified.*
 - **Tâches à phase de planification, avec et sans recherche web préalable.**
-  Prévu. dsh expose `dsh-tool-web` et `dsh-web-search-deepseek` — à noter que la
-  recherche passe par l'API DeepSeek, donc **hors du modèle local** : toute
-  comparaison doit dire ce qui est local et ce qui ne l'est pas.
+  Corpus écrit (t21..t26 et t31..t36), bras web câblé, **non encore calibré** :
+  les douze bras known-GOOD/known-BAD n'ont pas tourné. À noter que la recherche
+  passe par l'API DeepSeek (`dsh-web-search-deepseek`, `https://api.deepseek.com`),
+  donc **hors du modèle local** : la comparaison doit dire ce qui est local et ce
+  qui ne l'est pas.
 
 ---
 
