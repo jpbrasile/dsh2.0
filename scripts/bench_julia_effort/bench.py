@@ -1061,6 +1061,8 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
            "bras_web": bool(web), "appels_web": compter_web(ws, t0, accueil),
            "tours": len(par_tour), "par_tour": par_tour,
            "recherches_banc": recherches,
+           "rech_faites": sum(1 for x in recherches if x.get("requete")),
+           "rech_refusees": sum(1 for x in recherches if not x.get("requete")),
            "web_apres_julia": web_apres_julia, "max_rech": max_rech,
            "provider": PROVIDER, "modele": MODELE}
     if slot is not None:
@@ -1070,9 +1072,16 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
         rec["servis"] = servis
         rec["appels_bascules"] = casc
     with VERROU:
-        print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-3s tours=%-2d rech=%-2d %s%s"
+        # `rech=` FAITES/REFUSEES, jamais un seul nombre. Mesure du 22/08 :
+        # t24 affichait rech=1 et n avait RIEN cherche -- l enregistrement
+        # etait un refus ("delai depasse : aucun message a chercher"). Un
+        # compteur qui additionne une recherche et son refus rend le meme
+        # nombre pour deux faits opposes, et se lit comme la branche parcourue.
+        faites = sum(1 for x in recherches if x.get("requete"))
+        refus = len(recherches) - faites
+        print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-3s tours=%-2d rech=%d/%-2d %s%s"
               % (rep, effort, tache, v, dt, fj(julia_runs), len(par_tour),
-                 len(recherches), "" if slot is None else "w%-2d " % slot,
+                 faites, refus, "" if slot is None else "w%-2d " % slot,
                  "" if v == "PASS" else (why or "")[:44]))
         sys.stdout.flush()
     return rec
@@ -1232,6 +1241,7 @@ def main():
         print("  sans passer -- des TENTATIVES, pas des tours -- et injecte les")
         print("  extraits dans l enonce suivant. Au plus %d recherche(s) par run."
               % MAX_RECH)
+        print("  colonne rech=FAITES/REFUSEES -- un refus n est pas une recherche.")
     iteratif = "--iterate" in argv
     if iteratif:
         argv.remove("--iterate")
