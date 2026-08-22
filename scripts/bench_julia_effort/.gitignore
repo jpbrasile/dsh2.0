@@ -1,0 +1,9 @@
+# Sorties de campagne : regenerees par bench.py, jamais versionnees.
+# Les versionner ferait vieillir un compte dans l arbre, et un compte qui
+# vieillit se cite comme une mesure.
+runs/
+resultats.jsonl
+wire.jsonl
+proxy.out
+sweep.log
+__pycache__/
