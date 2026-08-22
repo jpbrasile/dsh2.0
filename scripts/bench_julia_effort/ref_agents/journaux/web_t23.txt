@@ -1,0 +1,3 @@
+JULIA_RUNS=2
+WEB_SEARCHES=3
+QUERIES=precedence climbing algorithm unary minus binds looser than exponentiation -2^2 = -4 prefix binding power | recursive descent parser exponent right associative right operand allows unary minus 2^-3 grammar factor rule | Julia operator precedence documentation unary minus exponentiation "-2^2" right associative tryparse Float64

@@ -1,0 +1,3 @@
+JULIA_RUNS=3
+WEB_SEARCHES=3
+QUERIES=Julia AbstractArray interface size getindex setindex! IndexCartesian custom matrix type | LAPACK band storage format AB(ku+1+i-j,j) = A(i,j) general band matrix gbmv | Julia LinearAlgebra mul! three-argument mul!(Y, A, B) in-place documentation five-argument alpha beta

@@ -1,0 +1,3 @@
+JULIA_RUNS=2
+WEB_SEARCHES=4
+QUERIES=Julia setrounding Float64 RoundDown deprecated removed unreliable | Julia prevfloat nextfloat semantics adjacent floating point value | interval arithmetic outward rounding one ulp nextfloat prevfloat guarantees containment round-to-nearest half ulp | interval arithmetic multiplication four corner products min max IEEE 1788 division by interval containing zero

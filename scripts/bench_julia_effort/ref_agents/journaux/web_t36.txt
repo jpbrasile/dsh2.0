@@ -1,0 +1,3 @@
+JULIA_RUNS=2
+WEB_SEARCHES=3
+QUERIES=Clojure PersistentVector bit-partitioned trie shift 5 branching factor 32 implementation details | Clojure PersistentVector pushTail root overflow condition "(cnt >>> 5) > (1 << shift)" tailoff | PersistentVector.java tailoff "((cnt - 1) >>> 5) << 5" arrayFor doAssoc newPath source

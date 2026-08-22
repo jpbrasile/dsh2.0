@@ -1,0 +1,3 @@
+JULIA_RUNS=2
+WEB_SEARCHES=3
+QUERIES=deterministic Miller-Rabin witness bases sufficient for all n < 2^64 first 12 primes | Julia widemul UInt64 Int128 modular multiplication avoid overflow mulmod | Sorenson Webster first twelve prime bases strong pseudoprime bound 3317044064679887385961981

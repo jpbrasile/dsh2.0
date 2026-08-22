@@ -1,0 +1,3 @@
+JULIA_RUNS=3
+WEB_SEARCHES=4
+QUERIES=perturbation confusion forward-mode automatic differentiation tagging Siskind Pearlmutter nested derivatives | ForwardDiff.jl Dual number tag ordering nested differentiation perturbation confusion implementation | ForwardDiff dual.jl binary operation different tags outermost tag wins nested dual scalar promotion rule | dual number power rule x^y partial derivatives y*x^(y-1) and x^y*log(x) automatic differentiation edge case zero base

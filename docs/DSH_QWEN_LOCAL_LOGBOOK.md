@@ -565,6 +565,97 @@ faits qu'une recherche doit rapporter** (3.7) : elle transforme la question
 
 ---
 
+### 3.9 · Vingt-quatre agents neufs, même énoncé à l'octet près : le web ne sépare rien à ce niveau
+
+La ligne 3.8 ne remplissait qu'une case sur quatre, et son bras web était mort-né
+— ayant résolu les douze tâches sans chercher, je ne pouvais plus répondre à
+« aurais-je eu besoin d'une recherche ? ». La réparation n'est pas de recommencer
+sur moi : c'est de faire tourner **vingt-quatre exécutants neufs**, un par
+(bras, tâche), aucun n'ayant jamais vu le corpus.
+
+**Ce qu'ils ont reçu, exactement.** Un dossier de travail contenant un seul
+fichier, `TASK.md`, construit par un script qui fait `import bench` et
+concatène `bench.PREAMBULE_WEB` et `prompts/tNN.txt` **par le même code que
+`bench.py`** — l'énoncé est donc identique à l'octet près à celui que reçoit
+l'agent dsh (2 141 octets avec préambule web, 1 285 sans, mesuré sur t22). La
+consigne d'entrée est celle de dsh, mot pour mot : *« Read the file TASK.md in
+the current directory and do exactly what it says. »* Chaque agent a écrit à
+côté un `_journal.txt` déclarant ses exécutions de Julia, ses recherches et
+**le texte de ses requêtes**. Le verdict est rendu par le même `tasks/harness.jl`.
+
+| tâche | fait externe | web : verdict / julia / recherches / jetons / s | sans web : verdict / julia / recherches / jetons / s |
+|---|---|---|---|
+| t21 | — | **PASS** / 3 / 3 / 65837 / 224 | **PASS** / 3 / 0 / 56092 / 153 |
+| t22 | OUI | **PASS** / 2 / 2 / 59276 / 170 | **PASS** / 4 / 0 / 73008 / 336 |
+| t23 | — | **PASS** / 2 / 3 / 64346 / 205 | **PASS** / 3 / 0 / 56720 / 172 |
+| t24 | OUI | **PASS** / 1 / 4 / 60237 / 149 | **PASS** / 2 / 0 / 52078 / 96 |
+| t25 | — | **PASS** / 1 / 3 / 62661 / 201 | **PASS** / 2 / 0 / 56549 / 154 |
+| t26 | — | **PASS** / 1 / 3 / 57802 / 141 | **PASS** / 4 / 0 / 60133 / 196 |
+| t31 | — | **PASS** / 3 / 4 / 96182 / 538 | **PASS** / 1 / 0 / 64099 / 226 |
+| t32 | OUI | **PASS** / 3 / 3 / 67460 / 250 | **PASS** / 2 / 0 / 56039 / 167 |
+| t33 | — | **PASS** / 5 / 4 / 71751 / 288 | **PASS** / 1 / 0 / 55114 / 141 |
+| t34 | OUI | **PASS** / 2 / 3 / 62130 / 217 | **PASS** / 2 / 0 / 53466 / 119 |
+| t35 | — | **PASS** / 2 / 4 / 64799 / 196 | **PASS** / 4 / 0 / 56156 / 159 |
+| t36 | — | **PASS** / 2 / 3 / 64670 / 231 | **PASS** / 1 / 0 / 53566 / 112 |
+| **total** | 4 | **12/12** / 27 / 39 / 797151 / 2810 | **12/12** / 29 / 0 / 693020 / 2030 |
+
+**24 sur 24.** Les deux bras réussissent les douze tâches, y compris les
+**quatre à fait externe réel**. Le bras web a cherché — 39 recherches, sur
+12 tâches sur 12 — et il a cherché **la bonne chose** : le tableau de
+Dormand-Prince et les conventions de contrôle du pas pour t22, la table des
+octets de préfixe MessagePack pour t24, `similar(::Broadcasted, ::Type)` et la
+précédence des styles de diffusion pour t32, les douze premiers témoins de
+Miller-Rabin et la borne de Sorenson-Webster pour t34. Ce sont mot pour mot les
+quatre faits que 3.7 avait mesurés **absents des énoncés**.
+
+Et ça n'a rien changé au résultat. Le bras sans web passe les quatre mêmes
+tâches, sans une seule recherche. Ce que ça coûte est net : **+15,0 % de jetons,
++38,4 % de temps, 138 appels d'outils contre 97**, pour un gain de zéro case.
+
+**Ce que ça corrige dans la lecture du corpus.** « Fait externe » est une
+propriété **de l'énoncé** — le fait n'est pas écrit dedans, c'est mesuré — et
+non une prédiction d'échec. Elle ne prédit un échec que pour un exécutant qui ne
+**détient pas déjà** le fait. Un modèle de frontière détient les quatre. La
+question que le corpus pose reste entière, mais elle ne se pose qu'au modèle
+local : la campagne `t21..t36` sur Qwen3.8 est le seul endroit où l'axe web peut
+encore séparer quelque chose.
+
+**Ce que le bras sans web fait quand même, et qui compte.** Il exécute Julia :
+29 lancements sur les douze tâches, contre 27 pour le bras web. C'est
+exactement l'axe que 3.2 et 3.3 désignent comme décisif sur le modèle local — le
+modèle local, lui, **n'exécute jamais son code en un coup et dit l'avoir
+vérifié**. Ici l'axe est saturé : les vingt-quatre agents testent avant de
+rendre, sans qu'on le leur demande. C'est le vrai écart avec dsh, et il est
+déclaré ci-dessous, pas caché.
+
+| | agent dsh, bras un coup | ces vingt-quatre agents |
+|---|---|---|
+| énoncé | `prompts/tNN.txt` + préambule | **le même, à l'octet près** |
+| exécutions de Julia | aucun shim installé, donc non comptées | comptées, mais **auto-déclarées** dans `_journal.txt` |
+| lecture hors du dossier | rien ne l'empêche techniquement | **interdite par consigne**, non par bac à sable |
+| exécutant | Qwen3.8-27B servi localement | Opus 5 |
+| délai | 900 s appliqué par le harnais | aucun |
+
+La case remplie n'est donc **pas** « itératif » au sens de dsh : l'énoncé est
+celui du bras un coup, seule la conduite a été itérative. Sur les quatre cases
+du banc, 3.8 tient « un coup × sans web », 3.9 tient « énoncé un coup, exécutant
+libre », dans les deux bras web. Reste vide : **un coup strict × avec web**.
+
+**Et un obstacle matériel, mesuré.** `prompts_iter/` ne contient que
+`t01..t16` — dans le dépôt **comme** dans la copie qui tourne. Les douze énoncés
+`t21..t36` n'existent qu'en version un coup : aujourd'hui, dsh **ne peut pas**
+courir le corpus dur en mode itératif. Écrire les douze énoncés itératifs est le
+préalable, pas une option.
+
+**Le défaut d'instrument trouvé au passage.** Le premier jugement annonçait
+« 11 runs sur 12 ont cherché ». C'était faux : un des journaux portait une
+**marque d'ordre d'octets** en tête, et le lecteur ouvrait en `utf-8` — la
+marque reste collée à la première clé, qui devient illisible. La donnée
+manquante était dans le **lecteur**, pas dans le run. Corrigé en `utf-8-sig`, le
+compte passe à 12 sur 12. Lire l'instrument avant sa sortie, encore.
+
+---
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
@@ -603,6 +694,10 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 | 2026-08-22 | Second bras known-GOOD `ref2/` câblé dans `--selftest` : **12/12**, et il tire — remis à sa première version de t35, il rend `!!! AVIS 5/6` (3.8). |
 | 2026-08-22 | `web_fetch` n'est **pas** monté par le paquet de base (`fetch: false`) : le préambule du bras web demandait un outil inexistant. Corrigé, et 3.5 avec (3.5). |
 | 2026-08-22 | L'étiquette « fait externe » n'avait jamais été vérifiée : sur les six tâches marquées, **deux impriment la réponse dans la question** (`t26`, `t33`) et ne peuvent rien mesurer sur l'axe web. Le corpus a quatre tâches à fait externe, pas six (3.7). |
+| 2026-08-22 | **Vingt-quatre sous-agents neufs, même `TASK.md` à l'octet près que dsh** : web **12/12**, sans web **12/12** — y compris les quatre tâches à fait externe. Le web coûte +15,0 % de jetons et +38,4 % de temps pour zéro case gagnée (3.9). |
+| 2026-08-22 | Le bras web a cherché **la bonne chose** sur les quatre tâches à fait externe (tableau Dormand-Prince, octets MessagePack, `similar(::Broadcasted, ::Type)`, témoins de Miller-Rabin) — et le bras sans web a réussi quand même (3.9). |
+| 2026-08-22 | Une **marque d'ordre d'octets** en tête d'un journal rendait sa première clé illisible : le juge annonçait 11 runs sur 12 ayant cherché, la réalité était 12. Lecture en `utf-8-sig` (3.9). |
+| 2026-08-22 | `prompts_iter/` ne contient que `t01..t16`, dépôt **et** copie qui tourne : le corpus dur `t21..t36` ne peut courir qu'en un coup sur dsh (3.9). |
 
 ---
 
@@ -619,7 +714,7 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
   compté par run ; **plafond de référence mesuré 12/12** par Claude Code sur le
   même juge (3.8). Ce qui manque est la campagne elle-même : **aucun des douze
   énoncés n'a encore été soumis au modèle local**, ni avec ni sans recherche.
-  Elle attend que les deux campagnes du corpus dur libèrent la carte.
+  **Bras web et sans web mesurés sur vingt-quatre sous-agents Claude, 12/12 des deux côtés (3.9)** : l'axe web ne sépare rien à ce niveau, il ne peut séparer que sur le modèle local. Elle attend que les deux campagnes du corpus dur libèrent la carte.
 
 ---
 

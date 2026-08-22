@@ -73,6 +73,14 @@ Code, 22/08) : **12/12**. `--selftest` le lance quand les fichiers existent et
 le rapporte en **AVIS** — il ne fait pas échouer le calibrage. Il a déjà tiré
 une fois : voir `ref2/LISEZ-MOI.md`.
 
+**Le plafond des deux bras web, `ref_agents/`.** Vingt-quatre sous-agents neufs
+ont reçu le **même `TASK.md` à l'octet près** que l'agent dsh — construit par le
+même code, `PREAMBULE_WEB` compris — un par couple (bras, tâche). Résultat :
+**12/12 avec web, 12/12 sans web**, y compris sur les quatre tâches dont le fait
+n'est pas dans l'énoncé. Le bras web a cherché la bonne chose et n'a rien gagné.
+Requêtes verbatim et tableau complet : `ref_agents/LISEZ-MOI.md`. Le jugement se
+rejoue avec `python juger_agents.py <racine>`.
+
 **Lire les noms, pas le compte.** Sur t31, le calibrage a affiché
 `known-BAD attrapés 6/6` alors que la mauvaise solution tombait par la *même*
 erreur que la référence — donc sans jamais atteindre son défaut nommé. Un bras

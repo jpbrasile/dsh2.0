@@ -1,0 +1,3 @@
+JULIA_RUNS=3
+WEB_SEARCHES=3
+QUERIES=Julia Broadcast.ArrayStyle custom array type similar(bc::Broadcasted{ArrayStyle{MyType}}, ::Type{ElType}) interfaces manual | Julia manual interfaces broadcasting "find_aac" ArrayWrapper example bc.args Broadcast.flatten unwrap | Julia BroadcastStyle precedence rule AbstractArrayStyle{Any} DefaultArrayStyle "BroadcastStyle(a::AbstractArrayStyle" custom style wins mixing plain Array

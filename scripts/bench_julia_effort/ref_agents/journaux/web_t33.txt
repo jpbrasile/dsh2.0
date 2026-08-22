@@ -1,0 +1,3 @@
+JULIA_RUNS=5
+WEB_SEARCHES=4
+QUERIES=Julia isless Float64 NaN ordering -0.0 sort total order documentation | radix sort IEEE 754 double flip sign bit "if (f >> 63)" xor 0xFFFFFFFFFFFFFFFF key mapping | SortingAlgorithms.jl RadixSort uint_mapping Float64 reinterpret UInt64 xor sign bit Julia | Julia Base.Order uint_map Float64 "0x8000000000000000" DEFAULT_UNSTABLE radix implementation NaN handling
