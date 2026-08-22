@@ -2,14 +2,23 @@
 // CE QUI PART SUR LE FIL a chaque niveau d'effort. Un banc qui compare des
 // niveaux sans lire la requete compare des etiquettes.
 import http from 'node:http';
+import https from 'node:https';
 import fs from 'node:fs';
+
+// Amont EN TLS (UP_TLS=1) : l'enregistreur sert aussi une dorsale distante,
+// OpenRouter. Sans ca, le seul moyen d'utiliser un modele hors du routeur
+// local serait de l'appeler en direct -- et une campagne en direct ne peut pas
+// prouver QUI a repondu ni si une bascule a eu lieu. Le port amont vaut alors
+// 443 par defaut, et `servername` doit etre pose : sans SNI, un hote mutualise
+// presente le mauvais certificat et la poignee de main echoue.
+const UP_TLS = process.env.UP_TLS === '1';
 
 const UP_HOST = process.env.UP_HOST || '127.0.0.1';
 // L'amont est configurable depuis le 22/08 : le meme enregistreur sert le
 // llama-server local (8005) ET le routeur FreeLLMAPI (31415). Sans lui,
 // `auto` choisit un modele et RIEN ne dit lequel a repondu -- un banc qui
 // ne lit pas le fil compare des etiquettes.
-const UP_PORT = Number(process.env.UP_PORT || 8005);
+const UP_PORT = Number(process.env.UP_PORT || (UP_TLS ? 443 : 8005));
 const PORT = Number(process.env.PROXY_PORT || 8006);
 const LOG = process.env.PROXY_LOG || './wire.jsonl';
 
@@ -66,10 +75,12 @@ const server = http.createServer((req, res) => {
         };
       } catch (e) { sent = { parse_error: String(e) }; }
     }
-    const up = http.request({
+    const opts = {
       host: UP_HOST, port: UP_PORT, path: url, method: req.method,
-      headers: { ...req.headers, host: `${UP_HOST}:${UP_PORT}` },
-    }, (ur) => {
+      headers: { ...req.headers, host: UP_HOST },
+    };
+    if (UP_TLS) opts.servername = UP_HOST;
+    const up = (UP_TLS ? https : http).request(opts, (ur) => {
       res.writeHead(ur.statusCode, ur.headers);
       const out = [];
       ur.on('data', (c) => { out.push(c); res.write(c); });
@@ -126,4 +137,4 @@ const server = http.createServer((req, res) => {
     up.end(body);
   });
 });
-server.listen(PORT, '127.0.0.1', () => console.error(`proxy ${PORT} -> ${UP_HOST}:${UP_PORT}, log=${LOG}`));
+server.listen(PORT, '127.0.0.1', () => console.error(`proxy ${PORT} -> ${UP_TLS ? 'https' : 'http'}://${UP_HOST}:${UP_PORT}, log=${LOG}`));

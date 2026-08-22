@@ -826,6 +826,82 @@ itératif : en un coup, `BENCH_JULIA_LOG` n'existait pas, et `julia_runs` valait
 un résultat (« les modèles frontière n'exécutent jamais Julia »). Calibré depuis
 aux deux bras : shim dans le PATH, 1 ligne journalisée ; sans, 0.
 
+### 3.12 · Épingler sur un routeur à quotas, c'est se priver de la seule chose qui le rend utilisable
+
+**Ce qui a motivé l'essai.** En §3.11, `nemotron-3-ultra` sortait **5/5** — le seul
+des huit modèles servis à n'avoir jamais échoué. Conclusion apparente : l'épingler
+et l'axe web redevient mesurable.
+
+**Ce que l'épinglage a mesuré.** Deux campagnes, 12 ouvriers puis 2 :
+
+| régime | résultat | ce que dit le journal du fil |
+|---|---|---|
+| épinglé, 12 ouvriers | **0/12** | `All models exhausted: 2 routes checked (2 rate-limited or on cooldown)` |
+| épinglé, 2 ouvriers | **2/24** | la plupart des runs : aucun appel abouti, mort en ~17 s |
+
+**Et ce chiffre ne dit rien sur le modèle.** Une campagne tuée par le quota mesure
+le quota. Le 2/24 n'est pas un verdict sur `nemotron-3-ultra` — pas plus que le 5/5
+n'en était un. **Les deux sont des artefacts de file d'attente** : en mode `auto`,
+le routeur ne tirait ce modèle que 5 fois sur 24 *parce que c'est tout ce que sa
+file gratuite permet*. Le 5/5 était un artefact de **rareté**. Le seul énoncé
+soutenable est : la file gratuite de `nemotron-3-ultra` ne tient pas ce banc.
+
+**Le mécanisme, vérifié dans la documentation du routeur.** Sur 429/5xx/timeout, la
+clé part en refroidissement et l'escalade peut aller jusqu'à une quarantaine de
+24 h ; la requête est reprise sur **l'entrée suivante de la chaîne de repli**,
+jusqu'à 20 tentatives. Une requête **épinglée n'a pas de chaîne** : 429, et l'agent
+abandonne sans avoir rien écrit — d'où les douze `aucun solution.jl ecrit`.
+
+**Ce qu'on aurait dû utiliser.** Le routeur n'a pas *un* mode auto mais **six
+stratégies de classement** de la chaîne — `priority`, `balanced`, `smartest`,
+`fastest`, `reliable`, `custom` — choisies **par requête** via `auto:<profil>`.
+Le réglage global de cette installation est `balanced` (table `settings`).
+`auto` nu prend « le modèle de plus haute priorité qui a une clé saine et de la
+marge » : disponibilité, pas capacité. D'où les 8 runs sur 24 attribués à
+`dots-3-note-preview` (1/8) en §3.11. **`auto:smartest` classe par capacité** et
+garde la bascule — c'est le réglage correct pour cette dorsale, et l'épinglage
+n'en est pas un.
+
+### 3.13 · Un préfixe de chemin traversé par un shell MSYS n'est plus un chemin
+
+**Instrument.** Campagne `stealth/ox-alpha` (OpenRouter, gratuit, 1 M de contexte,
+déclare `tools` et `reasoning_effort`), routée par l'enregistreur en amont TLS.
+
+Premier lancement : **quatre ouvriers morts en 1,7 s**, `PI_AI_ERROR: Invalid URL`.
+La `baseURL` écrite dans la configuration de l'ouvrier était :
+
+```
+http://127.0.0.1:8050C:/Program Files/Git/api/v1
+```
+
+`BENCH_PAR_CHEMIN=/api/v1` a traversé Git Bash, qui **convertit toute valeur
+d'environnement ressemblant à un chemin Unix en chemin Windows**. Même famille que
+le heredoc qui mange les antislash : le canal transforme la valeur en silence, et la
+panne ne nomme pas sa cause — quatre `Invalid URL` se relisent comme un défaut du
+modèle ou de dsh.
+
+**Réparé aux deux bouts.** Le banc prend désormais le préfixe **sans barre de
+tête** (`api/v1`) — la forme ne ressemble plus à un chemin, donc rien ne la
+convertit — et un garde refuse toute `baseURL` fabriquée portant une lettre de
+lecteur, un espace ou un antislash. Le garde est **né câblé** : son appelant est
+dans le même changement, `preparer_voies`.
+
+**Son bras known-BAD a tiré avant qu'il ne serve, deux fois.**
+Première version du motif : `[A-Za-z]:[/\]` sur l'URL entière — il matche
+`http://` lui-même et refusait **tout**, y compris le known-GOOD. Corrigé en
+ancrant sur l'hôte et le chemin séparément. Deuxième tir : `urlsplit(...).port`
+**lève** `ValueError` sur une autorité abîmée (`8050C:`) au lieu de rendre `None`
+— sans le `except`, le garde tuait la campagne avec une trace `urllib` au lieu du
+message qui nomme la cause. Calibré depuis sur cinq URL, 2 PASSE / 3 REFUSE.
+
+**Isolation des sorties, pas du code.** Deux campagnes lancées du même répertoire
+écrivaient dans les mêmes espaces de travail et le même `resultats.jsonl` : la
+seconde écrasait la solution que la première allait faire juger. La parade
+évidente — copier le banc ailleurs — est exactement celle qui a coûté deux heures
+le 22/08 (une campagne tournant depuis une copie figée où aucun correctif du jour
+n'existait). `BENCH_ETIQUETTE` isole donc `runs/<étiquette>/` et
+`resultats_<étiquette>.jsonl`, **jamais le code**.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |

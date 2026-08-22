@@ -42,6 +42,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
@@ -60,6 +61,14 @@ PROXY = os.environ.get("BENCH_PROXY", "http://127.0.0.1:8006")
 WIRE = os.environ.get("BENCH_WIRE")
 PROVIDER = os.environ.get("BENCH_PROVIDER", "local-think")
 MODELE = os.environ.get("BENCH_MODEL", "specdec-q38-plain-vision")
+# ETIQUETTE de campagne. Deux campagnes lancees depuis le MEME repertoire
+# ecrivaient dans les memes espaces de travail (runs/r01/<effort>/<tache>)
+# et le meme resultats.jsonl : la seconde ecrasait la solution que la
+# premiere allait faire juger. La parade evidente -- copier le banc
+# ailleurs -- est celle qui a deja coute deux heures le 22/08, une
+# campagne tournant depuis une copie figee ou aucun correctif du jour
+# n existait. On isole donc les SORTIES, jamais le code.
+ETIQUETTE = os.environ.get("BENCH_ETIQUETTE", "")
 
 # --- campagne PARALLELE ---------------------------------------------------
 # Pourquoi le parallelisme n'a de sens que sur la dorsale EXTERNE : le Qwen
@@ -71,6 +80,20 @@ MODELE = os.environ.get("BENCH_MODEL", "specdec-q38-plain-vision")
 # campagne epinglee du 22/08 en est morte, 29 lancements pour 1 reussite.
 PORT_PAR = int(os.environ.get("BENCH_PAR_PORT", "8020"))
 AMONT_PAR = os.environ.get("BENCH_PAR_AMONT", "127.0.0.1:31415")
+# Le prefixe de chemin de l amont : "/v1" pour FreeLLMAPI, "/api/v1" pour
+# OpenRouter. L enregistreur transmet le chemin tel qu il le recoit, donc
+# c est la baseURL de l ouvrier qui doit le porter -- une baseURL en /v1
+# vers openrouter.ai rendrait 404 sur chaque appel.
+# SANS barre oblique de tete : un shell MSYS (Git Bash) convertit toute
+# valeur d environnement qui RESSEMBLE a un chemin Unix en chemin Windows.
+# Mesure du 22/08 : BENCH_PAR_CHEMIN=/api/v1 est arrive sous la forme
+# C:/Program Files/Git/api/v1, la baseURL est devenue
+# http://127.0.0.1:8050C:/Program Files/Git/api/v1, et les 4 ouvriers ont
+# rendu "PI_AI_ERROR: Invalid URL" en 1,7 s -- une cause qui ne nomme pas
+# son origine. On passe "api/v1", la barre est ajoutee ici, ou aucun
+# shell ne la voit.
+CHEMIN_PAR = "/" + os.environ.get("BENCH_PAR_CHEMIN", "v1").lstrip("/")
+TLS_PAR = os.environ.get("BENCH_PAR_TLS") == "1"
 VERROU = threading.Lock()
 # Le JUGE est serialise meme quand les agents ne le sont pas : douze harnais
 # Julia lances ensemble se battent pour le CPU de la campagne locale voisine.
@@ -409,6 +432,40 @@ def _reecrire_baseurl(s, provider, url):
         % provider)
 
 
+def ecrire_texte(chemin, texte):
+    """Ecrit un fichier texte en LF. Existe pour que les fins de ligne ne
+    soient jamais recopiees a la main dans un canal qui les mange."""
+    with io.open(chemin, "w", encoding="utf-8", newline=chr(10)) as f:
+        f.write(texte)
+
+
+def _verifier_url(url):
+    """Refuse une baseURL que le shell a fabriquee en route.
+
+    Ancre sur l HOTE et le CHEMIN separement, jamais sur la chaine
+    entiere : un motif [A-Za-z]:[/] applique a l URL complete matche
+    `http://` lui-meme et refuse TOUT -- premiere version, attrapee par
+    son propre bras known-GOOD avant d avoir servi.
+    """
+    try:
+        u = urllib.parse.urlsplit(url)
+        mauvais = (u.scheme != "http" or u.hostname != "127.0.0.1" or not u.port
+                   or " " in u.path or chr(92) in u.path
+                   or re.search(r"^/[A-Za-z]:", u.path))
+    except ValueError:
+        # `.port` LEVE quand l autorite est abimee ("8050C:") au lieu de rendre
+        # None. Une exception non rattrapee ici tue la campagne avec une trace
+        # urllib au lieu du message qui nomme la cause : le bras known-BAD a
+        # trouve ce defaut du garde avant qu il ne serve.
+        mauvais = True
+    if mauvais:
+        raise SystemExit(
+            "banc: baseURL fabriquee invalide -- %r. Le shell a "
+            "probablement converti le prefixe de chemin : passer "
+            "BENCH_PAR_CHEMIN SANS barre de tete (api/v1), le banc "
+            "l ajoute." % url)
+
+
 def preparer_voies(n, effort):
     """Cree n accueils dsh isoles ; l'ouvrier k parle a la voie /wk.
 
@@ -435,9 +492,9 @@ def preparer_voies(n, effort):
         # UN PORT PAR OUVRIER. Le prefixe de chemin (.../wK/v1) a ete essaye et
         # mesure faux : dsh normalise la baseURL et le jette, 47 appels sur 47
         # sont arrives sans voie. Le port, lui, ne se normalise pas.
-        io.open(cible, "w", encoding="utf-8", newline="\n").write(
-            _reecrire_baseurl(s, PROVIDER,
-                              "http://127.0.0.1:%d/v1" % (PORT_PAR + k)))
+        url = "http://127.0.0.1:%d%s" % (PORT_PAR + k, CHEMIN_PAR)
+        _verifier_url(url)
+        ecrire_texte(cible, _reecrire_baseurl(s, PROVIDER, url))
         set_default(PROVIDER, MODELE, effort, cible)
         voies.append((acc, k, os.path.join(acc, "wire.jsonl"),
                       "http://127.0.0.1:%d" % (PORT_PAR + k)))
@@ -476,6 +533,8 @@ def lancer_enregistreurs(voies):
         env["PROXY_SLOT"] = str(k)
         env["UP_HOST"] = hote
         env["UP_PORT"] = port
+        if TLS_PAR:
+            env["UP_TLS"] = "1"
         p = subprocess.Popen(["node", os.path.join(BASE, "proxy.mjs")],
                              cwd=BASE, env=env, stdout=subprocess.DEVNULL,
                              stderr=subprocess.DEVNULL)
@@ -551,7 +610,7 @@ def lancer_borne(cmd, cwd, env, delai):
 
 def un_run(effort, tache, rep=1, iteratif=False, web=False,
            slot=None, accueil=None, wire=None, proxy_base=None):
-    ws = os.path.join(BASE, "runs", "r%02d" % rep, effort, tache)
+    ws = os.path.join(BASE, "runs", ETIQUETTE, "r%02d" % rep, effort, tache)
     if os.path.isdir(ws):
         shutil.rmtree(ws)
     os.makedirs(ws)
@@ -703,7 +762,9 @@ def main():
 
     efforts = argv[0].split(",") if argv else ["off", "low", "medium", "high", "xhigh"]
     taches = argv[1].split(",") if len(argv) > 1 else defaut
-    out = os.path.join(BASE, "resultats.jsonl")
+    out = os.path.join(BASE, "resultats%s.jsonl"
+                       % (("_" + ETIQUETTE) if ETIQUETTE else ""))
+    print("sorties : %s" % out)
 
     def ecrire(rec):
         with VERROU:
