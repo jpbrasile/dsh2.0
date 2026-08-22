@@ -50,6 +50,9 @@ DSH = os.environ.get(
                  "dsh-0.1.1-rc.2", "node_modules", ".bin", "dsh.cmd"))
 JULIA = os.environ.get("JULIA_BIN", "julia")
 PROXY = os.environ.get("BENCH_PROXY", "http://127.0.0.1:8006")
+# Journal du fil, cote dorsale externe. En mode `auto` le routeur CHOISIT le
+# modele : `MODELE` dit ce qu'on a demande, ce journal dit qui a repondu.
+WIRE = os.environ.get("BENCH_WIRE")
 PROVIDER = os.environ.get("BENCH_PROVIDER", "local-think")
 MODELE = os.environ.get("BENCH_MODEL", "specdec-q38-plain-vision")
 
@@ -244,6 +247,36 @@ def cle_freellm():
     return k
 
 
+def modeles_servis(t0, t1):
+    """Rend ({modele: nb appels}, nb appels ayant bascule) sur la fenetre du run.
+
+    Sans ca, une campagne en mode `auto` rend douze lignes toutes etiquetees
+    "auto" : le verdict existe, l'executant non.
+    """
+    if not WIRE or not os.path.exists(WIRE):
+        return None, None
+    vus, casc = {}, 0
+    for l in io.open(WIRE, encoding="utf-8", errors="replace"):
+        l = l.strip()
+        if not l:
+            continue
+        try:
+            r = json.loads(l)
+        except ValueError:
+            continue
+        if r.get("kind") != "call":
+            continue
+        t = (r.get("t0") or 0) / 1000.0
+        if not (t0 <= t <= t1):
+            continue
+        m = r.get("servi")
+        if m:
+            vus[m] = vus.get(m, 0) + 1
+        if r.get("bascule"):
+            casc += 1
+    return vus, casc
+
+
 def compter_web(ws, depuis):
     """Nombre d'appels REELS a web_search / web_fetch pendant ce run.
 
@@ -427,6 +460,10 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False):
            # sans provider/modele n'est attribuable a aucun executant, et
            # deux campagnes deviennent un seul tas de chiffres.
            "provider": PROVIDER, "modele": MODELE}
+    servis, casc = modeles_servis(t0, time.time())
+    if servis is not None:
+        rec["servis"] = servis          # qui a REPONDU, et combien de fois
+        rec["appels_bascules"] = casc   # appels ou le routeur a du changer de route
     print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-2d  web=%-3s %s"
           % (rep, effort, tache, v, dt, julia_runs,
              "n/a" if appels_web < 0 else appels_web, why[:52]))

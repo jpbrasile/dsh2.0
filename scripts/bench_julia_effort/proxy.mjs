@@ -4,8 +4,12 @@
 import http from 'node:http';
 import fs from 'node:fs';
 
-const UP_HOST = '127.0.0.1';
-const UP_PORT = 8005;
+const UP_HOST = process.env.UP_HOST || '127.0.0.1';
+// L'amont est configurable depuis le 22/08 : le meme enregistreur sert le
+// llama-server local (8005) ET le routeur FreeLLMAPI (31415). Sans lui,
+// `auto` choisit un modele et RIEN ne dit lequel a repondu -- un banc qui
+// ne lit pas le fil compare des etiquettes.
+const UP_PORT = Number(process.env.UP_PORT || 8005);
 const PORT = Number(process.env.PROXY_PORT || 8006);
 const LOG = process.env.PROXY_LOG || './wire.jsonl';
 
@@ -54,6 +58,22 @@ const server = http.createServer((req, res) => {
         if (!sent) return;
         const raw = Buffer.concat(out).toString('utf8');
         const rec = { kind: 'call', t0, ms: Date.now() - t0, status: ur.statusCode, sent };
+        // `sent.model` est ce qu'on a DEMANDE ('auto') ; `servi` est ce qui a
+        // REPONDU. Les deux differents, c'est tout l'interet du mode auto.
+        // Le modele servi est sur CHAQUE fragment SSE, pas seulement sur celui
+        // qui porte `usage`. Mesure 22/08 : en s'appuyant sur `usage`, 4 appels
+        // sur 24 seulement etaient attribues -- le flux de ce routeur ne le
+        // renvoie presque jamais. On lit donc le PREMIER fragment qui nomme un
+        // modele, et l'attribution passe a 24 sur 24.
+        if (sent.stream) {
+          for (const l of raw.split(String.fromCharCode(10))) {
+            if (!l.startsWith('data: ') || l.includes('[DONE]')) continue;
+            let o = null; try { o = JSON.parse(l.slice(6)); } catch (e) { o = null; }
+            if (o && o.model) { rec.servi = o.model; break; }
+          }
+        }
+        const trail = ur.headers['x-fallback-trail'];
+        if (trail) rec.bascule = String(trail);
         // usage/timings : soit dans un JSON simple, soit dans le dernier chunk SSE.
         const grab = (txt) => { try { return JSON.parse(txt); } catch { return null; } };
         let last = grab(raw);
@@ -65,6 +85,7 @@ const server = http.createServer((req, res) => {
           }
         }
         if (last) {
+          if (last.model) rec.servi = last.model;
           if (last.usage) rec.usage = last.usage;
           if (last.timings) rec.timings = last.timings;
           if (last.error) rec.error = last.error;
@@ -82,4 +103,4 @@ const server = http.createServer((req, res) => {
     up.end(body);
   });
 });
-server.listen(PORT, UP_HOST, () => console.error(`proxy 8006 -> ${UP_PORT}, log=${LOG}`));
+server.listen(PORT, '127.0.0.1', () => console.error(`proxy ${PORT} -> ${UP_HOST}:${UP_PORT}, log=${LOG}`));
