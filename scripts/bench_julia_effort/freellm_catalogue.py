@@ -82,23 +82,25 @@ def ajouter(args):
         "(platform, model_id, display_name, intelligence_rank, speed_rank, "
         " size_label, rpm_limit, rpd_limit, monthly_token_budget, context_window, "
         " enabled, supports_vision, supports_tools, source, endpoint_scope) "
-        "values (?,?,?,?,?,?,?,?,?,?,1,?,?,'catalog','')",
+        "values (?,?,?,?,?,?,?,?,?,?,1,?,?,?,'')",
         (args.plateforme, args.modele, args.nom, args.rang_intel, args.rang_vitesse,
          args.taille, args.rpm, args.rpd, args.budget, args.ctx,
-         1 if args.vision else 0, 1 if args.outils else 0))
+         1 if args.vision else 0, 1 if args.outils else 0,
+         getattr(args, "source", None) or SOURCE_MOISSON))
     c.commit()
     apres = c.execute("select count(*) from models where platform = ?",
                       (args.plateforme,)).fetchone()[0]
     ligne = c.execute(
-        "select id, platform, model_id, context_window, enabled, supports_tools "
+        "select id, platform, model_id, context_window, enabled, supports_tools, source "
         "from models where platform = ? and model_id = ?",
         (args.plateforme, args.modele)).fetchone()
     c.close()
     if ligne is None:
         raise SystemExit("catalogue: insertion sans effet ET ligne absente -- anomalie")
     etat = "INSEREE" if apres > avant else "DEJA PRESENTE (idempotent)"
-    print("  %s : id=%s %s / %s ctx=%s active=%s outils=%s"
-          % (etat, ligne[0], ligne[1], ligne[2], ligne[3], ligne[4], ligne[5]))
+    print("  %s : id=%s %s / %s ctx=%s active=%s outils=%s src=%s"
+          % (etat, ligne[0], ligne[1], ligne[2], ligne[3], ligne[4],
+             ligne[5], ligne[6]))
     print("  lignes plateforme %s : %d -> %d" % (args.plateforme, avant, apres))
 
 
@@ -224,6 +226,140 @@ def _rangs_connus(c):
     return connus
 
 
+# PROVENANCE. La base de FreeLLMAPI est TENUE A JOUR EN AMONT : ses 525 lignes
+# portent `source = 'catalog'` et ne nous appartiennent pas. Nos ajouts doivent
+# rester reconnaissables en UNE requete, sinon on ne pollue pas seulement la
+# base -- on perd la capacite de defaire ce qu'on y a mis.
+#
+# Defaut mesure le 22/08 : nos huit premieres lignes avaient pris le DEFAUT de
+# la colonne, `catalog`. Elles etaient indiscernables des 525 autres. Corrige,
+# et la colonne devient l'instrument de la peremption ci-dessous.
+#
+# Deux valeurs, parce que les deux populations ne vieillissent pas au meme
+# rythme :
+#   `stealth` -- avant-premieres (ox-alpha, x-preview-f...). Nom de code,
+#                montee d'usage tres rapide, DISPARITION sans preavis quand
+#                l'editeur renomme ou retire. A verifier a CHAQUE session.
+#   `moisson` -- gratuits ordinaires releves en amont. Vieillissent lentement.
+SOURCE_STEALTH = "stealth"
+SOURCE_MOISSON = "moisson"
+SOURCE_AMONT = "catalog"
+
+
+def _appel_brut(modele, delai, outils=False):
+    """Un appel minimal au routeur. Rend (code HTTP, corps brut)."""
+    charge = {"model": modele,
+              "messages": [{"role": "user", "content": "reponds exactement: OK"}],
+              "max_tokens": 8}
+    if outils:
+        charge["tools"] = [{"type": "function", "function": {
+            "name": "obtenir_heure", "description": "Rend l heure courante.",
+            "parameters": {"type": "object", "properties": {}}}}]
+        charge["tool_choice"] = "auto"
+    req = urllib.request.Request(
+        ROUTEUR + "/v1/chat/completions",
+        data=json.dumps(charge).encode("utf-8"), method="POST",
+        headers={"Authorization": "Bearer " + _cle(),
+                 "Content-Type": "application/json"})
+    try:
+        with urllib.request.urlopen(req, timeout=delai) as r:
+            return r.status, r.read().decode("utf-8", "replace")
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8", "replace")
+    except Exception as e:
+        return 0, "ECHEC RESEAU: %s" % e
+
+
+def _classe_refus(corps, code):
+    """PERIME, ou seulement INDISPONIBLE ? La distinction EST l'instrument.
+
+    Un 429 est un quota, un 403 une autorisation : dans les deux cas le modele
+    EXISTE. Les lire comme une peremption retirerait du service un modele
+    vivant, et le geste serait invisible -- la ligne passe a `enabled = 0` et
+    plus rien ne la tire. Mesure du 22/08 : sur trois ajouts sondes dans la
+    foulee, deux ont rendu 403 et un 429. Aucun n'etait perime. Une regle qui
+    aurait lu "HTTP different de 200" comme une disparition en aurait retire
+    trois sur trois.
+
+    Seul un amont qui dit NE PAS CONNAITRE le modele vaut peremption."""
+    t = (corps or "").lower()
+    if ("model_not_found" in t or "no endpoints found" in t
+            or "is not in the catalog" in t or "no allowed providers" in t
+            or ("not found" in t and "404" in t)):
+        return "PERIME"
+    if code == 200:
+        return "VIVANT"
+    if code in (401, 403):
+        return "INDISPONIBLE (autorisation)"
+    if code == 429:
+        return "INDISPONIBLE (quota)"
+    if code == 0:
+        return "INDECIDABLE (reseau)"
+    return "INDECIDABLE (HTTP %s)" % code
+
+
+def perimer(args):
+    """Retirer du service les lignes A NOUS dont l'amont ne repond plus.
+
+    On ne touche JAMAIS une ligne `catalog` : celle-la est tenue a jour par
+    l'application, et la corriger serait se mettre en travers de sa propre
+    synchronisation. On ne touche que ce qu'on a ajoute.
+
+    Et on DEPINGLE, on ne supprime pas : une ligne desactivee garde son rang,
+    ses limites et sa trace ; le jour ou l'amont revient, il suffit de la
+    rallumer. Une ligne supprimee, il faut la reconstituer.
+
+    Par defaut, ne fait qu'AFFICHER. `--appliquer` ecrit."""
+    c = sqlite3.connect(_uri(DB, ro=True), uri=True)
+    lignes = c.execute(
+        "select id, platform, model_id, source from models "
+        "where source <> ? and enabled = 1 order by source, platform, model_id",
+        (SOURCE_AMONT,)).fetchall()
+    total = c.execute("select count(*) from models where source = ?",
+                      (SOURCE_AMONT,)).fetchone()[0]
+    c.close()
+    print("  base de l'application : %d lignes `%s`, JAMAIS touchees." % (total, SOURCE_AMONT))
+    if not lignes:
+        print("  aucune ligne a nous en service -- rien a perimer.")
+        return []
+    print("  a nous, en service : %d. L'amont decide, pas nous." % len(lignes))
+    morts = []
+    for (i, plat, mid, src) in lignes:
+        code, corps = _appel_brut(mid, args.delai)
+        verdict = _classe_refus(corps, code)
+        # Un INDECIDABLE qu'on peut lever a bon compte doit etre leve.
+        # Mesure du 22/08 : a 30 s, les deux SEULES lignes que cette
+        # routine existe pour surveiller -- les avant-premieres -- sont
+        # sorties "reseau". Un modele de raisonnement met plus de 30 s a
+        # rendre son premier jeton ; le delai court ne mesurait pas leur
+        # peremption, il mesurait ma patience.
+        if verdict.startswith("INDECIDABLE (reseau)"):
+            code, corps = _appel_brut(mid, args.delai * 3)
+        verdict = _classe_refus(corps, code)
+        print("  %-9s %-42s src=%-8s -> %s" % (plat, mid, src, verdict))
+        if verdict == "PERIME":
+            morts.append((i, plat, mid))
+            print("       %s" % (corps or "").replace(chr(10), " ")[:150])
+    print()
+    if not morts:
+        print("  AUCUNE PEREMPTION -- rien n'est retire.")
+        return []
+    print("  PERIMES (%d) : %s" % (len(morts), ", ".join(m[2] for m in morts)))
+    if not args.appliquer:
+        print("  (affichage seul -- --appliquer pour depingler)")
+        return morts
+    sauve = DB + ".bak-" + time.strftime("%Y%m%d-%H%M%S")
+    shutil.copy2(DB, sauve)
+    print("  sauvegarde : %s" % sauve)
+    c = sqlite3.connect(_uri(DB), uri=True)
+    for (i, plat, mid) in morts:
+        c.execute("update models set enabled = 0 where id = ?", (i,))
+        print("  depingle : %s / %s (id=%d)" % (plat, mid, i))
+    c.commit()
+    c.close()
+    return morts
+
+
 def moissonner(args):
     """Synchroniser le catalogue avec les modeles a COUT NUL ET OUTILLES
     d'OpenRouter. Deux criteres, pas un : un modele gratuit sans outils ne peut
@@ -332,9 +468,9 @@ def moissonner(args):
             "(platform, model_id, display_name, intelligence_rank, speed_rank, "
             " size_label, rpm_limit, rpd_limit, monthly_token_budget, context_window, "
             " enabled, supports_vision, supports_tools, source, endpoint_scope) "
-            "values (?,?,?,?,?,?,20,200,'gratuit OpenRouter',?,1,?,1,'catalog','')",
+            "values (?,?,?,?,?,?,20,200,'gratuit OpenRouter',?,1,?,1,?,'')",
             (args.plateforme, mid, (m.get("name") or mid)[:80], ri, rv, taille,
-             m.get("context_length"), vision))
+             m.get("context_length"), vision, SOURCE_MOISSON))
         n_add += cur.rowcount or 0
     for mid in a_depingler:
         cur = c.execute("update models set enabled = 0 where platform = ? and model_id = ?",
@@ -429,36 +565,80 @@ class _Args(object):
 
 
 def demarrage(args):
-    """ROUTINE DE DEBUT DE SESSION. Trois gestes, dans cet ordre.
+    """ROUTINE DE DEBUT DE SESSION.
 
-    1. MOISSONNER -- ce qui est apparu en amont a cout nul et outille.
-    2. CLASSER PAR USAGE -- porter en tete les gratuits massivement utilises.
+    LA BASE DE REFERENCE EST CELLE DE FREELLMAPI, pas la notre. Ses lignes
+    `catalog` sont tenues a jour en amont -- avec du RETARD sur l'engouement
+    des utilisateurs, et c'est exactement ce retard qu'on comble. On n'y
+    reverse donc pas tout ce qu'OpenRouter annonce : on y ajoute, au bon rang,
+    les seuls modeles que l'usage designe, et on retire ceux qui ont expire.
+
+    Trois gestes, dans cet ordre. L'ordre compte : perimer AVANT d'ajouter,
+    sinon la base grossit d'une session a l'autre sans jamais maigrir.
+
+    1. PERIMER -- nos lignes dont l'amont ne repond plus. Les avant-premieres
+       se perimeent vite : elles montent en usage sous un nom de code puis
+       disparaissent sans preavis quand l'editeur renomme ou retire.
+    2. AJOUTER LES PLUS UTILISES QUI MANQUENT -- et seulement ceux-la, au rang
+       que leur donne le volume d'usage. Un modele absent du catalogue
+       OpenRouter n'est pas invente : il est SIGNALE, pas ajoute.
     3. SONDER AVEC UN VRAI OUTIL -- transformer l'inference en mesure.
 
-    Le troisieme geste n'est pas decoratif. Mesure du 22/08, sur quatre modeles
-    supposes outilles parce que massivement utilises : deux confirmes (hy3-free
-    et nemotron-3.5-lightning-free repondent 200 avec un outil reel), un
-    INFIRME (muse-spark rend un 400 depuis OpenCode Zen lui-meme), un
-    indecidable ce jour-la (quota epuise). L'inference etait bonne trois fois
-    sur quatre -- ce qui veut dire qu'elle est fausse une fois sur quatre, et
-    qu'une fiche fausse se paie en runs qui echouent sur la mauvaise cause.
+    Le troisieme geste n'est pas decoratif. Mesure du 22/08, sur quatre
+    modeles supposes outilles parce que massivement utilises : deux confirmes
+    (hy3-free, nemotron-3.5-lightning-free repondent 200 avec un outil reel),
+    un INFIRME (muse-spark rend un 400 depuis OpenCode Zen lui-meme), un
+    indecidable ce jour-la (quota). L'inference etait bonne trois fois sur
+    quatre -- donc fausse une fois sur quatre, et une fiche fausse se paie en
+    runs qui echouent sur la mauvaise cause.
 
-    Et un piege a connaitre : tant que la fiche du routeur dit `outils=0`, il
-    REFUSE la requete outillee en citant sa propre fiche. Le refus ne mesure
-    alors rien du tout -- il faut lever le drapeau pour pouvoir mesurer."""
+    Piege a connaitre : tant que la fiche du routeur dit `outils=0`, il REFUSE
+    la requete outillee en citant SA PROPRE FICHE. Le refus ne mesure alors
+    rien -- il faut lever le drapeau pour pouvoir mesurer.
+
+    `--moissonner` ajoute le versement en masse depuis OpenRouter. Il n'est
+    PAS dans la routine : il ajoute des dizaines de lignes que personne ne
+    tirera, et c'est precisement ce qui pollue une base tenue en amont."""
     print("=" * 68)
-    print("1/3  MOISSON -- nouveautes a cout nul ET outillees")
+    print("1/3  PEREMPTION -- nos lignes d'abord, celles de l'application jamais")
     print("=" * 68)
-    moissonner(_Args(plateforme=args.plateforme, appliquer=args.appliquer, delai=90))
+    perimer(_Args(appliquer=args.appliquer, delai=args.delai))
+
+    if args.moissonner:
+        print()
+        print("=" * 68)
+        print("1bis  MOISSON EN MASSE (hors routine, --moissonner)")
+        print("=" * 68)
+        moissonner(_Args(plateforme=args.plateforme, appliquer=args.appliquer,
+                         delai=args.delai))
+
     print()
     print("=" * 68)
-    print("2/3  CLASSEMENT PAR USAGE -- releve fige, voir USAGE_20260821")
+    print("2/3  LES PLUS UTILISES -- releve fige, voir USAGE_20260821")
     print("=" * 68)
+    manquants = _usage_manquants(args.delai)
+    for nom, jetons, ou, ctx in manquants:
+        print("  MANQUANT %-22s %5d Md/j" % (nom, jetons), end="")
+        if ou is None:
+            print("  -- absent du catalogue OpenRouter : SIGNALE, pas ajoute.")
+            continue
+        print("  -- OpenRouter annonce %s (ctx=%s)" % (ou, ctx))
+        if args.appliquer:
+            ajouter(_Args(plateforme="openrouter", modele=ou, nom=nom,
+                          ctx=ctx or 131072, outils=True, vision=False,
+                          rang_intel=1, rang_vitesse=3, taille="Frontier",
+                          rpm=20, rpd=200, budget="apercu gratuit",
+                          source=SOURCE_STEALTH))
+    if not manquants:
+        print("  aucun manquant : les plus utilises sont deja au catalogue.")
+    print()
     usage(_Args(appliquer=args.appliquer))
+
     if not args.appliquer:
         print()
         print("(affichage seul de bout en bout -- --appliquer pour ecrire et sonder)")
         return
+
     print()
     print("=" * 68)
     print("3/3  SONDES OUTILLEES -- l'inference devient une mesure")
@@ -472,6 +652,43 @@ def demarrage(args):
     c.close()
     for mid in cibles:
         sonder(_Args(modele=mid, delai=args.delai, avec_outils=True))
+
+
+def _usage_manquants(delai):
+    """Les noms du releve d'usage qui ne sont dans AUCUNE ligne du catalogue.
+
+    On ne cherche pas seulement le nom exact : le meme modele circule sous
+    plusieurs identifiants (`hy3`, `hy3-free`, `stealth/ox-alpha`), d'ou les
+    alias du releve. Un modele est present des qu'UN de ses alias l'est.
+
+    Et pour chaque manquant, on demande a OpenRouter s'il le connait -- un
+    identifiant qu'aucun amont n'annonce ne s'ajoute pas, il se signale."""
+    c = sqlite3.connect(_uri(DB, ro=True), uri=True)
+    presents = {_normalise(r[0]) for r in c.execute("select model_id from models")}
+    c.close()
+    manque = [(nom, jetons, alias) for (nom, jetons, alias) in USAGE_20260821
+              if not any(_normalise(a) in presents for a in alias)]
+    if not manque:
+        return []
+    try:
+        with urllib.request.urlopen(AMONT_OR, timeout=delai) as r:
+            ms = json.loads(r.read().decode("utf-8", "replace")).get("data", [])
+    except Exception as e:
+        print("  (catalogue OpenRouter injoignable : %s -- signalement seul)" % e)
+        ms = []
+    par_cle = {}
+    for m in ms:
+        par_cle.setdefault(_normalise(m["id"]), m)
+    sortie = []
+    for nom, jetons, alias in manque:
+        trouve = None
+        for a in list(alias) + [nom]:
+            if _normalise(a) in par_cle:
+                trouve = par_cle[_normalise(a)]
+                break
+        sortie.append((nom, jetons, trouve["id"] if trouve else None,
+                       (trouve or {}).get("context_length")))
+    return sortie
 
 
 def main():
@@ -495,6 +712,10 @@ def main():
     b.add_argument("--rpm", type=int, default=20)
     b.add_argument("--rpd", type=int, default=200)
     b.add_argument("--budget", default="apercu gratuit")
+    b.add_argument("--source", default=None,
+                   help="provenance : %s pour une avant-premiere, %s sinon. "
+                        "Jamais `catalog` : celle-la est la marque de l application."
+                        % (SOURCE_STEALTH, SOURCE_MOISSON))
     b.set_defaults(fn=ajouter)
 
     e = sp.add_parser("desactiver", help="depingler une ligne dont l amont a disparu")
@@ -510,18 +731,26 @@ def main():
     f.add_argument("--delai", type=int, default=60)
     f.set_defaults(fn=moissonner)
 
+    i = sp.add_parser("perimer",
+                      help="depingler NOS lignes dont l amont ne repond plus (jamais celles de l app)")
+    i.add_argument("--appliquer", action="store_true")
+    i.add_argument("--delai", type=int, default=60)
+    i.set_defaults(fn=perimer)
+
     g = sp.add_parser("usage", help="porter en tete du bareme les gratuits massivement utilises")
     g.add_argument("--appliquer", action="store_true")
     g.set_defaults(fn=usage)
 
     h = sp.add_parser("demarrage",
-                      help="routine de debut de session : moissonner, classer par usage, sonder outille")
+                      help="routine de debut de session : perimer, ajouter les plus utilises, sonder")
     h.add_argument("--plateforme", default="openrouter")
     h.add_argument("--appliquer", action="store_true",
                    help="ecrire ET sonder ; sans ce drapeau, affichage seul")
     h.add_argument("--jusqu-au-rang", type=int, default=4, dest="jusqu_au_rang",
                    help="sonder les modeles jusqu a ce rang (defaut 4)")
     h.add_argument("--delai", type=int, default=90)
+    h.add_argument("--moissonner", action="store_true",
+                   help="ajouter le versement en masse OpenRouter -- HORS routine, il pollue")
     h.set_defaults(fn=demarrage)
 
     d = sp.add_parser("sonder", help="404 avant / 200 apres, et QUI a repondu")
