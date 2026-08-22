@@ -77,14 +77,21 @@ CONSIGNE = "Read the file TASK.md in the current directory and do exactly what i
 # cherche jamais. Sans instruction explicite, le bras "avec web" serait le meme
 # bras que le bras "sans", et la campagne mesurerait la difference entre deux
 # tirages du meme reglage.
+# Le paquet de base monte `dsh-tool-web` avec `fetch: false`
+# (dsh-base/cordis.patch.yml) : seul `web_search` est enregistre, et le
+# greffon adapte lui-meme sa consigne dans ce cas. Un preambule qui demande
+# `web_fetch` demande un outil INEXISTANT -- le modele perdrait un tour a
+# l'appeler, et le bras "avec web" mesurerait cette perte au lieu de mesurer
+# la recherche. Verifie dans la configuration livree le 22/08.
 PREAMBULE_WEB = """Before writing any code, do these two things in order.
 
 1. SEARCH. Use the `web_search` tool to look up the parts of this task that depend
    on facts outside your own memory: the exact semantics of a documented interface,
    the byte order or constants a format or an algorithm specifies, the published
-   parameters of a numerical method. Use `web_fetch` on a source when the snippet is
-   not enough. Do not skip this step, and do not search for the whole task at once --
-   search for the specific facts you are unsure about.
+   parameters of a numerical method. Read the snippets and the source URLs the tool
+   returns -- `web_fetch` is NOT available in this composition, so the
+   snippets are what you get. Do not skip this step, and do not search for
+   the whole task at once -- search for the specific facts you are unsure of.
 
 2. PLAN. Write down, in a few lines, the components you are going to write and the
    decision you took for each one. Only then write the code.
@@ -173,6 +180,36 @@ def selftest(taches=None):
         v, why = juger(os.path.join(BASE, "bad", "%s.jl" % t), t)
         pris += v == "FAIL"
         print("  %s %-4s %s" % (t, v, why[:90]))
+    # SECOND bras known-GOOD, ecrit independamment de ref/ (Claude Code, 22/08).
+    # Le bras ref/ montre que le juge accepte LA solution de reference ; il ne
+    # montre pas que le juge teste le CONTRAT plutot que les choix de conception
+    # de cette solution-la. Une seconde implementation correcte, ecrite sans
+    # avoir lu la premiere, est exactement ce controle-la.
+    # AVIS SEULEMENT a la naissance (G10) : il rapporte, il ne refuse pas. Il a
+    # deja tire une fois -- la premiere version de ref2/t35 conservait bien la
+    # contenance mais laissait la borne EGALE au flottant, et le juge l'a dit :
+    # [0.3, 0.30000000000000004].
+    # Contamination declaree : t22, t31 et t34 ont ete ecrites apres avoir vu
+    # une partie du juge (tolerances, assertions, temoins). Les neuf autres non.
+    dispo = [t for t in taches
+             if os.path.isfile(os.path.join(BASE, "ref2", "%s.jl" % t))]
+    if dispo:
+        print("=== second known-GOOD (avis) : ref2/ , ecrit sans lire ref/ ===")
+        bons2 = 0
+        for t in dispo:
+            v, why = juger(os.path.join(BASE, "ref2", "%s.jl" % t), t)
+            bons2 += v == "PASS"
+            print("  %s %-4s %s" % (t, v, why[:90]))
+        if bons2 < len(dispo):
+            print("  !!! AVIS -- %d/%d seulement : soit ref2 est fausse, soit une"
+                  " assertion teste la CONCEPTION de ref/ et pas le contrat."
+                  % (bons2, len(dispo)))
+        else:
+            print("  second bras %d/%d : les assertions tiennent sur une AUTRE"
+                  " conception correcte." % (bons2, len(dispo)))
+    else:
+        print("=== second known-GOOD : aucun fichier ref2/ pour ce palier ===")
+
     ok = bons == len(taches) and pris == len(taches)
     print("\nknown-GOOD %d/%d   known-BAD attrapes %d/%d   =>  %s"
           % (bons, len(taches), pris, len(taches), "CALIBRE" if ok else "NON CALIBRE"))
@@ -362,6 +399,14 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False):
 
 
 def main():
+    # DIRE D'OU L'ON TOURNE, a chaque lancement. Le 22/08 la campagne tournait
+    # depuis une COPIE du banc figee dans le repertoire temporaire d'une session
+    # terminee : deux heures de correctifs -- l'orphelin, les paliers t21..t36,
+    # trois controles cables -- n'etaient dans aucun processus en cours. Rien
+    # dans la sortie ne le disait. "j'ai corrige bench.py" et "le correctif
+    # tourne" sont deux affirmations differentes ; cette ligne est la seule qui
+    # transforme la seconde en mesure.
+    print("banc : %s" % BASE)
     argv = list(sys.argv[1:])
     if argv and argv[0] == "--selftest":
         if len(argv) > 1:

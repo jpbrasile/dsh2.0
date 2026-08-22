@@ -65,6 +65,14 @@ python bench.py --selftest expert    # t21..t26   6/6 GOOD, 6/6 BAD  (22/08)
 python bench.py --selftest limite    # t31..t36   6/6 GOOD, 6/6 BAD  (22/08)
 ```
 
+**Un second bras known-GOOD, `ref2/`.** `ref/` prouve que le juge accepte *la*
+solution de référence ; il ne prouve pas que les assertions testent le
+**contrat** plutôt que les choix de conception de cette solution-là. `ref2/`
+contient douze solutions aux mêmes énoncés, écrites sans lire `ref/` (Claude
+Code, 22/08) : **12/12**. `--selftest` le lance quand les fichiers existent et
+le rapporte en **AVIS** — il ne fait pas échouer le calibrage. Il a déjà tiré
+une fois : voir `ref2/LISEZ-MOI.md`.
+
 **Lire les noms, pas le compte.** Sur t31, le calibrage a affiché
 `known-BAD attrapés 6/6` alors que la mauvaise solution tombait par la *même*
 erreur que la référence — donc sans jamais atteindre son défaut nommé. Un bras
