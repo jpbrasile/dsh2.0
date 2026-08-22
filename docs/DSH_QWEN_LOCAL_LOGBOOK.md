@@ -1096,6 +1096,45 @@ seul : un nombre isolé se rationalise, un triplet incohérent force à ouvrir
 l'instrument. Ici il en cachait trois défauts, dont un — la délégation à un
 modèle distant — qui change ce que « banc local » veut dire.
 
+### 3.19 — La recherche différée ne s'est jamais déclenchée : 12 runs, 0 appel web
+
+**Instrument :** `resultats_v3web.jsonl` et `resultats_oxalpha.jsonl` ;
+`_par/*/w*/wire.jsonl` pour l'attribution. Instrument égal entre les trois bras
+— même fournisseur (`openrouter-banc`), même modèle (`stealth/ox-alpha`), même
+effort `medium`, même corpus expert+limite, `--par 4`. Seul le préambule change.
+
+| bras | PASS | exécutions Julia | appels web | médiane |
+|---|---|---|---|---|
+| sans web | 9/12 | 104 | 0 | 173 s |
+| web V1 — cherche avant d'écrire | 11/12 | 66 | 21 * | 184 s |
+| **web V3 — cherche après deux échecs** | **10/12** | **92** | **0** | 303 s |
+
+\* compteur d'avant la correction §3.18 : c'est une **borne supérieure**, pas
+une mesure. Un 0 reste un 0.
+
+**Le résultat n'est pas 10/12. Le résultat est 0.** Sur douze runs, le modèle
+ne s'est jamais jugé bloqué deux fois de suite, donc il n'a jamais cherché. Le
+bras V3 n'est pas une condition intermédiaire entre « sans web » et « V1 » : il
+**est** le bras sans web, avec un préambule plus long. Ses 10/12 contre 9/12 sont
+un écart d'une tâche sur douze, en une répétition — du bruit.
+
+**Et les deux échecs sont précisément les cas où la recherche aurait dû partir.**
+t32 échoue sur une `MethodError` après 10 exécutions ; t31 tourne encore au
+plafond de 900 s après 16 exécutions. Deux situations où le modèle boucle sur le
+même point sans se déclarer bloqué.
+
+**Ce que ça dit de la consigne, et pas du modèle.** « Tu es bloqué quand le même
+point t'a défait deux fois » est un critère que le modèle s'applique à
+lui-même. Un modèle qui progresse à chaque tour — nouvelle erreur, nouveau
+correctif — ne se déclare jamais bloqué, même quand il tourne en rond à
+l'échelle de la tâche. **Un déclencheur auto-évalué ne se déclenche pas.**
+
+**Conséquence de conception.** Pour mesurer l'idée — chercher tard plutôt que
+tôt — le déclencheur doit être **mécanique et extérieur** : le banc compte les
+exécutions échouées et injecte la consigne de recherche après la deuxième. Cela
+demande le mode itératif, pas le mode one-shot. C'est le prochain bras à
+construire ; V3 tel quel ne mesure pas la question qu'il pose.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
