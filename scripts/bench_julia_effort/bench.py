@@ -927,8 +927,42 @@ def _question_depuis_echec(tache, why):
     # Seuls les numeros de ligne accroches a un deux-points partent, et
     # les chemins qui les portaient sont deja retires ci-dessus.
     t = re.sub(":[0-9]+", " ", t)
+    # Couper le JARGON DU BANC et la queue de bruit. Mesure du 22/08, t24 en
+    # boucle locale : la requete partait avec "check:" -- un mot du banc, pas
+    # de Julia -- et se terminait par "in expression starting at". Elle a
+    # ramene un blog de mots croises du New York Times et Google Traduction.
+    for mot in ("check:", "charge:", "ouvrier:"):
+        if t.strip().startswith(mot):
+            t = t.strip()[len(mot):]
+    for coupe in ("|", "in expression starting at", "Stacktrace"):
+        i = t.find(coupe)
+        if i > 20:
+            t = t[:i]
     t = " ".join(t.split())[:140]
     return "Julia " + t
+
+
+SOURCES_CODE = ("julialang.org", "github.com", "gitlab.com", "stackoverflow.com",
+                "stackexchange.com", "jlhub.com", "rosettacode.org",
+                "juliahub.com", "readthedocs.io", "docs.rs", "wikipedia.org")
+
+
+def _pertinent(titre, url, extrait):
+    """Ce resultat parle-t-il de Julia ou de code, ou pas du tout ?
+
+    Le moteur NE PEUT PAS echouer bruyamment : il rend trois resultats pour
+    n importe quoi, charabia compris. Mesure du 22/08, t24 en boucle locale :
+    la recherche a injecte un blog de mots croises du New York Times et Google
+    Traduction, puis le run a reussi -- le score seul aurait fait passer cette
+    injection pour de l aide.
+
+    Le filtre ne refuse pas en silence : les ecartes sont ENREGISTRES a cote
+    des retenus. Un filtre qui jette sans le dire remplace un defaut visible
+    par un defaut invisible."""
+    tout = " ".join((titre or "", url or "", extrait or "")).lower()
+    if "julia" in tout:
+        return True
+    return any(d in (url or "").lower() for d in SOURCES_CODE)
 
 
 def _bloc_retour(tour, why, trouvailles, cherche):
@@ -1041,7 +1075,9 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
         trouve = []
         if cherche:
             q = _question_depuis_echec(tache, why)
-            trouve = recherche_basique(q)
+            brut = recherche_basique(q)
+            trouve = [x for x in brut if _pertinent(x[0], x[1], x[2])]
+            ecartes = [x for x in brut if not _pertinent(x[0], x[1], x[2])]
             # On ENREGISTRE ce qui a ete injecte. Ce moteur rend trois
             # resultats pour n'importe quoi, y compris pour du charabia :
             # mesure du 22/08. Une recherche ne peut donc pas echouer
@@ -1049,7 +1085,8 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
             # elle, une injection hors sujet passerait pour de l'aide.
             recherches.append({"tour": tour, "requete": q,
                                "julia_a_ce_stade": faits,
-                               "resultats": [{"titre": t, "url": u} for t, u, _ in trouve]})
+                               "resultats": [{"titre": t, "url": u} for t, u, _ in trouve],
+                               "ecartes": [{"titre": t, "url": u} for t, u, _ in ecartes]})
         retour = _bloc_retour(tour, why, trouve, cherche)
     dt = time.time() - t0
 
@@ -1366,8 +1403,23 @@ def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None):
                             # il se remesure, une campagne perdue non.
                             with VERROU:
                                 print("  %s ERREUR OUVRIER %s" % (t, e))
+                            # L ENREGISTREMENT DE SECOURS PORTE LES MEMES
+                            # CLES. Mesure du 22/08 : t22 en boucle locale a
+                            # explose parce que le JUGE lui-meme a depasse son
+                            # delai (le programme candidat boucle sans fin), et
+                            # sa ligne est sortie sans julia_runs ni tours. Le
+                            # run devenait invisible aux analyses, qui plantent
+                            # dessus ou l ignorent. Les executions, elles,
+                            # avaient bien ete comptees : le journal du shim
+                            # survit a l exception.
+                            jl = os.path.join(BASE, "runs", ETIQUETTE,
+                                              "r%02d" % rep, effort, t,
+                                              "julia_calls.log")
                             ecrire({"effort": effort, "tache": t, "rep": rep,
                                     "verdict": "FAIL", "why": "ouvrier: %s" % e,
+                                    "julia_runs": compter_julia(jl),
+                                    "tours": None, "mode": "boucle" if TOURS else "oneshot",
+                                    "appels_web": -1,
                                     "provider": PROVIDER, "modele": MODELE})
 
 

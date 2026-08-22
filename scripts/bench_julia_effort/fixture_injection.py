@@ -86,6 +86,36 @@ exiger(not sous, "a 2 recherches enregistrees, le plafond de 2 est atteint")
 sous1 = sum(1 for r in faux[:1] if r.get("requete")) < 2
 exiger(sous1, "a 1 recherche, le plafond de 2 laisse passer")
 
+print("=== 7. le filtre de pertinence, sur les 3 resultats REELLEMENT injectes ===")
+# Cas reel du 22/08, t24 en boucle locale : la recherche a injecte un blog de
+# mots croises du NYT et Google Traduction, et le run a reussi ensuite -- donc
+# le score seul aurait fait passer cette injection pour de l aide.
+REELS = [("Issues - JuliaLang/julia", "https://github.com/JuliaLang/julia/issues", ""),
+         ("NYT Connections words meaning August 20 2026",
+          "https://connectionssports.com/blog/nyt-connections-words-meaning-august-20-2026", ""),
+         ("Google Translate", "https://translate.google.com/", "")]
+garde = [x for x in REELS if bench._pertinent(*x)]
+jete = [x for x in REELS if not bench._pertinent(*x)]
+for t, u, _ in garde:
+    print("  RETENU  %s" % u[:70])
+for t, u, _ in jete:
+    print("  ECARTE  %s" % u[:70])
+exiger(len(garde) == 1 and "JuliaLang" in garde[0][1], "la source Julia est retenue")
+exiger(len(jete) == 2, "les deux hors sujet sont ecartes")
+exiger(bench._pertinent("Sorting", "https://discourse.julialang.org/t/x", ""),
+       "un titre sans le mot mais sur un domaine Julia passe")
+exiger(not bench._pertinent("Recette de tarte", "https://cuisine.example/tarte", ""),
+       "un resultat sans rapport ne passe pas")
+
+print("=== 8. la requete ne part plus avec le jargon du banc ===")
+brut = ("check: LoadError: AssertionError: float64 gros-boutiste | in "
+        "expression starting at C:/Users/test/runs/t24/mytest.jl:31")
+q2 = bench._question_depuis_echec("t24", brut)
+print("  %s" % q2)
+exiger(not q2.startswith("Julia check:"), "le mot 'check:' du banc est retire")
+exiger("in expression starting at" not in q2, "la queue de bruit est coupee")
+exiger("AssertionError" in q2 and "float64" in q2, "l erreur et son objet survivent")
+
 print()
 if echecs:
     print("FIXTURE EN ECHEC : %d" % len(echecs))
