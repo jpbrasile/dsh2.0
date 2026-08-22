@@ -148,6 +148,49 @@ The task itself follows.
 ----------------------------------------------------------------------
 
 """
+# VERSION 2 DU PREAMBULE WEB, sous drapeau `BENCH_WEB_V2=1`.
+#
+# Sous sceau : ce n'est PAS le meme bras. Un preambule qui exige plus n'est pas
+# une amelioration du meme instrument, c'est un instrument different -- les
+# resultats des deux versions ne se comparent pas, ils s'additionnent comme deux
+# conditions distinctes. D'ou le drapeau plutot qu'un remplacement : une
+# campagne deja lancee garde le preambule sous lequel elle est partie.
+#
+# Motif, mesure le 22/08 : la v1 dit "ne saute pas cette etape", et les agents
+# la font -- une fois. Comptage sur 24 runs des deux dorsales, de 1 a 5 appels
+# web par run, mediane 1. Une recherche unique sur une tache qui depend de trois
+# faits verifiables, c'est une recherche pour la forme. La v1 n'a jamais dit
+# COMBIEN, ni sur QUOI, ni QUOI EN FAIRE.
+PREAMBULE_WEB_V2 = """Before writing any code, do these three things in order.
+
+1. LIST THE UNKNOWNS. Write out the specific facts this task depends on that you
+   are not fully certain of from memory -- the exact semantics of a documented
+   interface, a byte order, a magic constant, the published parameters of a
+   numerical method, an edge case a specification pins down. Name them one per
+   line. If you write fewer than two, look harder: a task at this level always
+   rests on more than one external fact.
+
+2. SEARCH EACH ONE SEPARATELY. Call the `web_search` tool ONCE PER LINE of that
+   list -- one focused query per fact, not one broad query for the whole task.
+   `web_fetch` is NOT available in this composition, so the returned snippets
+   are all you get; read them and the source URLs. If a search comes back
+   useless, reformulate it and search again rather than falling back on memory.
+   A single search for the whole task does not satisfy this step.
+
+3. PLAN, CITING WHAT YOU FOUND. Write a few lines listing the components you will
+   write, and for each decision that depended on one of the facts above, state
+   what the search actually said. If a search contradicted what you expected,
+   say so explicitly and follow the source, not your prior.
+
+Then write the code, and RUN IT before you finish.
+
+The task itself follows.
+
+----------------------------------------------------------------------
+
+"""
+
+
 TIMEOUT = 900        # mode one-shot
 TIMEOUT_ITER = 1800  # mode iteratif : l'agent tourne en boucle, il lui faut de la place
 SHIM = os.path.join(BASE, "_shim")
@@ -646,7 +689,8 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False,
     consigne = io.open(os.path.join(BASE, dossier, "%s.txt" % tache),
                        encoding="utf-8").read()
     if web:
-        consigne = PREAMBULE_WEB + consigne
+        consigne = (PREAMBULE_WEB_V2 if os.environ.get("BENCH_WEB_V2") == "1"
+                    else PREAMBULE_WEB) + consigne
     io.open(os.path.join(ws, "TASK.md"), "w", encoding="utf-8",
             newline="\n").write(consigne)
     env = dict(os.environ)
