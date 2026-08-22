@@ -108,8 +108,8 @@ def selftest():
     return 0 if ok else 1
 
 
-def un_run(effort, tache):
-    ws = os.path.join(BASE, "runs", effort, tache)
+def un_run(effort, tache, rep=1):
+    ws = os.path.join(BASE, "runs", "r%02d" % rep, effort, tache)
     if os.path.isdir(ws):
         shutil.rmtree(ws)
     os.makedirs(ws)
@@ -120,7 +120,11 @@ def un_run(effort, tache):
     env = dict(os.environ)
     env.setdefault("DSH_LOCAL_API_KEY", "local-loopback-noauth")
 
-    marquer("%s|%s|debut" % (effort, tache))
+    # Le marqueur porte la REPETITION. Sans elle, les 3 passages d'une meme
+    # tache portent le meme tag, et la regle "derniere fenetre" d'analyse.py
+    # n'en garde qu'un : deux tiers des appels deviennent orphelins et les
+    # debits de ces lignes sont faux sans en avoir l'air.
+    marquer("%s|%s|r%d|debut" % (effort, tache, rep))
     t0 = time.time()
     depasse = False
     try:
@@ -130,34 +134,54 @@ def un_run(effort, tache):
     except subprocess.TimeoutExpired as e:
         sortie, rc, depasse = "TIMEOUT %ds\n%s" % (TIMEOUT, (e.stdout or b"")[-2000:]), -1, True
     dt = time.time() - t0
-    marquer("%s|%s|fin" % (effort, tache))
+    marquer("%s|%s|r%d|fin" % (effort, tache, rep))
 
     io.open(os.path.join(ws, "_dsh.out"), "w", encoding="utf-8",
             errors="replace").write(str(sortie))
     v, why = juger(os.path.join(ws, "solution.jl"), tache)
     if depasse:
         v, why = "FAIL", "timeout %ds" % TIMEOUT
-    rec = {"effort": effort, "tache": tache, "verdict": v, "why": why,
-           "wall_s": round(dt, 1), "rc": rc}
-    print("  %-6s %s  %-4s  %6.1fs  %s" % (effort, tache, v, dt, why[:70]))
+    rec = {"effort": effort, "tache": tache, "rep": rep, "verdict": v,
+           "why": why, "wall_s": round(dt, 1), "rc": rc}
+    print("  r%d %-6s %s  %-4s  %6.1fs  %s" % (rep, effort, tache, v, dt, why[:70]))
     sys.stdout.flush()
     return rec
 
 
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "--selftest":
+    argv = list(sys.argv[1:])
+    if argv and argv[0] == "--selftest":
         raise SystemExit(selftest())
-    efforts = sys.argv[1].split(",") if len(sys.argv) > 1 else ["off", "low", "medium", "high", "xhigh"]
-    taches = sys.argv[2].split(",") if len(sys.argv) > 2 else TACHES
+
+    reps = 1
+    if "--reps" in argv:
+        i = argv.index("--reps")
+        reps = int(argv[i + 1])
+        del argv[i:i + 2]
+
+    efforts = argv[0].split(",") if argv else ["off", "low", "medium", "high", "xhigh"]
+    taches = argv[1].split(",") if len(argv) > 1 else TACHES
     out = os.path.join(BASE, "resultats.jsonl")
-    for effort in efforts:
-        set_default(PROVIDER, MODELE, effort)
-        print("=== effort %s ===" % effort)
+
+    for rep in range(1, reps + 1):
+        # La REPETITION est la boucle EXTERIEURE, et le sens alterne.
+        # Repeter une tache 3 fois d'affilee mesurerait 3 fois le meme instant
+        # de la machine ; parcourir la campagne entiere 3 fois etale chaque
+        # niveau sur les 3 moments. Et comme les bras tournent en sequence, un
+        # niveau toujours lance en dernier heriterait de toute derive
+        # monotone : le sens alterne pour qu'aucun bras ne reste en queue.
+        # Ce n'est PAS un equilibrage exact -- a 3 repetitions il n'existe pas.
+        ordre = efforts if rep % 2 else list(reversed(efforts))
+        print("=== repetition %d/%d  (ordre : %s) ===" % (rep, reps, ",".join(ordre)))
         sys.stdout.flush()
-        for tache in taches:
-            rec = un_run(effort, tache)
-            with io.open(out, "a", encoding="utf-8", newline="\n") as f:
-                f.write(json.dumps(rec) + "\n")
+        for effort in ordre:
+            set_default(PROVIDER, MODELE, effort)
+            print("--- effort %s ---" % effort)
+            sys.stdout.flush()
+            for tache in taches:
+                rec = un_run(effort, tache, rep)
+                with io.open(out, "a", encoding="utf-8", newline="\n") as f:
+                    f.write(json.dumps(rec) + "\n")
 
 
 if __name__ == "__main__":
