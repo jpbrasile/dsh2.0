@@ -816,19 +816,49 @@ def lancer_borne(cmd, cwd, env, delai):
 # jamais cherche, et le bras V3 etait le bras sans web avec un preambule plus
 # long. Les deux tours appartiennent donc au BANC, pas au modele.
 #
-# Ici le banc compte lui-meme les tentatives, et c'est LUI qui cherche : au
-# tour `--web-au-tour` (3 par defaut, donc apres DEUX tours infructueux), il
-# lance une recherche web sur le message d'echec et injecte les extraits dans
-# l'enonce du tour suivant. Le modele ne decide ni du moment ni de la requete.
+# Ici le banc compte lui-meme les tentatives, et c'est LUI qui cherche : des
+# que l'agent a lance Julia `--web-apres-julia` fois (2 par defaut) sans
+# passer, le banc lance une recherche web sur le message d'echec et injecte
+# les extraits dans l'enonce du tour suivant. Le modele ne decide ni du
+# moment ni de la requete.
+#
+# LE SEUIL EST EN EXECUTIONS, PAS EN TOURS. Un tour peut se terminer sans
+# aucune tentative : mesure du 22/08, t22 a brule 900 s en appelant read x1
+# et web_search x26, zero execution de Julia. Un seuil en tours aurait
+# compte ce tour-la comme un essai infructueux alors que rien n'avait ete
+# essaye ; un seuil en executions compte des tentatives reelles.
+#
+# ET LES RECHERCHES SONT PLAFONNEES (`--max-rech`, 2 par defaut). Le meme
+# t22 montre pourquoi : laisse libre, un modele a passe 26 appels web_search
+# portant 35 requetes sur une seule tache, sans jamais rien executer. Une
+# recherche non plafonnee remplace le travail au lieu de le debloquer.
 #
 # Et la recherche est une VRAIE recherche. Mesure du 22/08 : l'outil
 # `web_search` de dsh envoie la requete a deepseek-v4-flash -- un second
 # modele, pas un moteur. Un banc qui veut mesurer l'apport de la DOCUMENTATION
 # ne peut pas passer par un modele qui la resume : il lirait la reponse d'un
 # autre modele et l'appellerait "recherche".
+# Preambule du mode boucle. Il DISSUADE le modele de chercher lui-meme, et
+# c'est le point : ici c'est le BANC qui cherche, au moment qu'il choisit et
+# sur la requete qu'il construit. Laisse avec le preambule "search puis plan",
+# un modele a passe 26 appels web_search portant 35 requetes sur une seule
+# tache, sans executer Julia une seule fois -- la recherche avait remplace le
+# travail. Le compteur `appels_web` reste lu : si le modele cherche quand
+# meme, cela se voit, ce n'est pas une consigne qu'on suppose respectee.
+PREAMBULE_BOUCLE = (
+    "Tu travailles par tours. Ne lance PAS de recherche web : si tu bloques,"
+    + chr(10) +
+    "le banc en lancera une pour toi et te donnera les extraits dans l enonce"
+    + chr(10) +
+    "du tour suivant. Passe tes tours a ECRIRE du code et a le LANCER avec"
+    + chr(10) +
+    "julia -- une tentative executee vaut mieux qu une lecture de plus."
+    + chr(10) + chr(10))
+
 TIMEOUT_TOUR = int(os.environ.get("BENCH_TIMEOUT_TOUR", "600"))
+MAX_RECH = int(os.environ.get("BENCH_MAX_RECH", "2"))
 TOURS = 0
-WEB_AU_TOUR = 3
+WEB_APRES_JULIA = 2
 
 
 def recherche_basique(question, n=3, delai=25):
@@ -900,11 +930,13 @@ def _bloc_retour(tour, why, trouvailles, cherche):
     return chr(10).join(L)
 
 
-def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_au_tour=3,
+def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
+                  max_rech=2,
                   slot=None, accueil=None, wire=None, proxy_base=None):
     """Boucle PILOTEE PAR LE BANC. L'agent est relance dans le MEME espace de
-    travail, avec le message d'echec du juge, et -- au tour `web_au_tour` --
-    avec les resultats d'une recherche que LE BANC a lancee.
+    travail, avec le message d'echec du juge, et -- des qu'il a lance Julia
+    `web_apres_julia` fois sans passer -- avec les resultats d'une recherche
+    que LE BANC a lancee, au plus `max_rech` fois.
 
     Ce que ce mode mesure et que `--web` ne mesurait pas : l'apport de la
     documentation QUAND ON EST BLOQUE. Le bras V3 avait montre qu'un modele ne
@@ -916,7 +948,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_au_tour=3,
     base_consigne = io.open(os.path.join(BASE, "prompts", "%s.txt" % tache),
                             encoding="utf-8").read()
     if web:
-        base_consigne = PREAMBULE_WEB + base_consigne
+        base_consigne = PREAMBULE_BOUCLE + base_consigne
 
     env = dict(os.environ)
     env.setdefault("DSH_LOCAL_API_KEY", "local-loopback-noauth")
@@ -958,10 +990,30 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_au_tour=3,
         # garde, il aurait injecte trois liens sur le mot "timeout" et
         # cela aurait ressemble a de l aide.
         cherchable = not (why or "").startswith("timeout")
-        cherche = web and (tour + 1) >= web_au_tour and cherchable
-        if web and (tour + 1) >= web_au_tour and not cherchable:
+        # LE DECLENCHEUR EST LE NOMBRE D EXECUTIONS DE JULIA, pas le tour.
+        # Un tour peut se terminer sans AUCUNE tentative : mesure du 22/08,
+        # t22 a brule 900 s en appelant read x1 et web_search x26, zero
+        # execution. Compter les tours aurait compte ce tour-la comme un
+        # essai infructueux alors que rien n avait ete essaye. Le nombre
+        # d executions, lui, compte des tentatives reelles.
+        faits = compter_julia(journal_julia)
+        assez = faits >= web_apres_julia
+        # PLAFOND. Sans lui, chaque tour infructueux ajoute une recherche
+        # et l'enonce grossit d'extraits que personne n'a demandes.
+        sous_plafond = sum(1 for r in recherches if r.get("requete")) < max_rech
+        cherche = web and assez and cherchable and sous_plafond
+        if web and not cherche:
+            if not sous_plafond:
+                raison = "plafond de %d recherche(s) atteint" % max_rech
+            elif faits < 0:
+                raison = "compteur julia indisponible : declencheur aveugle"
+            elif not cherchable:
+                raison = "delai depasse : aucun message a chercher"
+            else:
+                raison = ("%d execution(s) julia, seuil %d"
+                          % (faits, web_apres_julia))
             recherches.append({"tour": tour, "requete": None,
-                               "raison": "delai depasse : aucun message a chercher"})
+                               "julia_a_ce_stade": faits, "raison": raison})
         trouve = []
         if cherche:
             q = _question_depuis_echec(tache, why)
@@ -972,6 +1024,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_au_tour=3,
             # bruyamment, et la seule garde possible est la trace -- sans
             # elle, une injection hors sujet passerait pour de l'aide.
             recherches.append({"tour": tour, "requete": q,
+                               "julia_a_ce_stade": faits,
                                "resultats": [{"titre": t, "url": u} for t, u, _ in trouve]})
         retour = _bloc_retour(tour, why, trouve, cherche)
     dt = time.time() - t0
@@ -984,6 +1037,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_au_tour=3,
            "bras_web": bool(web), "appels_web": compter_web(ws, t0, accueil),
            "tours": len(par_tour), "par_tour": par_tour,
            "recherches_banc": recherches,
+           "web_apres_julia": web_apres_julia, "max_rech": max_rech,
            "provider": PROVIDER, "modele": MODELE}
     if slot is not None:
         rec["slot"] = slot
@@ -1133,23 +1187,27 @@ def main():
     # MEME espace de travail, avec le message du juge. `--web-au-tour K`
     # dit a partir de quel tour le BANC lance lui-meme une recherche web
     # (3 = apres deux tours infructueux). Les deux tours sont au banc.
-    global TOURS, WEB_AU_TOUR
+    global TOURS, WEB_APRES_JULIA, MAX_RECH
     TOURS = 0
-    for cle in ("--boucle", "--web-au-tour"):
+    for cle in ("--boucle", "--web-apres-julia", "--max-rech"):
         if cle in argv:
             i = argv.index(cle)
             val = int(argv[i + 1])
             del argv[i:i + 2]
             if cle == "--boucle":
                 TOURS = val
+            elif cle == "--web-apres-julia":
+                WEB_APRES_JULIA = val
             else:
-                WEB_AU_TOUR = val
+                MAX_RECH = val
     if TOURS:
         print("mode BOUCLE DU BANC : %d tours au plus, %d s par tour."
               % (TOURS, TIMEOUT_TOUR))
-        print("  le BANC cherche lui-meme a partir du tour %d -- donc apres %d"
-              % (WEB_AU_TOUR, WEB_AU_TOUR - 1))
-        print("  tours infructueux -- et injecte les extraits dans l enonce suivant.")
+        print("  le BANC cherche lui-meme des que l agent a lance Julia %d fois"
+              % WEB_APRES_JULIA)
+        print("  sans passer -- des TENTATIVES, pas des tours -- et injecte les")
+        print("  extraits dans l enonce suivant. Au plus %d recherche(s) par run."
+              % MAX_RECH)
     iteratif = "--iterate" in argv
     if iteratif:
         argv.remove("--iterate")
@@ -1253,7 +1311,8 @@ def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None):
                         acc, slot, wire, base = libres.get()
                         try:
                             return un_run_boucle(_e, tache, _r, web, TOURS,
-                                                 WEB_AU_TOUR, slot, acc, wire, base)
+                                                 WEB_APRES_JULIA, MAX_RECH,
+                                                 slot, acc, wire, base)
                         finally:
                             libres.put((acc, slot, wire, base))
                     acc, slot, wire, base = libres.get()
