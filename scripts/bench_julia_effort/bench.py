@@ -1061,7 +1061,22 @@ def _cle_echec(why):
     return " ".join(t.split())[:110]
 
 
-def _bloc_retour(tour, historique, trouvailles, cherche):
+def _fin_journal_julia(journal, n=1):
+    """Les DERNIERES commandes julia lancees par l agent.
+
+    Sur un tour coupe par le delai, c est le SEUL temoin de ce qu il
+    faisait : le verificateur, lui, n a jamais tourne. Le shim ecrit une
+    ligne par invocation, donc la derniere ligne est la derniere commande.
+    Journal absent -> liste vide, jamais une ligne inventee."""
+    if not journal or not os.path.exists(journal):
+        return []
+    lignes = [l.strip() for l
+              in io.open(journal, encoding="utf-8", errors="replace")
+              if l.strip()]
+    return lignes[-n:]
+
+
+def _bloc_retour(tour, historique, trouvailles, cherche, journal=None):
     """L enonce du tour suivant. Le banc DIT ce qu il a fait, et pourquoi.
 
     LE BLOC EST APPENDU A UN PREFIXE STABLE, jamais insere dedans. L enonce
@@ -1074,22 +1089,62 @@ def _bloc_retour(tour, historique, trouvailles, cherche):
     tour ne sait pas qu il vient de retenter ce qui a deja rate au tour
     precedent -- et la boucle tourne sur elle-meme jusqu au plafond."""
     why = historique[-1]["why"] if historique else ""
-    L = ["", "-" * 70, "",
-         "HARNESS FEEDBACK -- attempt %d failed." % tour, "",
-         "The checker ran your solution.jl and reported:", "",
-         "    " + (why or "(no message)"), "",
-         "Your workspace still contains your previous solution.jl. Fix it, and",
-         "RUN IT before you finish."]
+    # UN TOUR COUPE N EST PAS UN TOUR RATE. Mesure du 22/08, t31 rep3 : le
+    # tour 1 est tombe sur le delai, et le bloc annoncait au tour 2 que "le
+    # verificateur a lance votre solution et rapporte : timeout tour 600s".
+    # Le verificateur n avait jamais tourne. Une absence de verdict rendue
+    # comme un verdict -- et le tour suivant repartait de zero en croyant
+    # avoir un diagnostic. Ce qu on SAIT d un tour coupe est ailleurs : dans
+    # le journal du shim, qui a compte les executions et garde la derniere.
+    if (why or "").startswith("timeout"):
+        faits = compter_julia(journal)
+        L = ["", "-" * 70, "",
+             "HARNESS FEEDBACK -- attempt %d was CUT OFF (%s)." % (tour, why), "",
+             "You ran out of time. The checker never ran your code, so there is",
+             "NO verdict on it -- neither pass nor fail. Nothing here says your",
+             "approach is wrong."]
+        derniere = _fin_journal_julia(journal)
+        if faits > 0:
+            L += ["", "What is known: you invoked julia %d time(s)." % faits]
+            if derniere:
+                L += ["The last invocation was:", "",
+                      "    julia " + derniere[0][:200]]
+        elif faits == 0:
+            L += ["", "What is known: you invoked julia ZERO times in the whole",
+                  "attempt. You spent it without ever running anything. Write the",
+                  "smallest thing that runs, run it, then grow it."]
+        L += ["", "Your workspace is intact -- solution.jl and anything else you",
+              "wrote are still on disk. Do NOT start over from scratch. Read what",
+              "you left, run the smallest piece that exercises it, and finish well",
+              "before the deadline."]
+    else:
+        L = ["", "-" * 70, "",
+             "HARNESS FEEDBACK -- attempt %d failed." % tour, "",
+             "The checker ran your solution.jl and reported:", "",
+             "    " + (why or "(no message)"), "",
+             "Your workspace still contains your previous solution.jl. Fix it, and",
+             "RUN IT before you finish."]
     if len(historique) > 1:
         L += ["", "Already tried, and still failing -- do not repeat these:"]
         for h in historique[:-1]:
-            L += ["  - attempt %d: %s" % (h["tour"], (h["why"] or "")[:120])]
+            # Un tour coupe n a rien "essaye qui rate" : le dire tel quel,
+            # sinon le modele evite une piste qui n a jamais ete jugee.
+            if (h["why"] or "").startswith("timeout"):
+                L += ["  - attempt %d: cut off by the time limit -- no verdict"
+                      % h["tour"]]
+            else:
+                L += ["  - attempt %d: %s" % (h["tour"], (h["why"] or "")[:120])]
         # LA REPETITION EST NOMMEE. Un modele qui relit trois echecs
         # differents cherche trois causes ; s ils sont IDENTIQUES, la cause
         # est que le correctif n a rien change, et c est ca qu il faut dire.
         cle = historique[-1]["cle"]
         memes = [h["tour"] for h in historique[:-1] if h["cle"] == cle]
-        if memes:
+        # DEUX COUPURES NE SONT PAS DEUX FOIS LA MEME ERREUR. Leur empreinte
+        # est pourtant identique ("timeout tour 600s"), donc sans ce garde le
+        # bloc dirait "votre correctif n a rien change" a un tour qui n a
+        # jamais ete juge -- et lui demanderait de changer d approche pour
+        # une raison inventee.
+        if memes and not (why or "").startswith("timeout"):
             L += ["",
                   "THIS IS THE SAME FAILURE AS ATTEMPT %s. Your last change did"
                   % ", ".join(str(m) for m in memes),
@@ -1219,7 +1274,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
                                "etat_moteur": etat,
                                "resultats": [{"titre": t, "url": u} for t, u, _ in trouve],
                                "ecartes": [{"titre": t, "url": u} for t, u, _ in ecartes]})
-        retour = _bloc_retour(tour, historique, trouve, cherche)
+        retour = _bloc_retour(tour, historique, trouve, cherche, journal_julia)
     dt = time.time() - t0
 
     julia_runs = compter_julia(journal_julia)

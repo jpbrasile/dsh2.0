@@ -166,6 +166,52 @@ H3 = [{"tour": 1, "why": WA, "cle": bench._cle_echec(WA)},
 b3 = bench._bloc_retour(2, H3, [], False)
 exiger("SAME FAILURE AS ATTEMPT 1" in b3, "la repetition est NOMMEE au modele")
 
+print("=== 9bis. un tour COUPE n est pas un tour JUGE ===")
+# Mesure du 22/08, t31 rep3 : le tour 1 est tombe sur le delai de 600 s et le
+# bloc annoncait au tour 2 "le verificateur a lance votre solution et
+# rapporte : timeout tour 600s". Le verificateur n avait jamais tourne.
+jrnl = os.path.join(ws, "fixture_julia_calls.log")
+io.open(jrnl, "w", encoding="utf-8", newline=chr(10)).write(
+    "--version" + chr(10) + '-e "include(solution.jl)"' + chr(10))
+coupe = bench._bloc_retour(1, [{"tour": 1, "why": "timeout tour 600s",
+                                "cle": "timeout tour 600s"}], [], False, jrnl)
+exiger("CUT OFF" in coupe, "la coupure est nommee comme telle")
+exiger("The checker ran your solution.jl" not in coupe,
+       "KNOWN-BAD : le bloc ne dit plus que le verificateur a tourne")
+exiger("NO verdict" in coupe, "l absence de verdict est dite explicitement")
+exiger("you invoked julia 2 time(s)" in coupe,
+       "le journal du shim fournit ce qui est REELLEMENT su")
+exiger("include(solution.jl)" in coupe, "la derniere commande julia est citee")
+
+vide = os.path.join(ws, "fixture_vide.log")
+io.open(vide, "w", encoding="utf-8", newline=chr(10)).write("")
+zero = bench._bloc_retour(1, [{"tour": 1, "why": "timeout tour 600s",
+                               "cle": "timeout tour 600s"}], [], False, vide)
+exiger("ZERO times" in zero, "zero execution est un signal, pas un blanc")
+absent = bench._bloc_retour(1, [{"tour": 1, "why": "timeout tour 600s",
+                                 "cle": "timeout tour 600s"}], [], False,
+                            os.path.join(ws, "pas-de-journal.log"))
+exiger("ZERO times" not in absent and "you invoked julia" not in absent,
+       "KNOWN-BAD : journal ABSENT -> aucun compte affirme")
+
+# Le bras normal, lui, ne doit pas avoir bouge.
+juge = bench._bloc_retour(1, [{"tour": 1, "why": "check: LoadError: X",
+                               "cle": "check: loaderror: x"}], [], False, jrnl)
+exiger("The checker ran your solution.jl" in juge and "CUT OFF" not in juge,
+       "un vrai verdict reste presente comme un verdict")
+
+# Deux coupures ont la MEME empreinte : sans garde, le bloc reprocherait au
+# modele un correctif sans effet sur un tour qui n a jamais ete juge.
+deux = bench._bloc_retour(2, [{"tour": 1, "why": "timeout tour 600s",
+                               "cle": "timeout tour 600s"},
+                              {"tour": 2, "why": "timeout tour 600s",
+                               "cle": "timeout tour 600s"}], [], False, jrnl)
+exiger("SAME FAILURE" not in deux,
+       "KNOWN-BAD : deux coupures ne sont pas deux fois la meme erreur")
+exiger("cut off by the time limit -- no verdict" in deux,
+       "l historique etiquette la coupure au lieu de la lister comme essai")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2
