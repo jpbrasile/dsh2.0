@@ -256,3 +256,41 @@ if impossibles:
 else:
     print("controle d'horloge : %d/%d runs coherents (aucun ne passe plus de temps "
           "en appels qu'il n'a dure)." % (len(lignes), len(lignes)))
+
+# --- CONTROLE D'ECHEANCE, cable : il tourne a chaque analyse ------------------
+# Un run ne peut pas durer plus longtemps que sa propre echeance. S'il le fait,
+# c'est que le kill du delai n'a PAS ferme l'arbre : le fils direct est mort,
+# un descendant a survecu en gardant le tuyau de sortie ouvert, et la campagne
+# est restee bloquee derriere lui -- pendant que l'orphelin continuait d'appeler
+# le modele et d'occuper la carte.
+#
+# PRISE REELLE, 22/08 : r2/high/t11, echeance 900 s, duree relevee 1588,9 s.
+# 689 s de campagne figee, et rien d'autre dans le fichier ne le montrait : le
+# verdict FAIL/timeout etait exact, la duree seule etait aberrante. Le remede
+# est dans bench.py (lancer_borne / tuer_arbre) ; ce controle est ce qui dirait
+# qu'il a lache.
+try:
+    from bench import TIMEOUT, TIMEOUT_ITER
+except Exception:
+    TIMEOUT, TIMEOUT_ITER = 900, 1800
+
+print()
+debordements = []
+for l in lignes:
+    echeance = TIMEOUT_ITER if l.get("mode") == "iterate" else TIMEOUT
+    # 60 s = la seconde echeance que lancer_borne s'accorde apres le kill, plus
+    # le temps du verdict Julia. Au-dela, l'arbre n'a pas ete ferme.
+    if l["wall_s"] > echeance + 60:
+        debordements.append((l.get("rep", 1), l["effort"], l["tache"],
+                             l["wall_s"], echeance))
+if debordements:
+    print("!!! ARBRE NON FERME -- %d run(s) ont dure plus que leur echeance."
+          % len(debordements))
+    for r, e, t, w, ech in debordements:
+        print("      r%s %-6s %-5s  duree %.1f s  pour une echeance de %d s "
+              "(campagne figee %.0f s)" % (r, e, t, w, ech, w - ech))
+    print("      Le delai a tue le fils direct, pas l'arbre. Les temps par "
+          "tache des lignes suivantes sont a lire avec cette pause en tete.")
+else:
+    print("controle d'echeance : %d/%d runs sous leur echeance (le delai a bien "
+          "ferme l'arbre)." % (len(lignes), len(lignes)))

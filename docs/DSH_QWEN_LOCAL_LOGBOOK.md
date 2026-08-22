@@ -16,7 +16,7 @@ RTX 4090 24 Go · llama-server b10488 · Qwen3.8-27B Q4_K_M ·
 
 ---
 
-## Partie 1 — Monter le banc : quatre pièges qui ne préviennent pas
+## Partie 1 — Monter le banc : cinq pièges qui ne préviennent pas
 
 ### 1.1 · Un seul format de pensée transmet un *niveau*
 
@@ -51,6 +51,38 @@ de Project Euler qu'on ne lui avait jamais demandé — et il l'a résolu.
 Le banc réécrit trois lignes de `~/.dsh/settings.yaml` à chaque niveau. Écrit
 naïvement, un plantage entre l'ouverture et l'écriture laisse la configuration de
 l'utilisateur **vide**. On sérialise dans un fichier voisin puis `os.replace`.
+
+### 1.5 · Un délai d'expiration ne tue que le fils direct — et la campagne se fige derrière l'orphelin
+
+Le plus cher des cinq, mesuré le 22/08 en pleine campagne. `subprocess.run(…,
+timeout=)` tue le processus qu'il a lancé, **pas ses descendants**. Or le fils
+direct ici est `dsh.cmd` ; l'agent lui-même est le *petit-fils*.
+
+Ce qui se passe à l'échéance :
+
+1. le `.cmd` meurt ;
+2. l'agent survit, **orphelin**, et continue d'appeler le modèle — donc d'occuper
+   la carte, et de fausser le débit de tout ce qui tournera ensuite ;
+3. il garde le tuyau de sortie ouvert, donc le `communicate()` que Python
+   enchaîne après le kill attend sa fermeture — **indéfiniment**.
+
+Relevé sur `r2/high/t11` : échéance de 900 s, **durée 1588,9 s**, aucun essai
+suivant pendant tout ce temps. Diagnostic confirmé sans ambiguïté par trois
+mesures indépendantes : le parent de l'agent n'existait plus (orphelin), Python
+totalisait 0,4 s de calcul et n'en prenait pas un centième de plus en 5 s
+(bloqué, pas lent), et le journal du proxy montrait l'agent **encore en train
+d'écrire**. La campagne est repartie seule dès l'arbre tué.
+
+Remède, dans `bench.py` : `lancer_borne` + `tuer_arbre` — `taskkill /F /T` sous
+Windows, `killpg` ailleurs — puis une **seconde** échéance courte, parce qu'un
+descendant peut encore échapper au kill et qu'un run perdu se remesure alors
+qu'une campagne figée, non.
+
+> **Pour le tutoriel.** Le nombre qui l'a montré n'est pas dans le verdict : le
+> verdict disait `FAIL / timeout 900s`, ce qui est exact. C'est la **durée** qui
+> était impossible — 1588,9 s pour une échéance de 900 s. Un run ne peut pas
+> durer plus longtemps que sa propre échéance ; ce contrôle est désormais câblé
+> en fin d'`analyse.py` et il tourne à chaque analyse.
 
 ---
 
@@ -425,6 +457,7 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 | 2026-08-22 | t31 : le bras known-BAD tombait par la même erreur que le bras known-GOOD — il ne mesurait rien. Énoncé corrigé, bras rendu à son défaut (2.7). |
 | 2026-08-22 | Palier limite `t31..t36` calibré 6/6 GOOD, 6/6 BAD (3.7). |
 | 2026-08-22 | Deux assouplissements du juge mesurés inutiles et annulés (2.8). |
+| 2026-08-22 | Campagne figée 689 s par un agent orphelin : le délai ne tuait que le fils direct. Corrigé, et le contrôle d'échéance câblé dans `analyse.py` (1.5). |
 
 ---
 

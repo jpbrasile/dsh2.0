@@ -34,6 +34,7 @@ import io
 import json
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -246,6 +247,63 @@ def compter_web(ws, depuis):
     return n if trouve else -1
 
 
+def tuer_arbre(p):
+    """Tue le processus ET tous ses descendants."""
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(p.pid)],
+                       capture_output=True)
+    else:
+        try:
+            os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+        except OSError:
+            pass
+    try:
+        p.kill()
+    except OSError:
+        pass
+
+
+def lancer_borne(cmd, cwd, env, delai):
+    """Lance une commande sous echeance et tue TOUT L'ARBRE si elle deborde.
+
+    Defaut mesure le 22/08 : il a fige une campagne 689 s et l'aurait figee
+    indefiniment. `subprocess.run(timeout=)` ne tue que le fils DIRECT. Ici le
+    fils direct est `dsh.cmd` ; l'agent lui-meme est le PETIT-fils. A
+    l'echeance, le .cmd meurt, l'agent survit -- orphelin, toujours en train
+    d'appeler le modele et d'occuper la carte -- et il garde le tuyau de sortie
+    ouvert. Le communicate() que Python enchaine apres le kill attend alors la
+    fermeture de ce tuyau, c'est-a-dire POUR TOUJOURS.
+
+    Constate sur r2/high/t11 : echeance 900 s, duree relevee 1588,9 s, aucun
+    essai suivant pendant tout ce temps, et le journal du proxy montrait
+    l'orphelin encore actif. Aucun nombre deja publie ne l'aurait montre ; ce
+    qui l'a montre, c'est duree > echeance -- controle desormais cable dans
+    analyse.py.
+
+    Rend (sortie, code de retour, a_depasse).
+    """
+    kw = {}
+    if os.name != "nt":
+        kw["start_new_session"] = True
+    proc = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE, text=True, **kw)
+    try:
+        out, err = proc.communicate(timeout=delai)
+        return (out or "") + (err or ""), proc.returncode, False
+    except subprocess.TimeoutExpired:
+        tuer_arbre(proc)
+        # Seconde echeance, courte. Si le tuyau n'est toujours pas ferme 60 s
+        # apres avoir tue l'arbre, c'est qu'un descendant a echappe au kill :
+        # on rend la main plutot que de figer la campagne. Un run perdu se
+        # remesure, une campagne figee ne se remesure pas.
+        try:
+            out, err = proc.communicate(timeout=60)
+        except subprocess.TimeoutExpired:
+            out, err = "", "arbre non ferme 60 s apres le kill"
+        return ("TIMEOUT %ds" % delai + chr(10)
+                + ((out or "") + (err or ""))[-2000:], -1, True)
+
+
 def un_run(effort, tache, rep=1, iteratif=False, web=False):
     ws = os.path.join(BASE, "runs", "r%02d" % rep, effort, tache)
     if os.path.isdir(ws):
@@ -272,13 +330,8 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False):
     # debits de ces lignes sont faux sans en avoir l'air.
     marquer("%s|%s|r%d|debut" % (effort, tache, rep))
     t0 = time.time()
-    depasse = False
-    try:
-        p = subprocess.run([DSH, "--profile", "headless", CONSIGNE], cwd=ws,
-                           env=env, capture_output=True, text=True, timeout=delai)
-        sortie, rc = (p.stdout or "") + (p.stderr or ""), p.returncode
-    except subprocess.TimeoutExpired as e:
-        sortie, rc, depasse = "TIMEOUT %ds\n%s" % (delai, (e.stdout or b"")[-2000:]), -1, True
+    sortie, rc, depasse = lancer_borne(
+        [DSH, "--profile", "headless", CONSIGNE], ws, env, delai)
     dt = time.time() - t0
     marquer("%s|%s|r%d|fin" % (effort, tache, rep))
 
