@@ -1,0 +1,9 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `isbalanced(s::AbstractString)` returning a Bool: true when the brackets `()`, `[]`, `{}` in `s` are correctly nested and matched. Any other character is ignored. The empty string is balanced.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

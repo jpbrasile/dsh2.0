@@ -1,0 +1,9 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `dotp(x, y)` returning the dot product of two real float vectors of equal length. Hard requirement: after warm-up it must perform ZERO heap allocation, i.e. `@allocated dotp(x, y)` must be exactly 0 for `x, y :: Vector{Float64}` of length 10000. It must also work for `Vector{Float32}` and return a `Float32`. The empty case returns zero. Do not use `sum(x .* y)` or any temporary array.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

@@ -1,0 +1,12 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define a parametric struct `Poly{T}` with a single field `c::Vector{T}` holding coefficients in ASCENDING order, so `Poly([1.0, 2.0, 3.0])` is 1 + 2x + 3x^2. Then:
+- make a `Poly` callable: `p(x)` evaluates the polynomial (Horner's method).
+- extend `Base.:+` for two `Poly` (coefficientwise, different lengths allowed).
+- extend `Base.:*` for two `Poly` (polynomial product / convolution).
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

@@ -1,0 +1,9 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `power_iteration(A::AbstractMatrix, tol::Real, maxiter::Integer=10000)` implementing the power method for the dominant eigenvalue of a symmetric matrix. Return the tuple `(lambda, v)` where `lambda` is the dominant eigenvalue (Rayleigh quotient) and `v` is the corresponding eigenvector NORMALISED to unit 2-norm. Iterate until the eigenvalue estimate changes by less than `tol` (relative), or `maxiter` iterations.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

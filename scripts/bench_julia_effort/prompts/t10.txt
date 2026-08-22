@@ -1,0 +1,12 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define a parametric struct `Interval{T<:Real}` with fields `lo::T` and `hi::T` (in that order), representing the closed interval [lo, hi]. Then:
+- add an outer constructor so `Interval(1, 2.0)` works by promoting the two bounds to a common type.
+- extend `Base.:+` for two intervals.
+- extend `Base.:*` for two intervals, handling NEGATIVE bounds correctly: the result must contain every product x*y with x in the first interval and y in the second (consider all four endpoint products).
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.
