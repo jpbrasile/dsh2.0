@@ -60,7 +60,39 @@ TACHES = ["t%02d" % i for i in range(1, 11)]
 # stabilite de type. Corpus SEPARE, jamais melange au corpus de base : melanger
 # les deux rendrait les deux campagnes incomparables.
 TACHES_DUR = ["t%02d" % i for i in range(11, 17)]
+# Palier EXPERT : taches a phase de planification (plusieurs composants a
+# decider avant d'ecrire). Palier LIMITE : taches ou la reference elle-meme
+# etait incertaine du premier coup. Voir _generer_palier_expert.py et
+# _generer_palier_limite.py pour ce que chacune piege.
+TACHES_EXPERT = ["t%02d" % i for i in range(21, 27)]
+TACHES_LIMITE = ["t%02d" % i for i in range(31, 37)]
 CONSIGNE = "Read the file TASK.md in the current directory and do exactly what it says."
+
+# Bras "avec recherche web prealable".
+#
+# Mesure qui rend ce preambule OBLIGATOIRE : sur 91 sessions du banc, 10 395
+# appels d'outils et ZERO appel a web_search ou web_fetch, alors que les deux
+# outils etaient declares au modele dans chacune. Laisse seul, ce modele ne
+# cherche jamais. Sans instruction explicite, le bras "avec web" serait le meme
+# bras que le bras "sans", et la campagne mesurerait la difference entre deux
+# tirages du meme reglage.
+PREAMBULE_WEB = """Before writing any code, do these two things in order.
+
+1. SEARCH. Use the `web_search` tool to look up the parts of this task that depend
+   on facts outside your own memory: the exact semantics of a documented interface,
+   the byte order or constants a format or an algorithm specifies, the published
+   parameters of a numerical method. Use `web_fetch` on a source when the snippet is
+   not enough. Do not skip this step, and do not search for the whole task at once --
+   search for the specific facts you are unsure about.
+
+2. PLAN. Write down, in a few lines, the components you are going to write and the
+   decision you took for each one. Only then write the code.
+
+The task itself follows.
+
+----------------------------------------------------------------------
+
+"""
 TIMEOUT = 900        # mode one-shot
 TIMEOUT_ITER = 1800  # mode iteratif : l'agent tourne en boucle, il lui faut de la place
 SHIM = os.path.join(BASE, "_shim")
@@ -146,7 +178,75 @@ def selftest(taches=None):
     return 0 if ok else 1
 
 
-def un_run(effort, tache, rep=1, iteratif=False):
+SESSIONS = os.path.join(os.path.expanduser("~"), ".dsh", "sessions")
+
+
+def compter_web(ws, depuis):
+    """Nombre d'appels REELS a web_search / web_fetch pendant ce run.
+
+    Le bras "sans web" ne desactive pas les outils : il ne les demande pas. La
+    difference entre les deux bras n'est donc credible que si on MESURE ce que
+    chaque bras a reellement appele -- un bras "sans" qui cherche quand meme est
+    un bras contamine, et rien d'autre ne le montrerait.
+
+    La source est le journal de session de dsh, compresse en zstd, range sous un
+    repertoire par repertoire de travail. Comme chaque run a son propre ws, la
+    correspondance est exacte. Rend -1 si la mesure n'a pas pu etre faite : c'est
+    une absence de mesure, pas un zero, et l'analyse doit pouvoir les distinguer.
+    """
+    try:
+        import zstandard
+    except ImportError:
+        return -1
+    if not os.path.isdir(SESSIONS):
+        return -1
+    d = zstandard.ZstdDecompressor()
+    cible = os.path.abspath(ws)
+    n = 0
+    trouve = False
+    for nom in os.listdir(SESSIONS):
+        chemin = os.path.join(SESSIONS, nom)
+        try:
+            if os.path.getmtime(chemin) < depuis - 5:
+                continue
+        except OSError:
+            continue
+        for sous in os.listdir(chemin):
+            f = os.path.join(chemin, sous, "session.jsonl.zstd")
+            if not os.path.exists(f):
+                continue
+            try:
+                with io.open(f, "rb") as fh:
+                    brut = d.stream_reader(fh).read()
+            except Exception:
+                continue
+            lignes = brut.split(b"\n")
+            if not lignes:
+                continue
+            try:
+                tete = json.loads(lignes[0])
+            except Exception:
+                continue
+            if os.path.abspath(tete.get("cwd", "")) != cible:
+                continue
+            trouve = True
+            for l in lignes:
+                if not l.strip():
+                    continue
+                try:
+                    e = json.loads(l)
+                except Exception:
+                    continue
+                if "tool" not in e.get("type", ""):
+                    continue
+                data = e.get("data") or {}
+                nom_outil = data.get("name") or data.get("toolName") or ""
+                if nom_outil.startswith("web_"):
+                    n += 1
+    return n if trouve else -1
+
+
+def un_run(effort, tache, rep=1, iteratif=False, web=False):
     ws = os.path.join(BASE, "runs", "r%02d" % rep, effort, tache)
     if os.path.isdir(ws):
         shutil.rmtree(ws)
@@ -154,6 +254,8 @@ def un_run(effort, tache, rep=1, iteratif=False):
     dossier = "prompts_iter" if iteratif else "prompts"
     consigne = io.open(os.path.join(BASE, dossier, "%s.txt" % tache),
                        encoding="utf-8").read()
+    if web:
+        consigne = PREAMBULE_WEB + consigne
     io.open(os.path.join(ws, "TASK.md"), "w", encoding="utf-8",
             newline="\n").write(consigne)
     env = dict(os.environ)
@@ -193,12 +295,15 @@ def un_run(effort, tache, rep=1, iteratif=False):
     if os.path.exists(journal_julia):
         julia_runs = sum(1 for _ in io.open(journal_julia, encoding="utf-8",
                                             errors="replace"))
+    appels_web = compter_web(ws, t0)
     rec = {"effort": effort, "tache": tache, "rep": rep,
            "mode": "iterate" if iteratif else "oneshot", "verdict": v,
            "why": why, "wall_s": round(dt, 1), "julia_runs": julia_runs,
-           "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")), "rc": rc}
-    print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-2d  %s"
-          % (rep, effort, tache, v, dt, julia_runs, why[:60]))
+           "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")), "rc": rc,
+           "bras_web": bool(web), "appels_web": appels_web}
+    print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-2d  web=%-3s %s"
+          % (rep, effort, tache, v, dt, julia_runs,
+             "n/a" if appels_web < 0 else appels_web, why[:52]))
     sys.stdout.flush()
     return rec
 
@@ -207,7 +312,9 @@ def main():
     argv = list(sys.argv[1:])
     if argv and argv[0] == "--selftest":
         if len(argv) > 1:
-            liste = TACHES_DUR if argv[1] == "dur" else argv[1].split(",")
+            paliers = {"dur": TACHES_DUR, "expert": TACHES_EXPERT,
+                       "limite": TACHES_LIMITE}
+            liste = paliers.get(argv[1]) or argv[1].split(",")
         else:
             liste = TACHES
         raise SystemExit(selftest(liste))
@@ -227,10 +334,20 @@ def main():
         print("shim julia -> %s  (les executions de l'agent sont comptees)" % reel)
 
     defaut = TACHES
-    if "--dur" in argv:
-        argv.remove("--dur")
-        defaut = TACHES_DUR
-        print("corpus DUR : %s" % ",".join(defaut))
+    for drapeau, liste, nom in (("--dur", TACHES_DUR, "DUR"),
+                                ("--expert", TACHES_EXPERT, "EXPERT"),
+                                ("--limite", TACHES_LIMITE, "LIMITE")):
+        if drapeau in argv:
+            argv.remove(drapeau)
+            defaut = liste
+            print("corpus %s : %s" % (nom, ",".join(defaut)))
+
+    web = "--web" in argv
+    if web:
+        argv.remove("--web")
+        print("bras AVEC RECHERCHE WEB : le preambule impose search puis plan.")
+        print("  Les appels web reellement passes sont comptes par run "
+              "(colonne web=) -- un bras 'sans' qui cherche quand meme se voit.")
 
     efforts = argv[0].split(",") if argv else ["off", "low", "medium", "high", "xhigh"]
     taches = argv[1].split(",") if len(argv) > 1 else defaut
@@ -252,7 +369,7 @@ def main():
             print("--- effort %s ---" % effort)
             sys.stdout.flush()
             for tache in taches:
-                rec = un_run(effort, tache, rep, iteratif)
+                rec = un_run(effort, tache, rep, iteratif, web)
                 with io.open(out, "a", encoding="utf-8", newline="\n") as f:
                     f.write(json.dumps(rec) + "\n")
 

@@ -168,6 +168,73 @@ for t in sorted({l["tache"] for l in lignes}):
     print("  %-5s %-7s  %s" % (t, "%d/%d" % (sum(1 for x in g if x["verdict"] == "PASS"), len(g)),
                                "  ".join(par_e)))
 
+# --- BRAS WEB : compare, et verifie que les bras sont bien distincts ----------
+# Le bras "sans web" ne desactive pas les outils, il ne les demande pas. La
+# comparaison n'a donc de sens que si on MESURE ce que chaque bras a reellement
+# appele. Deux facons d'etre trompe, et les deux sont verifiees ici :
+#   - un bras "sans" qui cherche quand meme  -> les bras ne sont pas disjoints ;
+#   - un bras "avec" qui ne cherche jamais   -> il n'y a qu'un seul bras, et
+#     l'ecart mesure est un ecart entre deux tirages du meme reglage.
+bras = sorted({l.get("bras_web", False) for l in lignes})
+if len(bras) > 1 or any(l.get("appels_web", -1) > 0 for l in lignes):
+    print()
+    print("=== bras web ===")
+    print("%-12s %-9s %9s %10s %10s %9s" % ("bras", "reussite", "temps_moy",
+                                            "gen_tok_moy", "appels_web", "runs_web"))
+    for b in bras:
+        g = [x for x in lignes if x.get("bras_web", False) == b]
+        mes = [x for x in g if x.get("appels_web", -1) >= 0]
+        aw = [x["appels_web"] for x in mes]
+        print("%-12s %2d/%-6d %9.1f %10.0f %10s %9s"
+              % ("avec web" if b else "sans web",
+                 sum(1 for x in g if x["verdict"] == "PASS"), len(g),
+                 st.mean([x["wall_s"] for x in g]),
+                 st.mean([x["gen"] for x in g]),
+                 ("%.1f" % st.mean(aw)) if aw else "n/a",
+                 "%d/%d" % (sum(1 for v in aw if v > 0), len(mes)) if mes else "n/a"))
+
+    triche = [l for l in lignes if not l.get("bras_web", False) and l.get("appels_web", -1) > 0]
+    muet = [l for l in lignes if l.get("bras_web", False) and l.get("appels_web", -1) == 0]
+    if triche:
+        print("!!! %d run(s) du bras SANS web ont appele un outil web : les bras "
+              "ne sont pas disjoints." % len(triche))
+        for l in triche[:8]:
+            print("      %-6s %-5s r%d : %d appel(s)" % (l["effort"], l["tache"], l["rep"], l["appels_web"]))
+    if muet:
+        print("!!! %d run(s) du bras AVEC web n'ont appele AUCUN outil web : pour "
+              "ces runs il n'y a pas deux bras, il y en a un." % len(muet))
+        for l in muet[:8]:
+            print("      %-6s %-5s r%d" % (l["effort"], l["tache"], l["rep"]))
+    if not triche and not muet and len(bras) > 1:
+        print("les deux bras sont disjoints : aucun run 'sans' n'a cherche, "
+              "aucun run 'avec' ne s'en est dispense.")
+
+    # Les taches a fait externe sont le lieu ou une recherche PEUT aider ; les
+    # autres sont le temoin. Si le bras web ameliore aussi les temoins, ce n'est
+    # pas la recherche qui agit.
+    for nom in ("expert_faits_externes.txt", "limite_faits_externes.txt"):
+        p = os.path.join(B, "tasks", nom)
+        if not os.path.exists(p):
+            p = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tasks", nom)
+        if not os.path.exists(p):
+            continue
+        ext = {x.strip() for x in io.open(p, encoding="utf-8") if x.strip()}
+        concernees = {l["tache"] for l in lignes} & ext
+        if not concernees or len(bras) < 2:
+            continue
+        print()
+        print("--- %s : taches a fait externe %s, temoins le reste"
+              % (nom.split("_")[0], ",".join(sorted(concernees))))
+        for etiquette, cible in (("fait externe", lambda t: t in ext),
+                                 ("temoin", lambda t: t not in ext)):
+            cases = []
+            for b in bras:
+                g = [x for x in lignes if x.get("bras_web", False) == b and cible(x["tache"])]
+                if g:
+                    cases.append("%s %d/%d" % ("avec" if b else "sans",
+                                               sum(1 for x in g if x["verdict"] == "PASS"), len(g)))
+            print("    %-14s %s" % (etiquette, "   ".join(cases)))
+
 # --- CONTROLE D'HORLOGE, cable : il tourne a chaque analyse -------------------
 # Un run ne peut pas passer en appels reseau plus de temps qu'il n'a dure. Si
 # c'est le cas, des appels lui ont ete attribues a tort et TOUS les debits de

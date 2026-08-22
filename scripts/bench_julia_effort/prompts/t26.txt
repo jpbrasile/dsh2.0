@@ -1,0 +1,26 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Implement `gemm5!(C, A, B, alpha, beta)` computing IN PLACE and returning `C`:
+
+    C  <-  alpha * (A * B)  +  beta * C
+
+following exactly the contract of the five-argument `mul!` of `LinearAlgebra`. Two
+points of that contract decide the result and both are easy to get wrong:
+
+- `alpha` scales ONLY the product `A*B`. It must NOT be applied to the `beta*C` term.
+- When `beta` is zero, the previous contents of `C` are NOT read at all: they are
+  overwritten. `C` may hold `NaN` or `Inf` beforehand and the result must still be
+  finite. Multiplying them by a zero `beta` is not the same thing and does not satisfy it.
+
+`A` is m-by-k, `B` is k-by-n, `C` is m-by-n; they need not be square, and mismatched
+dimensions must throw a `DimensionMismatch`.
+
+Do NOT call `LinearAlgebra.mul!`, matrix `*`, or BLAS -- write the loops. The
+implementation must stay generic: it has to work on `Rational{Int}` entries, which
+BLAS cannot touch, exactly as it does on `Float64`.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

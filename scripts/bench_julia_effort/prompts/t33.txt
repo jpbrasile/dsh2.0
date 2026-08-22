@@ -1,0 +1,26 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Implement `fsort!(v::Vector{Float64})` sorting `v` IN PLACE and returning it,
+in exactly the order Julia's own `sort` produces -- which is the order of `isless`.
+
+It must be a RADIX sort on the bit patterns: no comparison of the floating point
+values, no call to `sort`, `sort!`, `sortperm`, `partialsort` or `searchsorted`. Read
+each `Float64` as its 64-bit pattern, map that pattern to an unsigned key whose
+natural order matches `isless`, and sort the keys by successive digit passes.
+
+The mapping is where this task is won or lost:
+- for a non-negative float, flipping the sign bit is enough;
+- for a negative float, the exponent and mantissa run BACKWARDS with respect to the
+  value, so the whole pattern must be inverted -- flipping only the sign bit leaves
+  the negatives sorted the wrong way round;
+- `-0.0` must come before `+0.0`, since `isless(-0.0, 0.0)` is true;
+- every `NaN` must end up at the very end, after `+Inf`, whatever its sign bit --
+  which the bit order alone does NOT give you.
+
+Subnormals, both infinities and both zeros must all land in the right place.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

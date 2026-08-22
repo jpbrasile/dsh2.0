@@ -1,0 +1,22 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Implement an ADAPTIVE embedded Runge-Kutta integrator for scalar ODEs:
+
+    rk_adaptive(f, y0::Float64, tspan::Tuple{Float64,Float64}, tol::Float64) -> (ts, ys)
+
+`f(t, y)` returns dy/dt. The integrator must use an EMBEDDED pair of methods of
+different order sharing the SAME stage evaluations, use the difference between the
+two as a local error estimate, accept or reject each step against `tol`, and adapt
+the step size from that estimate. Fixed-step integration is NOT acceptable: on a
+problem with a sharp feature the accepted steps must become much shorter there and
+much longer elsewhere.
+
+`ts` and `ys` are `Vector{Float64}` of the accepted points, strictly increasing in
+`ts`, with `ts[1] == tspan[1]` and `ts[end] == tspan[2]` EXACTLY -- the last step
+must be clipped so the final point lands on the end of the interval.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

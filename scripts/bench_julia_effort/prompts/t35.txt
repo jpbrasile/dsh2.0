@@ -1,0 +1,27 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Implement interval arithmetic with a GUARANTEED containment property.
+
+Define `struct Iv` with fields `lo::Float64` and `hi::Float64` in that order and the
+constructor `Iv(lo, hi)`, which must reject `lo > hi`. Implement `+`, `-`, `*`, `/`
+between two `Iv`, and `contient(a::Iv, x::Real)`.
+
+The contract that must hold, and that ordinary floating point breaks:
+
+    if x is in a and y is in b, then x OP y is in (a OP b)
+
+for every representable x and y. Because a floating point result is rounded to the
+nearest value, computing the bounds directly loses the guarantee: the true result can
+fall just outside the computed interval. The bounds must therefore be widened
+OUTWARDS -- the lower one downwards, the upper one upwards.
+
+Multiplication is the other trap: when the intervals straddle zero, the extreme
+products are not `lo*lo` and `hi*hi`. All four corner products have to be considered.
+
+Division by an interval that contains zero must throw an `ArgumentError`.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

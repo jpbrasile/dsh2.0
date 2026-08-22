@@ -1,0 +1,22 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Implement `evaluate(s::AbstractString) -> Float64`, a complete evaluator for
+arithmetic expressions written in infix notation. It must handle:
+
+- decimal literals (`2`, `3.5`), and whitespace anywhere between tokens;
+- the binary operators `+` `-` `*` `/` `^` and parentheses;
+- unary `-` and unary `+`.
+
+The precedence and associativity must be the usual ones, and they are the hard part:
+`^` binds tighter than `*` and `/`, which bind tighter than `+` and `-`; `^` is
+RIGHT-associative while the others are LEFT-associative; and unary minus binds
+LOOSER than `^` -- so `-2^2` is `-4`, not `4`.
+
+Any malformed input (a trailing operator, an unclosed parenthesis, two numbers in a
+row, an unknown character) must throw an exception rather than return a value.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

@@ -1,0 +1,28 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `struct Grid{T} <: AbstractVector{T}` holding a sampled function: a
+`Vector{T}` of values plus the two `Float64` fields `x0` (coordinate of the first
+sample) and `dx` (spacing). Give it the constructor `Grid(v::Vector{T}, x0, dx)` and
+the `AbstractVector` interface (`size`, `getindex`, `setindex!`).
+
+The real requirement is BROADCASTING. Julia's broadcast machinery must be taught
+about `Grid`, so that a fused expression over grids returns a `Grid` again, carrying
+`x0` and `dx` through:
+
+- `g1 .+ 2 .* g2` must be a `Grid` with the same `x0` and `dx`, not a plain `Vector`;
+- mixing a `Grid` with scalars and with plain vectors of the same length must still
+  yield a `Grid`;
+- broadcasting two grids whose `x0` or `dx` differ must throw an `ArgumentError`,
+  because adding samples taken on different grids is meaningless;
+- the expression must FUSE: `g .+ g .+ g` must allocate one result, not a chain of
+  temporaries.
+
+Defining arithmetic operators on `Grid` directly does not satisfy this: the dotted
+form goes through the broadcast machinery, and if that machinery is not taught about
+`Grid` it silently returns a `Vector`.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

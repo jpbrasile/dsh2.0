@@ -1,0 +1,23 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Implement two functions on a directed graph given as adjacency lists, where
+`adj[v]` lists the successors of vertex `v` and vertices are `1:length(adj)`.
+
+`sccs(adj::Vector{Vector{Int}}) -> Vector{Vector{Int}}` returns the strongly connected
+components. Every vertex appears in exactly one component.
+
+`condensation(adj) -> (comp, dag)` returns `comp::Vector{Int}`, where `comp[v]` is the
+index of the component holding `v` (indices matching the order returned by `sccs`), and
+`dag::Vector{Vector{Int}}`, the adjacency list of the condensation: one node per
+component, with an edge from component `a` to component `b` whenever the original graph
+has an edge from a vertex of `a` to a vertex of `b` AND `a != b`. `dag` must therefore
+contain NO self-loop and NO duplicate edge, and it must be acyclic.
+
+The graph can hold 200000 vertices in a single chain. A traversal that recurses on graph
+depth blows the stack there: the traversal must be iterative.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

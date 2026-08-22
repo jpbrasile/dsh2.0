@@ -1,0 +1,28 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Implement a PERSISTENT vector: every operation returns a new version and no
+previous version is ever modified.
+
+    PVec()                  the empty vector
+    plength(v)              its length
+    ppush(v, x)             a new version with `x` appended
+    pget(v, i)              the i-th element, 1-based, `BoundsError` outside 1:plength(v)
+    pset(v, i, x)           a new version whose i-th element is `x`
+
+The requirement that makes this hard is not correctness -- copying the whole thing on
+every operation is correct. It is STRUCTURAL SHARING: two consecutive versions must
+share almost all of their storage, so that keeping N successive versions alive costs
+O(N log N) memory rather than O(N^2).
+
+The usual way is a tree of small fixed-width nodes (32 children is the common choice):
+an update rebuilds only the nodes along one path from the root to the touched leaf and
+reuses every other node. `pget` and `pset` then cost O(log N).
+
+Keeping 10000 successive versions of a 10000-element vector alive must cost a few tens
+of megabytes, not the four hundred that copying would.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

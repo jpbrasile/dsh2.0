@@ -1,0 +1,23 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Implement `mp_decode(bytes::Vector{UInt8})` decoding a value serialised in the
+MessagePack binary format, and returning the corresponding Julia value.
+
+You must support: nil, the two booleans, positive fixint and negative fixint,
+uint 8 / uint 16 / uint 32, int 8 / int 16 / int 32, float 64, fixstr and str 8,
+fixarray and array 16, and fixmap.
+
+- nil decodes to `nothing`, integers to `Int`, float 64 to `Float64`, strings to `String`.
+- Arrays decode to `Vector{Any}`, maps to `Dict{String,Any}` (keys are always strings).
+- Arrays and maps nest arbitrarily.
+- `mp_decode` receives the whole buffer and returns the single value it encodes.
+
+Decoding must be exact, including the byte order the format specifies for its
+multi-byte integers and floats. Getting that order wrong is the classic failure here,
+and it is silent: small values still decode, large ones come out scrambled.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.

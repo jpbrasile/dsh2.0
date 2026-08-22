@@ -1,0 +1,26 @@
+Write a Julia solution and save it as the file `solution.jl` in the current working directory.
+
+Define `struct Banded{T} <: AbstractMatrix{T}`, a square n-by-n matrix holding
+only `l` sub-diagonals and `u` super-diagonals. Provide the constructors
+`Banded{T}(n::Int, l::Int, u::Int)` returning an all-zero matrix and `Banded(n, l, u)`
+defaulting to `T = Float64`.
+
+The storage must NOT be a dense n-by-n array: memory must grow like `n*(l+u+1)`, not `n^2`.
+
+Implement `Base.size`, `Base.getindex` and `Base.setindex!` so that:
+- reading an entry OUTSIDE the band returns `zero(T)` -- that is not an error;
+- writing a NON-ZERO value outside the band throws an `ArgumentError`;
+- writing zero outside the band is allowed and does nothing.
+
+Also implement `LinearAlgebra.mul!(y::AbstractVector, A::Banded, x::AbstractVector)`
+computing `y .= A*x`. Once compiled it must allocate NOTHING, and it must touch only
+the stored band -- never the full n-by-n.
+
+Beware: `l` counts diagonals BELOW the main one and `u` counts diagonals ABOVE it.
+They are not interchangeable.
+
+Rules:
+- `solution.jl` must define EXACTLY the names listed above, with those exact spellings.
+- Use only Julia Base and standard libraries (LinearAlgebra, Random are allowed). Do NOT add packages.
+- Do not print anything at top level and do not write tests in the file.
+- Write the file with your tools. When it is written, reply with the single word DONE.
