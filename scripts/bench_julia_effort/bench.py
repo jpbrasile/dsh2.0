@@ -502,6 +502,14 @@ def compter_web(ws, depuis, accueil=None):
                     continue
                 data = e.get("data") or {}
                 nom_outil = data.get("name") or data.get("toolName") or ""
+                # `tool` est une SOUS-CHAINE : elle attrape `tool/call`,
+                # `tool/result` et `tool-call-chunks`. Mesure du 22/08 sur
+                # le run t21 local : le compteur rendait 11 -- 2 vrais
+                # appels et 9 FRAGMENTS de flux. Un appel bavard comptait
+                # pour dix, et le facteur n'est pas constant : deux
+                # colonnes `web=` de deux runs n'etaient pas comparables.
+                if e.get("type") != "tool/call":
+                    continue
                 if nom_outil.startswith("web_"):
                     n += 1
     return n if trouve else -1
@@ -924,8 +932,13 @@ def main():
                 f.write(json.dumps(rec) + "\n")
 
     voies, procs = None, []
-    if par > 1:
-        if PROVIDER == "local-think":
+    # UN ouvrier est un POOL D UN, pas un cas particulier. Mesure du
+    # 22/08 : `--par 1` sautait `preparer_voies`, donc pas d enregistreur,
+    # pas de journal de fil, et `set_default` ecrivait dans le VRAI
+    # ~/.dsh/settings.yaml de l utilisateur. La campagne locale a tourne
+    # sans instrument -- impossible de dire quel modele avait repondu.
+    if par >= 1:
+        if PROVIDER == "local-think" and par > 1:
             print("!!! AVIS -- %d ouvriers sur la dorsale LOCALE : un seul "
                   "serveur, une seule carte. Le chrono par tache mesurerait la "
                   "file d'attente, pas le modele." % par)
@@ -957,7 +970,7 @@ def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None):
         for effort in ordre:
             print("--- effort %s ---" % effort)
             sys.stdout.flush()
-            if par > 1:
+            if par >= 1:
                 # Le niveau d'effort reste la boucle EXTERIEURE, meme en
                 # parallele : il vit dans le settings.yaml de chaque ouvrier,
                 # donc melanger deux niveaux dans un meme lot demanderait de
@@ -994,10 +1007,6 @@ def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None):
                             ecrire({"effort": effort, "tache": t, "rep": rep,
                                     "verdict": "FAIL", "why": "ouvrier: %s" % e,
                                     "provider": PROVIDER, "modele": MODELE})
-            else:
-                set_default(PROVIDER, MODELE, effort)
-                for tache in taches:
-                    ecrire(un_run(effort, tache, rep, iteratif, web))
 
 
 if __name__ == "__main__":

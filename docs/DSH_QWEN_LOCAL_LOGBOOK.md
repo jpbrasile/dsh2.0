@@ -1046,6 +1046,56 @@ parallélisme le quota tient-il », et elle se mesure en faisant varier `--par`.
 instruments qui ne l'étaient pas. 5/12 contre 9/12 se lit comme un écart de
 compétence tant qu'on ne regarde pas ce qui est parti sur le fil.
 
+### 3.18 — `web_search` n'est pas une recherche : c'est un appel à un autre modèle
+
+**Instrument :** journal de session dsh du run `localv1/r01/off/t21`, décompressé
+(`session.jsonl.zstd`), enregistrements `type = "web/deepseek-search-llm-request"`.
+
+Un run local a rendu `PASS 54,0 s julia=0 web=11`. Trois nombres invraisemblables
+ensemble : onze recherches, aucune exécution, cinquante-quatre secondes sur un
+27B local. Le journal explique les trois, et aucune des explications n'était
+celle qu'on attendait.
+
+**Ce que `web_search` fait réellement.** Chaque requête part vers
+`https://api.deepseek.com/anthropic/v1/messages`, corps `{"model":
+"deepseek-v4-flash", ...}`, avec le prompt *« Perform a web search for the
+query: … »*. L'outil « recherche web » de dsh est un **appel à un second
+modèle**, distant. Conséquence directe : **le bras « avec web » d'une campagne
+locale n'est pas local.** Une partie du raisonnement est faite ailleurs, par un
+autre modèle, et rien dans la colonne `web=` ne le disait.
+
+**Pourquoi 54 s.** Les trois requêtes du premier appel partent à la même
+milliseconde (`seq` 129, 130, 131, même `time`) : elles sont émises en parallèle
+et servies par un modèle distant rapide. Le modèle local n'a fait que 7 étapes.
+
+**Pourquoi `web=11` était faux.** Le compteur retenait tout enregistrement dont
+le `type` contient `tool`. Le journal en a trois sortes : `tool/call`,
+`tool/result` et `tool-call-chunks`. Décompte sur ce run :
+
+| type retenu | nombre |
+|---|---|
+| `tool-call-chunks` (fragments de flux) | 9 |
+| `tool/call` (vrais appels) | 2 |
+| **total rendu par le banc** | **11** |
+
+Deux appels, contenant cinq requêtes. Le compteur additionnait les fragments du
+flux aux appels — et le facteur n'est pas constant, il dépend du bavardage du
+flux. **Deux colonnes `web=` de deux runs n'étaient donc pas comparables**, ce
+qui est plus grave que d'être faux d'un facteur fixe. Corrigé : seul `tool/call`
+compte, vérifié sur le même run, 11 → 2.
+
+**Et le troisième défaut, celui qui rendait l'enquête nécessaire.** `--par 1`
+sautait `preparer_voies` : pas d'enregistreur, pas de journal de fil, et
+`set_default` écrivait dans le **vrai** `~/.dsh/settings.yaml`. La campagne
+locale tournait sans instrument — impossible de dire quel modèle avait répondu.
+Un ouvrier est maintenant un *pool d'un*, avec son port, son journal et sa
+configuration isolée, comme les autres.
+
+**La forme.** Trois nombres invraisemblables ensemble valaient mieux qu'un
+seul : un nombre isolé se rationalise, un triplet incohérent force à ouvrir
+l'instrument. Ici il en cachait trois défauts, dont un — la délégation à un
+modèle distant — qui change ce que « banc local » veut dire.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
