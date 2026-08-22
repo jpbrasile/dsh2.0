@@ -1135,6 +1135,95 @@ exécutions échouées et injecte la consigne de recherche après la deuxième. 
 demande le mode itératif, pas le mode one-shot. C'est le prochain bras à
 construire ; V3 tel quel ne mesure pas la question qu'il pose.
 
+### §3.20 — `julia=0` disait deux choses opposées, et le contrôle qui l'a prouvé a d'abord refusé un shim sain
+
+**Déclencheur : une question de l'utilisateur** — « julia 0 ça bugge ». Sur la
+campagne locale, t22 affichait `julia=0 web=26` après 900 s de plafond.
+
+**Mesure.** Le zéro était **vrai pour ce run** : la session n'appelle que
+`read` ×1 et `web_search` ×26, aucun outil d'exécution. Mais le journal du
+shim était **absent**, et le code rendait 0 dans les deux cas :
+
+| état du journal | ce que ça veut dire | ce que le compteur rendait |
+|---|---|---|
+| présent, 0 ligne | l'agent n'a rien exécuté | `0` |
+| **absent** | **le shim n'a jamais été appelé — l'instrument manquait** | `0` |
+
+La seconde panne s'était déjà produite ici, en mode itératif : `BENCH_JULIA_LOG`
+n'existait pas, le shim n'était pas dans le PATH, et `julia_runs` valait 0 pour
+**toute la population**. Cela s'était lu comme un résultat.
+
+**Réparation.** `compter_julia` rend `-1` quand il n'y a pas eu de mesure et
+l'affichage la note `n/a` — la convention déjà en place pour `compter_web`
+(§3.18). Une absence de mesure n'est pas un zéro, et l'analyse doit pouvoir
+les distinguer.
+
+**Le contrôle, câblé à la naissance.** `preparer_shim` tourne au démarrage de
+chaque campagne ; il tire désormais un `julia --version` **à travers le PATH de
+l'agent** et exige qu'une ligne exactement atterrisse dans le journal. Sinon la
+campagne est refusée. Sans lui, toutes les colonnes `julia=` d'une campagne
+peuvent valoir 0 sans qu'aucune ne soit fausse à la lecture.
+
+**Et son premier bras known-GOOD a REFUSÉ un shim sain.** C'est le contrôle qui
+était faux, pas le shim : appelé en liste avec `shell=False`, `CreateProcess`
+résout le nom avec le PATH du **processus parent** — pas celui qu'on lui
+passe — et ne sait pas lancer un `.cmd`. Le contrôle mesurait le `julia` du
+banc et n'avait jamais touché le shim. Corrigé en passant par le shell, la
+forme qu'emploie réellement l'agent.
+
+> Un contrôle qui refuse au premier tir apprend davantage qu'un contrôle qui
+> passe : le premier vert est ce qu'il produira de moins informatif.
+
+**Bras known-BAD tenus**, tous deux rendant `n/a` et refusant la campagne :
+shim présent mais qui n'écrit pas son journal ; shim absent du PATH — la panne
+réelle du mode itératif.
+
+**Instrument :** `bench.py::compter_julia`, `fj`, et le bloc de contrôle de
+`preparer_shim`. Commit `af3ae8d3`.
+
+### §3.21 — Le déclencheur passe des tours aux exécutions, et les recherches sont plafonnées
+
+§3.19 avait conclu qu'un déclencheur auto-évalué ne se déclenche pas, et que le
+banc devait compter lui-même. Restait à choisir **ce** qu'il compte. La première
+version comptait les **tours**. La campagne locale a montré pourquoi c'est faux :
+
+| tâche | exécutions Julia | appels web | verdict |
+|---|---|---|---|
+| t22 | **0** | **26** (35 requêtes) | plafond 900 s |
+| t24 | **0** | **21** | échec |
+| t25 | 0 | 1 | PASS |
+
+**Un tour peut se terminer sans aucune tentative.** t22 a brûlé 900 s en
+cherchant, sans lancer Julia une seule fois. Un seuil en tours aurait compté ce
+tour comme un essai infructueux alors que **rien n'avait été essayé**. Le seuil
+est donc en **exécutions** (`--web-apres-julia`, 2 par défaut) : il compte des
+tentatives réelles.
+
+**Deux plafonds, pas un.** Le banc s'arrête à `--max-rech` recherches par run
+(2 par défaut). Et le mode boucle a son propre préambule, qui **dissuade** le
+modèle de chercher : c'est le banc qui cherche, au moment qu'il choisit et sur
+la requête qu'il construit. Le compteur `appels_web` reste lu — un modèle qui
+cherche quand même se voit ; la consigne n'est pas supposée respectée.
+
+**La branche d'injection a enfin été parcourue.** Le fixture de bout en bout
+était passé au premier tour (`tours=1 rech=0`) : la branche n'avait jamais rien
+construit, et un chemin de repli jamais parcouru échoue en position permissive.
+`fixture_injection.py` rejoue la construction sur un vrai message de juge, écrit
+`TASK.md` comme la boucle l'écrit, et **relit le fichier** : la requête garde le
+type d'erreur et les mots de l'assertion, les trois URL sont dans ce que l'agent
+lit. Deux bras known-BAD : sans recherche aucun extrait ne se glisse ; le
+plafond bloque à deux.
+
+**Un cran de fixture a été écrit puis retiré.** Il forçait les N premiers tours
+à échouer pour parcourir la branche — mais son propre message d'échec devait
+être exclu de la recherche (sinon la requête interrogeait le banc), donc il
+forçait un tour **sans** injection : il ne parcourait pas ce qu'il prétendait
+parcourir. Le fixture direct prouve la même chose sans toucher à la logique de
+décision du banc.
+
+**Instrument :** `bench.py::un_run_boucle`, `PREAMBULE_BOUCLE`,
+`fixture_injection.py`. Commit `bff4e3f3`.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
