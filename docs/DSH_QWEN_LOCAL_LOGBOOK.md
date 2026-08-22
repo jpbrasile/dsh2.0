@@ -1315,6 +1315,70 @@ corpus — résultat utile, pas échec.
 **Instrument :** `resultats_dur_uncoup.jsonl`, `resultats_dur_boucle.jsonl`,
 `resultats_dur_bcl_noweb.jsonl`.
 
+### §3.24 — Un tour coupé n'a pas été jugé, et le banc lui répondait comme s'il l'avait été
+
+Sur t31 répété, un run sans recherche a vu ses **trois** tours tomber sur le
+délai de 600 s. Voici, mot pour mot, ce que le tour 3 a lu dans son énoncé :
+
+```
+HARNESS FEEDBACK -- attempt 2 failed.
+
+The checker ran your solution.jl and reported:
+
+    timeout tour 600s
+
+Already tried, and still failing -- do not repeat these:
+  - attempt 1: timeout tour 600s
+
+THIS IS THE SAME FAILURE AS ATTEMPT 1. Your last change did
+not affect it. Do not adjust the same line again -- change
+your approach, or test a smaller case first to locate it.
+```
+
+Trois affirmations, trois faussetés. Le vérificateur n'a **pas** lancé la
+solution — il n'a jamais tourné. Rien n'a « encore échoué », puisque rien n'a
+été jugé. Et le dernier correctif n'a pas « été sans effet » : personne ne l'a
+regardé. Le banc poussait un modèle à abandonner une approche qu'aucun juge
+n'avait évaluée.
+
+Pendant ces trois tours, le journal du shim comptait **25 exécutions de
+Julia**, la dernière sur le script de débogage écrit par l'agent lui-même. Il
+manquait de temps, pas d'idées — et le seul message qui lui parvenait lui
+disait le contraire.
+
+> **Quatrième instance de la même forme cette semaine.** `julia=0` pour un
+> journal absent (§3.20), `rech=1` pour un refus enregistré (§3.21), dix
+> « résultats » moissonnés sur une page de blocage (§3.22), et maintenant un
+> verdict annoncé là où aucun juge n'a tourné. À chaque fois, une **absence de
+> mesure rendue comme un résultat** — jamais une valeur fausse, toujours une
+> valeur là où il ne devait rien y avoir.
+
+**Ce qui change.** Le tour coupé a désormais sa propre tête : la coupure est
+nommée, l'absence de verdict est dite explicitement (« nothing here says your
+approach is wrong »), et ce qui est transmis vient de l'instrument — nombre
+d'exécutions et **dernière commande julia lancée**, lus dans le journal du
+shim. Journal absent ⇒ aucun compte affirmé. Zéro exécution est dit comme un
+signal, pas comme un blanc. En amont, l'historique étiquette une coupure au
+lieu de la ranger parmi les essais qui ratent, et la désignation de répétition
+ne tire plus dessus : deux coupures partagent la même empreinte sans être deux
+fois la même erreur.
+
+**Combien de tours étaient concernés.** 12 tours coupés sur 58 joués (21 %) et
+**7 runs sur 34 perdent leur premier tour** — celui dont le successeur ne
+recevait, jusque-là, qu'un faux verdict. Réserve : 5 de ces 12 coupures
+viennent du seul bras local, où la lenteur du modèle domine ; hors bras local,
+7 coupures sur 29 runs, dont 4 au premier tour.
+
+**Ce qui reste non mesuré.** Que ce message-là change une issue. La campagne en
+cours tourne sur le code d'avant ; la comparaison demandera une reprise. Ce qui
+est vérifié est le contenu du message, par dix bras de fixture dont quatre
+known-BAD — dont celui qui exige que la phrase « The checker ran your
+solution.jl » ait disparu du cas coupé.
+
+**Instrument :** `scripts/bench_julia_effort/fixture_injection.py` (§9bis),
+la section « tours coupés par le délai » de `analyse.py`, et l'énoncé conservé
+`runs/t31_noweb/r02/medium/t31/TASK.md`.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
