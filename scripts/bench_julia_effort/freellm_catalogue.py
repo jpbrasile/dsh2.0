@@ -114,12 +114,15 @@ def sonder(args):
     req = urllib.request.Request(
         ROUTEUR + "/v1/chat/completions", data=corps, method="POST",
         headers={"Authorization": "Bearer " + cle, "Content-Type": "application/json"})
+    route = None
     try:
         with urllib.request.urlopen(req, timeout=args.delai) as r:
             statut = r.status
+            route = r.headers.get("X-Routed-Via")
             brut = r.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
         statut = e.code
+        route = e.headers.get("X-Routed-Via")
         brut = e.read().decode("utf-8", "replace")
     except Exception as e:
         print("  demande %-32s -> ECHEC RESEAU %s" % (args.modele, e))
@@ -130,12 +133,46 @@ def sonder(args):
     except Exception:
         pass
     verdict = "SERVI" if statut == 200 else "REFUSE"
-    print("  demande %-32s -> HTTP %s  %s  servi=%s"
-          % (args.modele, statut, verdict, servi or "(non nomme)"))
+    # `X-Routed-Via` est le champ DECISIF, et le corps ne le remplace pas : il
+    # nomme la PLATEFORME amont, pas seulement le modele. Mesure du 22/08 --
+    # une demande `x-preview-f-free` a repondu 200 en se nommant
+    # `stealth/ox-alpha` ; sans l'en-tete, impossible de dire si OpenCode Zen
+    # renvoyait l'identifiant canonique ou si le routeur avait bascule sur la
+    # plateforme OpenRouter. Il avait bascule.
+    print("  demande %-32s -> HTTP %s  %s  servi=%s  via=%s"
+          % (args.modele, statut, verdict, servi or "(non nomme)", route or "(non dit)"))
     if statut != 200:
         print("     %s" % brut[:220].replace(chr(10), " "))
+    elif route and not route.endswith(args.modele):
+        print("     ATTENTION : bascule -- demande %s, route %s." % (args.modele, route))
     elif servi and servi != args.modele:
         print("     ATTENTION : le routeur a servi un AUTRE modele que le demande.")
+
+
+def desactiver(args):
+    """DEPINGLER, jamais supprimer. Une ligne dont l'amont a disparu ne doit
+    plus etre TIREE, mais son enregistrement reste : le supprimer effacerait
+    la trace de ce qui a ete mesure avec. Mesure du 22/08 --
+    `openai/gpt-oss-20b:free` etait encore actif au catalogue du routeur alors
+    qu'il a disparu des 421 modeles annonces par OpenRouter."""
+    horo = time.strftime("%Y%m%d-%H%M%S")
+    sauve = DB + ".bak-" + horo
+    shutil.copy2(DB, sauve)
+    print("  sauvegarde : %s" % sauve)
+    c = sqlite3.connect(_uri(DB), uri=True)
+    avant = c.execute("select enabled from models where platform = ? and model_id = ?",
+                      (args.plateforme, args.modele)).fetchone()
+    if avant is None:
+        raise SystemExit("catalogue: ligne absente -- %s / %s" % (args.plateforme, args.modele))
+    c.execute("update models set enabled = 0 where platform = ? and model_id = ?",
+              (args.plateforme, args.modele))
+    c.commit()
+    apres = c.execute("select enabled from models where platform = ? and model_id = ?",
+                      (args.plateforme, args.modele)).fetchone()[0]
+    c.close()
+    print("  %s / %s : active %s -> %s%s"
+          % (args.plateforme, args.modele, avant[0], apres,
+             "  (deja desactivee)" if avant[0] == 0 else ""))
 
 
 def main():
@@ -160,6 +197,11 @@ def main():
     b.add_argument("--rpd", type=int, default=200)
     b.add_argument("--budget", default="apercu gratuit")
     b.set_defaults(fn=ajouter)
+
+    e = sp.add_parser("desactiver", help="depingler une ligne dont l amont a disparu")
+    e.add_argument("plateforme")
+    e.add_argument("modele")
+    e.set_defaults(fn=desactiver)
 
     d = sp.add_parser("sonder", help="404 avant / 200 apres, et QUI a repondu")
     d.add_argument("modele")
