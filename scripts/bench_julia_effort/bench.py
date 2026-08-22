@@ -482,7 +482,15 @@ def preparer_voies(n, effort):
         os.environ.get("DSH_HOME") or os.path.join(os.path.expanduser("~"), ".dsh"),
         "settings.yaml")
     s = io.open(src, encoding="utf-8").read()
-    racine = os.path.join(BASE, "_par")
+    # L ETIQUETTE isole AUSSI la racine des ouvriers. Sans elle, deux
+    # campagnes simultanees ecrivaient leurs journaux de fil dans les MEMES
+    # fichiers _par/wK/wire.jsonl : meme numero de voie, fenetres de temps
+    # qui se chevauchent, attribution irrecuperable. Mesure du 22/08 -- une
+    # campagne EPINGLEE sur stealth/ox-alpha s est vue attribuer du
+    # mistral-small, et une campagne FreeLLMAPI s est vue attribuer un
+    # modele absent de son catalogue. Les verdicts, eux, etaient justes :
+    # ils viennent des espaces de travail, qui etaient bien isoles.
+    racine = os.path.join(BASE, "_par", ETIQUETTE)
     os.makedirs(racine, exist_ok=True)
     voies = []
     for k in range(n):
@@ -520,8 +528,28 @@ def _ecoute(port, delai=15):
     return False
 
 
+def _ports_libres(voies):
+    """GARDE. Refuse de demarrer si un port d enregistreur est DEJA en ecoute.
+    Sans elle, une seconde campagne trouve le port ouvert, `_ecoute` repond
+    vrai, et ses agents parlent a l enregistreur de l AUTRE campagne -- qui
+    journalise sous son propre nom. Mesure du 22/08 : deux campagnes ont
+    partage la racine `_par/wK`, la seconde a REECRIT les settings des
+    ouvriers de la premiere EN PLEINE COURSE, et trois runs epingles sur
+    stealth/ox-alpha ont ete servis par des modeles FreeLLMAPI. La racine est
+    desormais isolee par etiquette ; ce garde attrape le cas restant, deux
+    campagnes qui choisissent la meme plage de ports."""
+    occupes = [PORT_PAR + k for _, k, _, _ in voies if _ecoute(PORT_PAR + k, delai=0.4)]
+    if occupes:
+        raise SystemExit(
+            "banc: ports d enregistreur deja en ecoute %r -- une autre campagne "
+            "tourne, ou un enregistreur precedent survit. Arretez-la, ou donnez "
+            "un BENCH_PAR_PORT distinct." % occupes)
+    return True
+
+
 def lancer_enregistreurs(voies):
     """Un enregistreur par ouvrier, chacun sur SON port et SON journal."""
+    _ports_libres(voies)
     hote, port = AMONT_PAR.split(":")
     procs = []
     for acc, k, wire, base in voies:
