@@ -12,6 +12,84 @@ import io, json, os, statistics as st, sys
 B = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.dirname(os.path.abspath(__file__))
 
 
+# COMPARER DEUX BRAS : `analyse.py --comparer A.jsonl B.jsonl`.
+#
+# La mesure vit ici et pas dans la tete de qui redige. Elle a deja derive une
+# fois : un bras annonce 2/3 contre 1/3 le 23/08 alors que les deux enonces
+# differaient par autre chose que l'axe teste. Trois choses sont donc dites
+# ensemble, toujours, et dans cet ordre -- l'avertissement AVANT le score.
+#
+# LE SCORE FINAL N'EST PAS LA MESURE. Un run qui passe du premier coup ne
+# pose pas la question ; un run coupe au delai n'y repond pas. Ce qui compte
+# est : PARMI les runs qui n'ont pas passe au tour 1, combien finissent en
+# PASS -- et sur combien de runs la question se pose reellement.
+def _marques(r):
+    out = []
+    for t in r.get('par_tour') or []:
+        why = t.get('why') or ''
+        out.append('C' if why.startswith('timeout')
+                   else ('P' if t.get('verdict') == 'PASS' else 'F'))
+    return ''.join(out) or '-'
+
+
+def _comparer(chemins):
+    bras = []
+    for c in chemins:
+        rs = [json.loads(l) for l in io.open(c, encoding='utf-8') if l.strip()]
+        bras.append((os.path.basename(c), rs))
+
+    print('=== provenance : quel enonce chaque bras a-t-il recu ? ===')
+    shas = []
+    for nom, rs in bras:
+        e = sorted({r.get('enonce_sha') or '(aucune)' for r in rs})
+        shas.append(tuple(e))
+        print('  %-28s %s' % (nom[:28], ', '.join(e)))
+    if any('(aucune)' in e for e in shas):
+        print('  Au moins un bras N ENREGISTRE PAS son enonce (campagne lancee')
+        print('  avant l ajout de l empreinte) : cet enonce est INCONNU.')
+        print('  L ecart mesure ci-dessous ne peut pas etre attribue a l axe teste.')
+    elif len(set(shas)) > 1:
+        print('  Les deux bras ont des enonces DIFFERENTS. C est correct si et')
+        print('  seulement si cette difference EST l axe teste.')
+
+    print()
+    print('=== les runs, tour par tour  (P=passe  F=juge et rate  C=coupe) ===')
+    for nom, rs in bras:
+        for r in sorted(rs, key=lambda z: z.get('rep', 0)):
+            faites = sum(1 for x in (r.get('recherches_banc') or []) if x.get('requete'))
+            print('  %-18s r%-2s %-4s %7.1fs julia=%-3s [%s] rech=%d'
+                  % (nom[:18], r.get('rep'), r.get('verdict'), r.get('wall_s') or 0,
+                     r.get('julia_runs'), _marques(r), faites))
+
+    print()
+    print('=== la mesure : PARMI les runs qui n ont pas passe au tour 1 ===')
+    for nom, rs in bras:
+        pose = [r for r in rs if (r.get('par_tour') or [{}])[0].get('verdict') != 'PASS']
+        gagne = [r for r in pose if r.get('verdict') == 'PASS']
+        print('  %-28s la question se pose sur %d run(s) sur %d ; %d finissent PASS'
+              % (nom[:28], len(pose), len(rs), len(gagne)))
+    petit = min(len(rs) for _, rs in bras)
+    if petit < 10:
+        print('  n=%d par bras : aucun ecart n est separable ici. Le tableau' % petit)
+        print('  ci-dessus se lit, il ne se conclut pas.')
+
+    print()
+    print('=== tours sans verdict (coupes au delai) ===')
+    for nom, rs in bras:
+        tours = [t for r in rs for t in (r.get('par_tour') or [])]
+        coup = [t for t in tours if (t.get('why') or '').startswith('timeout')]
+        t1 = [r for r in rs if ((r.get('par_tour') or [{}])[0].get('why') or '').startswith('timeout')]
+        jam = [r for r in rs if r.get('par_tour') and all(
+               (t.get('why') or '').startswith('timeout') for t in r['par_tour'])]
+        print('  %-28s %d/%d tours coupes ; %d run(s) perdent le 1er ; %d jamais juge(s)'
+              % (nom[:28], len(coup), len(tours), len(t1), len(jam)))
+
+
+if len(sys.argv) > 2 and sys.argv[1] == '--comparer':
+    _comparer(sys.argv[2:])
+    raise SystemExit(0)
+
+
 def _charger(nom, pourquoi):
     p = os.path.join(B, nom)
     if not os.path.exists(p):
