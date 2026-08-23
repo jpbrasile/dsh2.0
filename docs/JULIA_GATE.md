@@ -35,8 +35,10 @@ Codes de retour : 0 VERT, 1 ROUGE, 2 ORANGE, 3 PANNE (serveur absent).
 - Un fichier de test qui ne charge rien lui-même (158 sur 459) est rejoué via le `runtests.jl`
   qui l'inclut. Un test inclus par un autre candidat n'est pas rejoué à part.
 - Rang = nombre de sources atteintes par le test (peu = ciblé) ; les suites entières viennent
-  après. Une durée mémorisée (`_gate/durees.json`) plus longue que le budget restant fait
-  sauter le test (compté « non rejoué »), au lieu de bloquer le serveur.
+  après. Une durée **mesurée** (`_gate/durees.json`, rejeu complet vert ou rouge) plus longue
+  que le budget restant fait sauter le test (compté « non rejoué »), au lieu de bloquer le
+  serveur. Un dépassement n'est pas une mesure et n'est pas mémorisé (phase 2, 23/08 : une
+  compilation à froid de 31 s mémorisée rendait un module de 4,5 s ORANGE à vie).
 - **22 sources sur 374 n'ont aucun test** (`hybrid/Hybrid.jl`, `PICburst.jl`,
   `node_contract/path_c_builders/*`, …) : modifier l'un d'eux donne ORANGE « non couvert »,
   jamais VERT. 27 fichiers de test ne sont ni autonomes ni inclus par un runner : invisibles
@@ -87,7 +89,10 @@ la carte a un trou. Les quatre bras laissent l'arbre du framework intact (md5 v�
 ## Ce que l'étape 0.5 du README donne, mesuré
 
 - « un fichier modifié → verdict < 30 s » : **oui, toujours** (budget dur : verdict à 30 s au
-  plus, serveur tué et relancé s'il dépasse). Mais un VERT en 30 s n'existe que si les tests
+  plus ; s'il dépasse, le serveur n'est plus tué (changé le 23/08, phase 2) : il finit le
+  fichier en arrière-plan et le chauffe, la porte répond ORANGE « serveur occupé » sans
+  attendre tant qu'il tourne (marqueur `_gate/occupe_<port>.json`, relance forcée après
+  900 s), et l'appel suivant rejoue à chaud). Mais un VERT en 30 s n'existe que si les tests
   ciblés tiennent dans le budget : vrai pour un fichier de test ou un module léger ; pour un
   fichier de `Physics` (maille module : 6 unités, 3 lourdes à 100–230 s) le verdict à 30 s est
   ORANGE — preuve partielle, suites lourdes dues avant fusion.

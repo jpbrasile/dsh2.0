@@ -161,6 +161,33 @@ def _relancer_sans_attendre(repo, port):
     io.open(os.path.join(ETAT, "serveur_%d.pid" % port), "w").write(str(p.pid))
 
 
+OCCUPE_MAX_S = 900
+
+
+def _occupe_chemin(port):
+    return os.path.join(ETAT, "occupe_%d.json" % port)
+
+
+def _marquer_occupe(port, fichier):
+    io.open(_occupe_chemin(port), "w", encoding="utf-8").write(json.dumps({"fichier": fichier, "depuis": time.time()}))
+
+
+def _lire_occupe(port):
+    """(fichier, age_s) si le serveur a ete laisse sur un fichier trop long, sinon None."""
+    try:
+        d = json.load(io.open(_occupe_chemin(port), encoding="utf-8"))
+        return d["fichier"], time.time() - float(d["depuis"])
+    except (OSError, ValueError, KeyError):
+        return None
+
+
+def _oublier_occupe(port):
+    try:
+        os.remove(_occupe_chemin(port))
+    except OSError:
+        pass
+
+
 def _blocs_erreur(r):
     """Lignes utiles d un rejeu non vert : blocs Test Failed / Error During Test
     du journal complet (6 lignes de contexte), sinon la fin de sortie."""
@@ -209,8 +236,25 @@ def main(argv):
         return 0
     r = ping(port)
     if o["statut"]:
-        print("serveur :", r or "absent")
+        print("serveur :", r or "absent", "; occupe :", _lire_occupe(port))
         return 0 if r else 3
+    occ = _lire_occupe(port)
+    if not r and occ and _pid_vivant(port) and occ[1] < OCCUPE_MAX_S:
+        # Run Done phase 2 (23/08) : un fichier a froid (48 s de compilation) depassait le budget,
+        # le serveur etait TUE et relance, donc jamais chaud, et la duree memorisee (31 s)
+        # bloquait toute relecture : ORANGE a vie. Desormais le serveur finit le fichier en
+        # arriere-plan (il le chauffe) ; tant qu il est occupe, la porte repond ORANGE sans
+        # attendre, et le prochain appel rejoue a chaud.
+        print("serveur occupe sur %d : il chauffe %s depuis %.0fs -- rien rejoue (ORANGE, pas vert) ; rappeler la porte"
+              % (port, os.path.relpath(occ[0], repo) if occ[0].startswith(repo) else occ[0], occ[1]))
+        _ecrire_dernier(repo, "ORANGE", [], [], [], [], [], 0.0, "serveur occupe (%s, %.0fs)" % (occ[0], occ[1]))
+        return 2
+    if not r and occ:
+        print("serveur occupe depuis %.0fs (> %ds) ou mort : on le relance" % (occ[1], OCCUPE_MAX_S))
+        _tuer_serveur(port)
+        _oublier_occupe(port)
+    if r:
+        _oublier_occupe(port)
     if r and not _meme_projet(r, repo):
         # trouve le 23/08 en preparant le red team 0-done : un serveur deja vivant etait
         # reutilise sans regarder son --project ; un VERT sur la copie pouvait donc avoir
@@ -264,10 +308,11 @@ def main(argv):
                 durees[t] = float(res["s"])
         except socket.timeout:
             res = {"fichier": t, "etat": "depasse", "passes": 0, "echecs": 0, "erreurs": 0, "casses": 0,
-                   "s": time.time() - t0, "sortie_fin": "budget depasse pendant ce fichier"}
-            durees[t] = max(durees.get(t, 0), reste + 1)  # retenu : au moins ce qu on a attendu
-            # le serveur est bloque sur ce fichier : on le tue (c est le notre) et on en relance un
-            _tuer_serveur(port)
+                   "s": time.time() - t0,
+                   "sortie_fin": "budget depasse pendant ce fichier ; le serveur continue de le rejouer en arriere-plan (il chauffe) : rappeler la porte"}
+            # pas de duree memorisee : un depassement n est pas une mesure (la prochaine relecture,
+            # a chaud, la donnera) ; le serveur n est PAS tue, il finit le fichier
+            _marquer_occupe(port, t)
             serveur_perdu = True
         except OSError as e:
             res = {"fichier": t, "etat": "erreur", "passes": 0, "echecs": 0, "erreurs": 1, "casses": 0,
@@ -277,8 +322,7 @@ def main(argv):
               res["erreurs"], float(res["s"]), os.path.relpath(t, repo)))
     _ecrire_durees(durees)
     if serveur_perdu:
-        print("  serveur relance en arriere-plan (il sera tiede au prochain appel)")
-        _relancer_sans_attendre(repo, port)
+        print("  serveur laisse sur ce fichier (il le chauffe) : la prochaine porte le rejouera a chaud")
     wall = time.time() - t0
     rouges = [r for r in resultats if r["etat"] in ("echec", "erreur")]
     non_rejoues = depasse + [t for t in a_rejouer if t not in [r["fichier"] for r in resultats] and t not in depasse]
@@ -296,12 +340,16 @@ def main(argv):
         print("  --- %s" % os.path.relpath(r["fichier"], repo))
         for l in _blocs_erreur(r)[:40]:
             print("      " + l[:170])
+    _ecrire_dernier(repo, verdict, fichiers, a_rejouer, resultats, non_rejoues, non, wall)
+    return code
+
+
+def _ecrire_dernier(repo, verdict, fichiers, cibles, resultats, non_rejoues, non, wall, note=""):
     os.makedirs(ETAT, exist_ok=True)
     io.open(os.path.join(ETAT, "dernier.json"), "w", encoding="utf-8").write(json.dumps({
-        "verdict": verdict, "fichiers": fichiers, "cibles": a_rejouer, "resultats": resultats,
-        "non_rejoues": non_rejoues, "non_couverts": non, "wall_s": round(wall, 1),
+        "verdict": verdict, "fichiers": fichiers, "cibles": cibles, "resultats": resultats,
+        "non_rejoues": non_rejoues, "non_couverts": non, "wall_s": round(wall, 1), "note": note,
         "date": time.strftime("%Y-%m-%d %H:%M:%S")}, indent=1, ensure_ascii=False))
-    return code
 
 
 if __name__ == "__main__":

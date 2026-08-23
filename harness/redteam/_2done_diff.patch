@@ -1,131 +1,135 @@
 --- C:/Users/test/AppData/Local/Temp/claude/C--Users-test-Documents-dsh2-0/2f5ac01b-e7fa-4114-ade5-43802ecf6b0f/scratchpad/capex_model.avant.jl	2026-08-23 19:03:21.751577600 +0200
-+++ C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework/src/industrial/capex_model.jl	2026-08-23 19:14:16.655573000 +0200
-@@ -445,6 +445,78 @@
++++ C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework/src/industrial/capex_model.jl	2026-08-23 19:45:35.071210700 +0200
+@@ -445,6 +445,119 @@
      return annuity
  end
  
 +"""
 +    validate_financing(fin::FinancingStructure) -> Bool
 +
-+Validate a financing structure. Returns `false` on any failure; never throws.
++Validate that a FinancingStructure is internally consistent.
 +
-+Checks:
-+- `equity_pct + debt_pct + grant_pct ~= 1.0` (within 1e-6)
-+- each share >= 0
-+- each rate (`debt_interest`, `equity_irr_target`) >= 0
-+- `debt_tenor_years >= 1`
++Returns `true` when:
++- `equity_pct + debt_pct + grant_pct` equals 1.0 within 1e-6
++- Every share (`equity_pct`, `debt_pct`, `grant_pct`) is non-negative
++- `debt_interest` is non-negative
++- `debt_tenor_years` >= 1
++- `equity_irr_target` is non-negative
++
++Returns `false` otherwise (no exception thrown).
 +"""
-+function validate_financing(fin::FinancingStructure) -> Bool
-+    isapprox(fin.equity_pct + fin.debt_pct + fin.grant_pct, 1.0, atol=1e-6) || return false
-+    fin.equity_pct >= 0 || return false
-+    fin.debt_pct >= 0 || return false
-+    fin.grant_pct >= 0 || return false
-+    fin.debt_interest >= 0 || return false
-+    fin.equity_irr_target >= 0 || return false
-+    fin.debt_tenor_years >= 1 || return false
++function validate_financing(fin::FinancingStructure)
++    # Check shares sum to 1.0
++    abs(fin.equity_pct + fin.debt_pct + fin.grant_pct - 1.0) > 1e-6 && return false
++    # Check non-negativity
++    fin.equity_pct < 0.0 && return false
++    fin.debt_pct < 0.0 && return false
++    fin.grant_pct < 0.0 && return false
++    fin.debt_interest < 0.0 && return false
++    fin.equity_irr_target < 0.0 && return false
++    # Check tenor
++    fin.debt_tenor_years < 1 && return false
 +    return true
 +end
 +
 +"""
 +    compute_debt_schedule(capex::Float64, fin::FinancingStructure) -> Vector{NamedTuple}
 +
-+Build the amortizing debt repayment schedule for a CAPEX amount under a
-+financing structure. Uses the same annuity formula as `compute_debt_service`:
-+equal annual payments over `debt_tenor_years` years. Each entry of the returned
-+`Vector{NamedTuple}` carries `(year, payment, interest, principal, balance)`
-+where `balance` is the outstanding balance after that year's payment. The final
-+balance is zero (within 1e-6) and the sum of principal equals the debt amount
-+(within 1e-6) by construction of the annuity formula.
++Compute the full amortization schedule for the debt portion of a CAPEX.
++
++Returns one NamedTuple per year (1 .. debt_tenor_years), each with fields:
++- `year::Int`
++- `payment::Float64`   — total annual payment (annuity)
++- `interest::Float64`  — interest portion of payment
++- `principal::Float64` — principal portion of payment
++- `balance::Float64`   — remaining debt after payment
++
++Uses the same annuity formula as `compute_debt_service`. At zero interest the
++payment is straight-line principal (debt_amount / tenor). The final balance is
++zero within 1e-6 and the sum of principal equals the debt amount.
 +"""
-+function compute_debt_schedule(capex::Float64, fin::FinancingStructure) -> Vector{NamedTuple{(:year, :payment, :interest, :principal, :balance), Tuple{Int, Float64, Float64, Float64, Float64}}}
++function compute_debt_schedule(capex::Float64, fin::FinancingStructure)
 +    debt_amount = capex * fin.debt_pct
 +    r = fin.debt_interest
 +    n = fin.debt_tenor_years
 +
-+    # Annuity formula (same as compute_debt_service)
-+    if r > 0
-+        annuity = debt_amount * r * (1 + r)^n / ((1 + r)^n - 1)
++    # Annuity (same formula as compute_debt_service)
++    annuity = if r > 0.0
++        debt_amount * r * (1.0 + r)^n / ((1.0 + r)^n - 1.0)
 +    else
-+        annuity = debt_amount / n
++        debt_amount / n
 +    end
 +
-+    schedule = Vector{NamedTuple{(:year, :payment, :interest, :principal, :balance), Tuple{Int, Float64, Float64, Float64, Float64}}}(undef, n)
++    schedule = Vector{NamedTuple{(:year, :payment, :interest, :principal, :balance),
++                                 Tuple{Int, Float64, Float64, Float64, Float64}}}(undef, n)
 +    balance = debt_amount
-+    for t in 1:n
++
++    for y in 1:n
 +        interest = balance * r
-+        principal = r > 0 ? annuity - interest : annuity
-+        balance -= principal
-+        # Round to zero on the final year to absorb floating-point drift
-+        if t == n
-+            balance = 0.0
++        principal = annuity - interest
++        # Clamp final principal to avoid tiny floating-point drift
++        if y == n
++            principal = balance
 +        end
-+        schedule[t] = (; year=t, payment=annuity, interest=interest,
-+                        principal=principal, balance=balance)
++        balance -= principal
++        schedule[y] = (year=y, payment=annuity, interest=interest,
++                       principal=principal, balance=balance)
 +    end
++
 +    return schedule
 +end
 +
 +"""
 +    total_interest_paid(capex::Float64, fin::FinancingStructure) -> Float64
 +
-+Total interest paid over the life of the debt for a CAPEX amount under a
-+financing structure.
++Return the sum of the interest column of `compute_debt_schedule`.
 +"""
-+function total_interest_paid(capex::Float64, fin::FinancingStructure) -> Float64
++function total_interest_paid(capex::Float64, fin::FinancingStructure)
 +    schedule = compute_debt_schedule(capex, fin)
-+    return sum(s.interest for s in schedule)
++    return sum(entry.interest for entry in schedule)
++end
++
++"""
++    print_debt_schedule(capex::Float64, fin::FinancingStructure)
++
++Print the debt amortization schedule as a formatted table.
++"""
++function print_debt_schedule(capex::Float64, fin::FinancingStructure)
++    schedule = compute_debt_schedule(capex, fin)
++    println("="^75)
++    println("DEBT AMORTIZATION SCHEDULE")
++    println("="^75)
++    @printf("  Debt amount:   €%.2f M\n", capex * fin.debt_pct / 1e6)
++    @printf("  Interest rate: %.2f%%\n", fin.debt_interest * 100)
++    @printf("  Tenor:         %d years\n", fin.debt_tenor_years)
++    println("-"^75)
++    @printf("%4s | %12s | %12s | %12s | %12s\n",
++            "Year", "Payment €", "Interest €", "Principal €", "Balance €")
++    println("-"^75)
++    for entry in schedule
++        @printf("%4d | %12.0f | %12.0f | %12.0f | %12.0f\n",
++                entry.year, entry.payment, entry.interest,
++                entry.principal, entry.balance)
++    end
++    println("="^75)
++    total_int = total_interest_paid(capex, fin)
++    @printf("  Total interest paid: €%.2f M\n", total_int / 1e6)
++    println("="^75)
 +end
 +
  # ============================================================================
  # Printing Functions
  # ============================================================================
-@@ -519,6 +591,40 @@
-     println("="^100)
- end
+@@ -564,10 +677,10 @@
+ # ============================================================================
  
-+"""
-+    print_debt_schedule(capex::Float64, fin::FinancingStructure)
-+
-+Print the amortizing debt repayment schedule for a CAPEX amount.
-+"""
-+function print_debt_schedule(capex::Float64, fin::FinancingStructure)
-+    schedule = compute_debt_schedule(capex, fin)
-+    println("="^80)
-+    println("DEBT REPAYMENT SCHEDULE")
-+    @printf("  Debt amount: €%.2f M | Interest: %.2f%% | Tenor: %d years\n",
-+        capex * fin.debt_pct / 1e6, fin.debt_interest * 100, fin.debt_tenor_years)
-+    println("="^80)
-+    @printf("%5s | %12s | %12s | %12s | %12s\n",
-+        "Year", "Payment €M", "Interest €M", "Principal €M", "Balance €M")
-+    println("-"^80)
-+
-+    total_payment = 0.0
-+    total_interest = 0.0
-+    total_principal = 0.0
-+    for s in schedule
-+        @printf("%5d | %12.4f | %12.4f | %12.4f | %12.4f\n",
-+            s.year, s.payment / 1e6, s.interest / 1e6, s.principal / 1e6, s.balance / 1e6)
-+        total_payment += s.payment
-+        total_interest += s.interest
-+        total_principal += s.principal
-+    end
-+
-+    println("-"^80)
-+    @printf("%5s | %12.4f | %12.4f | %12.4f | %12s\n",
-+        "TOTAL", total_payment / 1e6, total_interest / 1e6,
-+        total_principal / 1e6, "-")
-+    println("="^80)
-+end
-+
- # ============================================================================
- # Demo Function
- # ============================================================================
-@@ -568,6 +674,6 @@
+ export ModularCAPEX, DeploymentPhase, PhaseCAPEX, CumulativeCAPEX
+-export FinancingStructure
++export FinancingStructure, validate_financing
  export default_capex_model, optimistic_capex_model, conservative_capex_model
  export default_deployment_phases
  export compute_phase_capex, compute_phased_capex, compute_cumulative_capex
 -export default_financing, compute_debt_service
--export print_phase_capex, print_phased_capex_summary
-+export default_financing, compute_debt_service, validate_financing, compute_debt_schedule, total_interest_paid
-+export print_phase_capex, print_phased_capex_summary, print_debt_schedule
++export default_financing, compute_debt_service, compute_debt_schedule, total_interest_paid, print_debt_schedule
+ export print_phase_capex, print_phased_capex_summary
  export demo_capex_model

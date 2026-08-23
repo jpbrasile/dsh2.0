@@ -216,7 +216,7 @@ exactement l'angle « dépense non mesurée » du README. Corrigé : stdout UTF-
 écrit d'abord ; les deux runs perdus ont été reportés par `--reingerer` (doublon refusé au
 second passage). Tous les runs : `harness/_cout/claude_code_<t0>.json` (gitignoré).
 
-## 6. Critère Done — run 1 : NON atteint (coder tué par un 402 OpenRouter), chiffres
+## 6. Critère Done — atteint au run 3 ; runs 1 et 2 non atteints, chiffrés
 
 Tâche (`harness/taches/done_capex.txt`) : un seul run dsh, orchestrateur qwen3.8-27b →
 `planner` (deepseek-v4-pro) → `coder` (qwen3.8-27b) avec le plan verbatim → `DONE.md`. Cible
@@ -262,3 +262,56 @@ Bloqué par le solde OpenRouter (0,185 USD) : un rerun coûte ~0,35–0,45 USD, 
 + `test/liquid/pretreatment/test_pretreatment_damage.jl`, CPU) est prêt mais sans objet tant
 que le diff n'est pas VERT. Le red team payé 2-done (`harness/redteam/2-done.md`, 3 angles :
 mur de tests, verdict de la porte, honnêteté du coût ; 20 appels max) n'a pas été lancé.
+
+### Run 2 (après recharge : 30,18 USD) — NON atteint : ORANGE ×5, défaut de la porte
+
+651,7 s, 22 appels, 0,1544 USD (parent 7 / planner 5 / coder 10), fumee OK, tests intacts. Le
+coder a livré les 4 fonctions (signatures valides cette fois, exports) et a dit ORANGE à raison :
+porte appel 1 → 31,0 s > budget 30 s (relecture à froid de `test/industrial/runtests.jl`), appel 2
+→ 56,2 s (11,5 s de relance + 44 s), appels 3–5 → 0,9 s « non rejoué ». Cause, dans la porte de
+la phase 0.5 : au dépassement elle **tuait** le serveur (donc jamais chaud pour ce fichier) et
+**mémorisait 31 s** comme durée, ce qui excluait le fichier de toute relecture sous 30 s — ORANGE
+à vie pour un module qui se rejoue en 4,5 s à chaud (mesuré : 48,2 s à froid, 4,5 s à chaud ;
+7,4 s sur un serveur neuf hors run — le 31–48 s pendant le run n'est pas expliqué, contention
+CPU supposée, non vérifiée). Corrigé dans `porte.py` (`docs/JULIA_GATE.md` mis à jour) : au
+dépassement le serveur n'est plus tué, il finit le fichier (il le chauffe), un marqueur
+`_gate/occupe_<port>.json` fait répondre ORANGE « serveur occupé » sans attendre (relance forcée
+après 900 s), un dépassement n'est plus mémorisé comme durée. Cycle vérifié à la main sur
+`test/surrogate/runtests.jl` sous budget 10 s : dépassé 11,0 s (serveur gardé) → « occupé depuis
+5 s » instantané → serveur libre → relecture 19,4 s, marqueur effacé. Diff du run 2 gardé en
+scratch, copie restaurée.
+
+### Run 3 (porte corrigée, copie propre, serveur chaud) — ATTEINT
+
+**382,1 s, 16 appels, 0,1358 USD, dsh rc=0, fumee OK.**
+
+| rôle | appels | temps | entrée max | sortie | coût |
+|---|---|---|---|---|---|
+| parent (qwen, 22 outils) | 7 | 239 s | 32 019 | 10 618 | 0,0876 USD |
+| planner (deepseek, 3 outils) | 3 | 67 s | 23 855 | 2 735 (plan 8 678 car.) | 0,0072 USD |
+| coder (qwen, 9 outils) | 6 | 54 s | 21 964 | 2 409 | 0,0410 USD |
+
+- Porte : **1 appel → VERT en 5,0 s** (`test/industrial/runtests.jl` : 912 ok, 0 faux, 0 err,
+  wall 4,1 s). Aucun refus de mur. Diff final (`harness/redteam/_2done_diff.patch`, 135 lignes) :
+  `validate_financing`, `compute_debt_schedule`, `total_interest_paid`, `print_debt_schedule` +
+  2 lignes d'export, rien d'autre. Tests intacts (md5 `60909d23e352`, `0621e4230aeb`).
+- `DONE.md` : le coder rend le VERT, puis une auto-vérification **statique** des 10 invariants du
+  plan (« I can only run code through julia_gate ») — il dit honnêtement qu'il ne les a pas
+  exécutés.
+- Contexte du parent : 18 229 → 22 461 (plan reçu) → 26 035 → 30 565 (rapport du coder) →
+  32 019. Plat = plan + rapport ; les 6 appels du coder (≤ 21 964) n'y entrent jamais.
+- Suite complète par l'opérateur, après le run (`julia --project=.` sur la copie) :
+  `test/runtests.jl` racine **3/3** (chargement du paquet + électrostatique),
+  `test/industrial/runtests.jl` **912/912** en 7,5 s, contrôle d'invariants des 4 fonctions
+  (`invariants_capex.jl`, 12 assertions : longueur, solde final < 1e-6, Σ principal = dette,
+  Σ intérêts = `total_interest_paid`, annuité constante, 4 refus de `validate_financing`, taux
+  zéro, impression) **12/12**. `test/liquid/pretreatment/test_pretreatment_damage.jl` écarté :
+  il ne dépend pas de `capex_model` (« industrial » dans un commentaire) et n'est pas autonome.
+  Le module `industrial` n'est pas inclus par `src/PlasmaDigitalTwin.jl` : la « suite complète »
+  de ce changement est bien racine + `industrial`, pas les 342 fichiers de tests (GPU, heures).
+- Coût cumulé des 3 runs Done : 0,4429 + 0,1544 + 0,1358 = **0,733 USD**.
+
+Limites dites : le budget 30 s de la porte exclut toujours les modules dont les tests ciblés
+dépassent 30 s à chaud (gpu2, gpu3d_integration, electrical_model : 104–236 s) — pour eux le
+Done de la phase 2 n'est pas reproductible tel quel ; le mur de tests est une regex, pas un bac à
+sable OS ; le parent paie la recopie du plan (106 s / 4,5 k tokens) et du rapport (154 s).

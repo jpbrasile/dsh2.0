@@ -1,0 +1,12 @@
+
+
+Done. Both delegations completed in order, and I stopped after writing DONE.md:
+
+1. **Planner** (called once, verbatim task): produced an 8678-character plan to add `validate_financing`, `compute_debt_schedule`, `total_interest_paid`, and `print_debt_schedule` to `src/industrial/capex_model.jl`, plus export-line updates — explicitly forbidding any test creation/editing and defining acceptance as VERT on the existing `test/industrial/runtests.jl` (which includes `test_capex_model.jl`) plus a 10-point invariant self-check.
+2. **Coder** (called once, contract line + plan verbatim): implemented the plan in `src/industrial/capex_model.jl` only, reported **VERT** (912 ok, 0 false, 0 errors, 4.1s), and verified all 10 invariants by static construction (no tests touched, no new files created).
+3. **DONE.md** written to the workspace: first line `planner: 8678 chars` (character count measured from the exact planner message), followed by the coder's final message verbatim.
+query-wall: arme -- outil(s) searcher,mcp__context7__resolve-library-id,mcp__context7__query-docs, 0 segment(s) de racine, 3 identifiant(s), max 1200 car.
+secret-redactor: arme -- 16 motifs, 5 valeur(s) vive(s) (env + credentials + .env), jamais affichees
+julia-gate: arme -- porte C:/Users/test/Documents/dsh2.0/scripts/julia_gate/porte.py, projet C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework, budget 30s
+test-wall: arme -- 1 racine(s) de tests (C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework/test), cwd C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework
+julia-gate: appel 1 -> VERT en 5.0s (1 fichier(s))
