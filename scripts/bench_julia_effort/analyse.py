@@ -119,7 +119,13 @@ def _comparer(chemins):
     for nom, rs, _m in bras:
         e = sorted({r.get('enonce_sha') or '(aucune)' for r in rs})
         shas.append(tuple(e))
-        b = sorted({(r.get('timeout_tour'), r.get('tours_max')) for r in rs})
+        # Trier une absence a cote d un entier fait planter la comparaison :
+        # un run sans detail (exception d ouvrier) n enregistre pas son
+        # budget, et None < 900 n existe pas. L absence se range en tete
+        # et se dit 'inconnu' juste en dessous.
+        b = sorted({(r.get('timeout_tour'), r.get('tours_max')) for r in rs},
+                   key=lambda z: (z[0] is None, z[0] or 0,
+                                  z[1] is None, z[1] or 0))
         # Budget ABSENT = 'inconnu', jamais un nombre par defaut : les
         # campagnes anterieures au 23/08 ne l enregistrent pas.
         bud = ', '.join('inconnu' if t is None else ('%ss x%s' % (t, n))
@@ -183,12 +189,54 @@ def _comparer(chemins):
         # sans reponse, exception d ouvrier) et ils comptent comme echecs --
         # mais pas dans une statistique qui a besoin du tour 1 pour exister.
         muets = [r for r in propres if not r.get('par_tour')]
-        detail = [r for r in propres if r.get('par_tour')]
+        avec = [r for r in propres if r.get('par_tour')]
+        # Deux mises de cote de plus, et elles portent sur MES defauts, pas
+        # sur ceux du modele.
+        #
+        # 1) UN TOUR COUPE AU DELAI EST MON BUDGET, PAS UNE PROPRIETE DU
+        #    MODELE. La lettre C l affichait deja ; la statistique, elle,
+        #    comptait le run comme un echec du bras. Un run dont un tour
+        #    meurt sur mon chronometre n a pas eu son tour : il ne temoigne
+        #    ni pour ni contre le traitement.
+        #
+        # 2) UN RUN DU BRAS WEB SANS RECHERCHE DELIVREE N EST PAS UN RUN WEB.
+        #    Le traitement n a pas ete administre : c est un run temoin
+        #    portant une mauvaise etiquette, et le compter contre le bras web
+        #    fait payer au traitement une panne de sa LIVRAISON. Seul le cas
+        #    bench-side compte -- recherche REFUSEE alors que le run avait
+        #    atteint l etape. Un run qui passe au tour 1 n a jamais eu besoin
+        #    du traitement : il sort deja par la question ci-dessous.
+        #
+        #    Le bras PROMESSE est exclu de cette regle par construction : sa
+        #    recherche est annoncee et jamais livree, c est SON traitement.
+        coupes_r, sans_trt, detail = [], [], []
+        for r in avec:
+            if any((t.get('why') or '').startswith('timeout')
+                   for t in r['par_tour']):
+                coupes_r.append(r)
+            elif (r.get('bras_web')
+                  and r['par_tour'][0].get('verdict') != 'PASS'
+                  and not r.get('rech_faites') and r.get('rech_refusees')):
+                sans_trt.append(r)
+            else:
+                detail.append(r)
         nets.append(len(detail))
         pose = [r for r in detail if r['par_tour'][0].get('verdict') != 'PASS']
         gagne = [r for r in pose if r.get('verdict') == 'PASS']
         print('  %-28s la question se pose sur %d run(s) sur %d ; %d finissent PASS'
               % (nom[:28], len(pose), len(detail), len(gagne)))
+        if coupes_r:
+            print('  %-28s (%d run(s) avec un tour COUPE AU DELAI, hors mesure :'
+                  ' %s -- mon budget, pas le modele)'
+                  % ('', len(coupes_r),
+                     ', '.join('r%s %s' % (r.get('rep'), r.get('verdict'))
+                               for r in coupes_r)))
+        if sans_trt:
+            print('  %-28s (%d run(s) du bras web SANS recherche delivree,'
+                  ' hors mesure : %s -- traitement non administre)'
+                  % ('', len(sans_trt),
+                     ', '.join('r%s %s' % (r.get('rep'), r.get('verdict'))
+                               for r in sans_trt)))
         if muets:
             print('  %-28s (%d run(s) sans detail par tour, hors de CETTE'
                   ' statistique : %s)'
@@ -282,14 +330,26 @@ if rejoues:
           "retenue.\n" % rejoues)
 
 def agrege(calls):
-    gen = dec_ms = pre_n = pre_ms = 0
+    """`ntim` : combien d appels portent REELLEMENT un bloc timings.
+
+    Sans lui, une dorsale qui n en envoie jamais -- c est le cas de toute
+    dorsale distante, seul llama-server les renvoie -- produisait gen=0 et
+    0.0 t/s sur CHAQUE run. Un debit nul affiche comme une mesure, alors que
+    la mesure n a simplement pas eu lieu. Mesure du 23/08 : 650 appels sur le
+    fil des campagnes t31e, 0 avec timings, et la colonne debit entierement
+    a zero. C est l un des trois instruments annonces en tete de ce fichier.
+    """
+    gen = dec_ms = pre_n = pre_ms = ntim = 0
     for c in calls:
         t = c.get("timings") or {}
+        if t:
+            ntim += 1
         gen += t.get("predicted_n") or 0
         dec_ms += t.get("predicted_ms") or 0
         pre_n += t.get("prompt_n") or 0
         pre_ms += t.get("prompt_ms") or 0
-    return dict(appels=len(calls), gen=gen, dec_s=dec_ms/1000.0, pre_n=pre_n, pre_s=pre_ms/1000.0)
+    return dict(appels=len(calls), ntim=ntim, gen=gen, dec_s=dec_ms/1000.0,
+                pre_n=pre_n, pre_s=pre_ms/1000.0)
 
 lignes = []
 for r in res:
@@ -306,8 +366,11 @@ print("%-3s %-6s %-5s %-4s %7s %7s %7s %6s  %s" % ("rep","effort","tache","ok","
 for e in efforts:
     for l in sorted([x for x in lignes if x["effort"] == e], key=lambda x: (x["tache"], x["rep"])):
         tps = l["gen"]/l["dec_s"] if l["dec_s"] else 0
-        print("r%-2d %-6s %-5s %-4s %7.1f %7d %7.1f %6d  %s"
-              % (l["rep"], e, l["tache"], l["verdict"], l["wall_s"], l["gen"], tps, l["appels"], l["why"][:52]))
+        # '-' veut dire NON MESURE. Zero voudrait dire mesure et nulle.
+        jt = ("%7d" % l["gen"]) if l["ntim"] else "      -"
+        db = ("%7.1f" % tps) if l["ntim"] else "      -"
+        print("r%-2d %-6s %-5s %-4s %7.1f %7s %7s %6d  %s"
+              % (l["rep"], e, l["tache"], l["verdict"], l["wall_s"], jt, db, l["appels"], l["why"][:52]))
 
 print()
 iteratif = any(l.get("mode") == "iterate" for l in lignes)
@@ -320,11 +383,13 @@ synth = {}
 for e in efforts:
     g = [x for x in lignes if x["effort"] == e]
     ok = sum(1 for x in g if x["verdict"] == "PASS")
-    tot_gen = sum(x["gen"] for x in g); tot_dec = sum(x["dec_s"] for x in g)
-    s = dict(n=len(g), ok=ok,
+    avec = [x for x in g if x["ntim"]]
+    tot_gen = sum(x["gen"] for x in avec); tot_dec = sum(x["dec_s"] for x in avec)
+    s = dict(n=len(g), ok=ok, ntim=len(avec),
              med=st.median([x["wall_s"] for x in g]),
              moy=st.mean([x["wall_s"] for x in g]),
-             gen=tot_gen/len(g), tps=(tot_gen/tot_dec if tot_dec else 0),
+             gen=(tot_gen/len(avec) if avec else None),
+             tps=((tot_gen/tot_dec if tot_dec else 0) if avec else None),
              ap=st.mean([x["appels"] for x in g]),
              jl=st.mean([x.get("julia_runs", 0) for x in g]),
              # Un run sans mytest.jl en mode iteratif n'est pas une donnee
@@ -332,8 +397,10 @@ for e in efforts:
              # explicitement demande. C'est une mesure d'obeissance.
              sans=sum(1 for x in g if not x.get("a_teste", False)))
     synth[e] = s
-    ligne = "%-8s %2d/%-5d %9.1f %9.1f %10.0f %10.1f %9.1f" % (
-        e, ok, len(g), s["med"], s["moy"], s["gen"], s["tps"], s["ap"])
+    ligne = "%-8s %2d/%-5d %9.1f %9.1f %10s %10s %9.1f" % (
+        e, ok, len(g), s["med"], s["moy"],
+        ("%.0f" % s["gen"]) if avec else "-",
+        ("%.1f" % s["tps"]) if avec else "-", s["ap"])
     if iteratif:
         ligne += " %8.1f %9s" % (s["jl"], "%d/%d" % (s["sans"], len(g)))
     print(ligne)
@@ -347,7 +414,13 @@ if "high" in synth and "xhigh" in synth:
           % (h["ok"], h["n"], x["ok"], x["n"], abs(h["ok"] - x["ok"]), h["n"],
              100.0 * abs(h["ok"] / max(h["n"], 1) - x["ok"] / max(x["n"], 1))))
     print("    temps moy %.1f vs %.1f s  (ecart %.0f %%)" % (h["moy"], x["moy"], 100*abs(h["moy"]-x["moy"])/max(h["moy"],1e-9)))
-    print("    jetons    %.0f vs %.0f  (ecart %.0f %%)" % (h["gen"], x["gen"], 100*abs(h["gen"]-x["gen"])/max(h["gen"],1e-9)))
+    if h["gen"] is None or x["gen"] is None:
+        # Deux absences comparees rendent un ecart de 0 %, qui se lit
+        # "identiques" -- exactement la conclusion que le temoin doit
+        # rendre impossible a atteindre sans mesure.
+        print("    jetons    NON MESURES (aucun appel ne porte de timings)")
+    else:
+        print("    jetons    %.0f vs %.0f  (ecart %.0f %%)" % (h["gen"], x["gen"], 100*abs(h["gen"]-x["gen"])/max(h["gen"],1e-9)))
 
 if nreps > 1:
     print()
@@ -397,11 +470,12 @@ if len(bras) > 1 or any(l.get("appels_web", -1) > 0 for l in lignes):
         g = [x for x in lignes if x.get("bras_web", False) == b]
         mes = [x for x in g if x.get("appels_web", -1) >= 0]
         aw = [x["appels_web"] for x in mes]
-        print("%-12s %2d/%-6d %9.1f %10.0f %10s %9s"
+        print("%-12s %2d/%-6d %9.1f %10s %10s %9s"
               % ("avec web" if b else "sans web",
                  sum(1 for x in g if x["verdict"] == "PASS"), len(g),
                  st.mean([x["wall_s"] for x in g]),
-                 st.mean([x["gen"] for x in g]),
+                 (lambda t: ("%.0f" % st.mean(t)) if t else "n/a")(
+                     [x["gen"] for x in g if x.get("ntim")]),
                  ("%.1f" % st.mean(aw)) if aw else "n/a",
                  "%d/%d" % (sum(1 for v in aw if v > 0), len(mes)) if mes else "n/a"))
 
