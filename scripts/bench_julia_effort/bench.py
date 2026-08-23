@@ -1042,6 +1042,17 @@ def preambule_boucle(tours, secondes, web):
     return chr(10).join(L) + chr(10) + chr(10)
 
 TIMEOUT_TOUR = int(os.environ.get("BENCH_TIMEOUT_TOUR", "600"))
+# JUGE >= TOUR. Le modele a TIMEOUT_TOUR secondes pour ecrire ET essayer sa
+# solution ; si le juge en a moins, une solution lente que le modele a pu
+# voir passer chez lui est coupee chez le juge, et le run est perdu. t31e
+# (tour 900 s, juge 600 s) a perdu 1 run sur 12 ainsi. Un BENCH_JUGE_TIMEOUT
+# explicite est respecte, mais dit quand il est sous le tour.
+if "BENCH_JUGE_TIMEOUT" not in os.environ:
+    JUGE_TIMEOUT = max(JUGE_TIMEOUT, TIMEOUT_TOUR)
+elif JUGE_TIMEOUT < TIMEOUT_TOUR:
+    print("ATTENTION : BENCH_JUGE_TIMEOUT=%d < BENCH_TIMEOUT_TOUR=%d -- une solution "
+          "plus lente que %d s sera coupee chez le juge alors que le modele avait %d s."
+          % (JUGE_TIMEOUT, TIMEOUT_TOUR, JUGE_TIMEOUT, TIMEOUT_TOUR), file=sys.stderr)
 MAX_RECH = int(os.environ.get("BENCH_MAX_RECH", "2"))
 TOURS = 0
 WEB_APRES_JULIA = 2

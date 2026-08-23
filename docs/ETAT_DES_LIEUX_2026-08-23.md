@@ -4,7 +4,7 @@
 > État des points du §4 au commit `15fed4d` de ce dépôt (mesuré, pas déclaré — chaque réparation
 > a son bras known-BAD sous `scripts/bench_julia_effort/fixtures/`) :
 > 4.1 **fait** (`horloge_bad_boucle`) · 4.2 **fait** (enregistrement de secours affiché `-`, exclu
-> des moyennes) · 4.3 **fait** (`_sans_chemins`) · 4.4 **ouvert** · 4.5 **ouvert** ·
+> des moyennes) · 4.3 **fait** (`_sans_chemins`) · 4.4 **fait** (juge = max(600, tour) sauf `BENCH_JUGE_TIMEOUT` explicite, alors signalé) · 4.5 **ouvert** ·
 > 4.6 **ouvert** (la table « bras web » lit encore `bras_web` ; `--comparer` lit `bras`) ·
 > 4.7 **ouvert** · 4.8 échéance : **fait** (lit `timeout_tour × tours_max` de l'enregistrement),
 > le reste **ouvert** · §2.2 débit depuis `usage` : **fait** (colonne `~`, t31e = ~30,6 t/s, le

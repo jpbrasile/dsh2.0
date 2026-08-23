@@ -805,7 +805,9 @@ for l in mesures:
         # par JUGE_TIMEOUT. L echeance du run est la somme. Sans cette branche
         # le controle lisait TIMEOUT (900 s, un seul tour) et denoncait
         # 7 runs sur 14 de t31e "non fermes" -- ils etaient dans leur budget.
-        echeance = l["tours_max"] * (l["timeout_tour"] + JUGE_TIMEOUT)
+        # Meme regle que bench.py : juge >= tour, sauf BENCH_JUGE_TIMEOUT explicite.
+        juge = JUGE_TIMEOUT if "BENCH_JUGE_TIMEOUT" in os.environ else max(JUGE_TIMEOUT, l["timeout_tour"])
+        echeance = l["tours_max"] * (l["timeout_tour"] + juge)
     else:
         echeance = TIMEOUT_ITER if l.get("mode") == "iterate" else TIMEOUT
     # 60 s = la seconde echeance que lancer_borne s'accorde apres le kill, plus
