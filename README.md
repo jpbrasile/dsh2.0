@@ -253,6 +253,10 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
       API key). `docs/PHASE2.md` §5.
 - **Done (⚑ RT):** mid-sized real task passes planner → coder → green targeted
   tests → green full suite, flat orchestrator context, cost measured.
+  2026-08-23 run 1: NOT met. planner (3 calls) → coder (47 calls, gate ROUGE/ROUGE/VERT/ROUGE)
+  → coder killed by OpenRouter HTTP 402 (credits: 0.185 USD left of 410); 863 s, 0.443 USD,
+  parent 18k→36k tokens (plan + report only). Found: porte.py cp1252 crash read as ROUGE →
+  fixed (PANNE, unit 11/11). Rerun + paid red team blocked on credits. `docs/PHASE2.md` §6.
 
 ### 3 — Memory
 - [ ] Session-end distiller (DeepSeek off-peak; local Qwen after Phase 5):

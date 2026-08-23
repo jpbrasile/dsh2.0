@@ -23,6 +23,16 @@ import os
 import socket
 import subprocess
 import sys
+
+# Sortie UTF-8 tolerante : sous Windows, stdout vers un tube est en cp1252 et l'impression
+# d'un bloc d'erreur Julia (fleches, guillemets) faisait planter porte.py APRES le rejeu --
+# rc 1 lu comme ROUGE par le greffon dsh-julia-gate (run Done de la phase 2, 23/08).
+for _f in (sys.stdout, sys.stderr):
+    try:
+        _f.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+import sys
 import time
 
 ICI = os.path.dirname(os.path.abspath(__file__))

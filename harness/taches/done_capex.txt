@@ -1,0 +1,15 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool on every .jl file you changed; VERT is the only green." followed by the planner's final message verbatim.
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the plan> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia, module under `src/industrial/`, tests under `test/industrial/`): plan the addition of financing cash-flow helpers to `src/industrial/capex_model.jl`, next to `FinancingStructure` and `compute_debt_service`:
+
+1. `validate_financing(fin::FinancingStructure) -> Bool` -- true when equity_pct + debt_pct + grant_pct == 1 within 1e-6, every share and rate is non-negative, and debt_tenor_years >= 1; false otherwise (no exception).
+2. `compute_debt_schedule(capex::Float64, fin::FinancingStructure) -> Vector{NamedTuple}` -- one entry per year 1..debt_tenor_years with fields (year, payment, interest, principal, balance), amortizing the debt amount (capex * debt_pct) with the same annuity as `compute_debt_service`; zero interest = straight-line principal. The final balance must be zero within 1e-6 and the sum of principal must equal the debt amount.
+3. `total_interest_paid(capex::Float64, fin::FinancingStructure) -> Float64` -- sum of the interest column of the schedule.
+4. `print_debt_schedule(capex::Float64, fin::FinancingStructure)` -- a printed table in the style of the other print_* functions of the file.
+5. Export the four names on the existing export lines.
+
+The coder who executes the plan may NOT create or edit tests: the plan must list the existing test files the gate replays (`test/industrial/runtests.jl` includes `test_capex_model.jl`), state that the acceptance criterion is that gate verdict VERT on those tests plus a self-check of the invariants in 2, and must not ask for new tests.

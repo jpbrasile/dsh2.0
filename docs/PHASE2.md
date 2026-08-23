@@ -215,3 +215,50 @@ dans la réponse) **avant** l'écriture du livre — 0,15 + 0,16 USD non compté
 exactement l'angle « dépense non mesurée » du README. Corrigé : stdout UTF-8 tolérant et livre
 écrit d'abord ; les deux runs perdus ont été reportés par `--reingerer` (doublon refusé au
 second passage). Tous les runs : `harness/_cout/claude_code_<t0>.json` (gitignoré).
+
+## 6. Critère Done — run 1 : NON atteint (coder tué par un 402 OpenRouter), chiffres
+
+Tâche (`harness/taches/done_capex.txt`) : un seul run dsh, orchestrateur qwen3.8-27b →
+`planner` (deepseek-v4-pro) → `coder` (qwen3.8-27b) avec le plan verbatim → `DONE.md`. Cible
+choisie pour qu'un VERT soit possible sous 30 s : `src/industrial/capex_model.jl` (4 helpers de
+financement), tests précis = `test/industrial/runtests.jl` seul (912 ok en 5,9 s ; le module
+`industrial` n'est pas inclus par `src/PlasmaDigitalTwin.jl`, ses tests l'incluent directement).
+
+**Run 1 — 863,5 s, 58 appels, 0,4429 USD, dsh rc=0, fumee VERDICT ECHEC** :
+
+| rôle | appels | temps | entrée max | sortie | coût |
+|---|---|---|---|---|---|
+| parent (qwen, 22 outils) | 7 | 372 s | 35 760 | 15 495 | 0,1022 USD |
+| planner (deepseek, 3 outils) | 3 | 63 s | 23 774 | 2 283 (plan 7 389 car.) | 0,0067 USD |
+| coder (qwen, 9 outils) | 47 + 1 × **HTTP 402** | 312 s | 41 430 | 9 532 | 0,3340 USD |
+
+- Porte : 4 appels — ROUGE 1,3 s, ROUGE 1,0 s, **VERT 5,4 s** (912 ok), puis **ROUGE 1,0 s** :
+  le coder a remis `-> Bool` dans la signature `function validate_financing(...) -> Bool`
+  (il croit qu'une annotation de retour façon docstring est du Julia ; le fichier existant
+  ne l'a que dans les docstrings). Mur : 1 refus, `pwsh julia --project=. -e 'try; include(...)'`
+  (il a voulu contourner la porte pour déboguer le ParseError — refusé).
+- Au 48ᵉ appel du coder, OpenRouter répond **402 `in_flight_budget_exhausted`** (« would
+  exceed your available credits ») : l'enfant meurt (« Error: subagent run failed »), le parent
+  écrit dans `DONE.md` la sortie partielle. Solde du compte après le run : **0,185 USD sur 410**.
+  État final du fichier : ParseError (ROUGE, vérifié par la porte à la main) ; diff partiel
+  conservé dans `harness/redteam/_2done_diff.patch` (131 lignes), copie restaurée
+  (md5 `c2aee9bb4e2e`), fichiers de test intacts (`60909d23e352`, `0621e4230aeb`).
+- Contexte du parent : 18,2 k → 23,4 k (plan reçu) → 28,2 k (rapport du coder) → 35,8 k ;
+  les 47 appels du coder (jusqu'à 41,4 k) ne sont jamais entrés dans le parent. « Plat » =
+  plan + rapport seulement ; le prix est la recopie : 106 s / 4 552 tokens de sortie pour
+  passer le plan au coder, 154 s / 6 640 pour écrire `DONE.md`.
+
+**Trouvé par ce run, corrigé gratuitement** : `porte.py` plantait en cp1252 en imprimant le
+bloc ParseError (`UnicodeEncodeError` après le rejeu) → rc 1 lu **ROUGE** par le greffon alors
+que c'était un crash de la porte. Corrigé : stdout/stderr UTF-8 dans `porte.py` ; le greffon
+mappe un `Traceback` Python en **PANNE** (code 3), quel que soit le code de retour.
+`node harness/julia_gate_unit.mjs` (fausse porte VERT/ROUGE/ORANGE/PANNE/crash) : **11/11**.
+
+**Verdict honnête** : la chaîne planner → coder → porte fonctionne (un VERT a été obtenu en
+cours de route) mais le critère Done — diff final VERT + suite complète verte + coût mesuré —
+**n'est pas atteint** sur ce run : le coder est mort sur un crédit épuisé avec un fichier ROUGE.
+Bloqué par le solde OpenRouter (0,185 USD) : un rerun coûte ~0,35–0,45 USD, le red team payé
+~0,2–0,3 USD. Le bras suite complète (`test/runtests.jl` racine + `test/industrial/runtests.jl`
++ `test/liquid/pretreatment/test_pretreatment_damage.jl`, CPU) est prêt mais sans objet tant
+que le diff n'est pas VERT. Le red team payé 2-done (`harness/redteam/2-done.md`, 3 angles :
+mur de tests, verdict de la porte, honnêteté du coût ; 20 appels max) n'a pas été lancé.

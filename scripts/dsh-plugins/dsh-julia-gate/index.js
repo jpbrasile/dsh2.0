@@ -85,14 +85,16 @@ export function apply(ctx, config = {}) {
       if (!files.length) return { verdict: 'ORANGE', code: 2, sortie: 'no file given: nothing replayed (ORANGE, not green)', tests_rejoues: 0, non_rejoues: 0, non_couverts: [], wall_s: 0 };
       const t0 = Date.now();
       const r = await lancer(python, [porte, '--repo', repo0, '--budget', String(budget), ...files], repo0, (budget + 150) * 1000);
-      const verdict = r.tue ? 'PANNE' : ({ 0: 'VERT', 1: 'ROUGE', 2: 'ORANGE', 3: 'PANNE' })[r.code] || 'PANNE';
+      // un crash Python de la porte (Traceback) n'est pas un test rouge : PANNE, quel que soit le code
+      const plante = /Traceback \(most recent call last\)/.test(r.stderr || '');
+      const verdict = r.tue || plante ? 'PANNE' : ({ 0: 'VERT', 1: 'ROUGE', 2: 'ORANGE', 3: 'PANNE' })[r.code] || 'PANNE';
       let d = {};
       try { d = JSON.parse(readFileSync(join(dirname(porte), '_gate', 'dernier.json'), 'utf8')); } catch { /* pas de dernier.json : verdict du code de retour seul */ }
       const lignes = (r.stdout + (r.stderr ? '\n[stderr] ' + r.stderr : '')).split(/\r?\n/).filter(Boolean);
       const sortie = lignes.slice(-60).join('\n');
       console.error(`julia-gate: appel ${appels} -> ${verdict} en ${((Date.now() - t0) / 1000).toFixed(1)}s (${files.length} fichier(s))`);
       return {
-        verdict, code: r.code,
+        verdict, code: plante ? 3 : r.code,
         tests_rejoues: Array.isArray(d.resultats) ? d.resultats.length : 0,
         non_rejoues: Array.isArray(d.non_rejoues) ? d.non_rejoues.length : 0,
         non_couverts: Array.isArray(d.non_couverts) ? d.non_couverts.map(String) : [],
