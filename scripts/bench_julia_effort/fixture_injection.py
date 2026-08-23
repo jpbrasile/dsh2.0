@@ -371,6 +371,54 @@ else:
     print("  (pas encore mesurable : la campagne trois bras n a pas tourne)")
 
 
+print("=== 9octies. un tour tue par la dorsale n est ni echec ni reussite ===")
+# Sixieme instance de la forme "une absence rendue comme un resultat". Le
+# garde vit dans analyse.py et il est cable dans --comparer : aucune
+# comparaison ne se publie sans que ses morts fournisseur remontent.
+# Ici on le fait TIRER sur des entrees dont la reponse est connue d avance.
+import os as _os
+_an = io.open(_os.path.join(_os.path.dirname(_os.path.abspath(__file__)),
+                            "analyse.py"), encoding="utf-8").read()
+_g = {"__name__": "an_fixture",
+      "__file__": _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), "analyse.py")}
+exec(compile(_an[:_an.index("if len(sys.argv) > 2 and sys.argv[1] == ")],
+             "analyse.py", "exec"), _g)
+_mf = _g["_morts_fournisseur"]
+
+# known-BAD : ces campagnes ONT des tours tues, et le compte est NOMINATIF.
+# oxviafree : 10 taches, 10 tours morts -- la campagne entiere etait une
+# absence. Avec une cle (rep, tour) au lieu de (rep, effort, tache, tour),
+# les 10 s ecrasaient en 1 : defaut trouve par ce bras meme, le 23/08.
+_ox = _mf("resultats_oxviafree.jsonl")
+exiger(_ox is not None and len(_ox) == 10,
+       "known-BAD : oxviafree rend 10 tours morts, pas un total ecrase")
+exiger(_ox is not None and "INVALID_REQUEST" in set(_ox.values())
+       and "RATE_LIMIT" in set(_ox.values()),
+       "known-BAD : les DEUX types de mort sont vus, pas seulement le 429")
+_pi = _mf("resultats_t31_web.jsonl")
+exiger(_pi is not None and len(_pi) == 1 and "PI_AI_ERROR" in set(_pi.values()),
+       "known-BAD : le flux coupe en pleine phrase est vu (t31_web r3 t2)")
+
+# known-GOOD : celle-ci est propre, et le garde ne doit pas crier.
+exiger(_mf("resultats_t31_noweb.jsonl") == {},
+       "known-GOOD : une campagne sans mort rend {} -- le garde se tait")
+
+# known-ABSENT : rien au sol. Ca ne se dit PAS "aucun".
+exiger(_mf("resultats_zzz_jamais_lancee.jsonl") is None,
+       "known-ABSENT : sans trace au sol le garde rend None, jamais {}")
+exiger(_mf("/pas/un/fichier/de/banc.txt") is None,
+       "known-ABSENT : un chemin hors convention rend None")
+
+# la lettre X remonte jusqu au tableau, sinon le lecteur ne la voit pas.
+_faux = {"rep": 2, "effort": "medium", "tache": "t31",
+         "par_tour": [{"tour": 1, "verdict": "FAIL", "why": "aucun solution.jl ecrit"},
+                      {"tour": 2, "verdict": "PASS", "why": ""}]}
+exiger(_g["_marques"](_faux) == "FP",
+       "sans le garde, le tour mort se lit F -- c est l artefact d origine")
+exiger(_g["_marques"](_faux, {(2, "medium", "t31", 1): "RATE_LIMIT"}) == "XP",
+       "avec le garde, il se lit X -- ni echec ni reussite")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2

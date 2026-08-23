@@ -23,12 +23,88 @@ B = os.path.abspath(sys.argv[1]) if len(sys.argv) > 1 else os.path.dirname(os.pa
 # pose pas la question ; un run coupe au delai n'y repond pas. Ce qui compte
 # est : PARMI les runs qui n'ont pas passe au tour 1, combien finissent en
 # PASS -- et sur combien de runs la question se pose reellement.
-def _marques(r):
+# --- MORT FOURNISSEUR, cable dans --comparer ---------------------------------
+#
+# Sixieme instance de la meme forme : une ABSENCE rendue comme un RESULTAT.
+# Quand la dorsale coupe (429, quota, credential), `dsh` meurt en deux lignes.
+# Le banc, lui, voit ce qui reste sur le disque et enregistre un verdict :
+# "aucun solution.jl ecrit", ou pire, la vraie erreur Julia d un brouillon que
+# le modele etait en train de remplacer (mesure du 23/08 : t31_web/r03 tour 2,
+# coupe sur "Fixing both files:" et juge sur le fichier d avant).
+#
+# Un tour tue par le fournisseur n est NI un echec NI une reussite du modele.
+# Il recoit donc sa propre valeur -- la lettre X -- et il n entre dans aucun
+# taux. L absence sans trace en recoit une autre : "SANS TRACE".
+TYPES_FATAL = ('RATE_LIMIT', 'QUOTA', 'MISSING_CREDENTIAL',
+               'INVALID_REQUEST', 'PI_AI_ERROR', 'AUTH', 'SERVER_ERROR')
+
+
+def _type_fatal(chemin):
+    """Le type d erreur fournisseur qui a tue ce tour, ou None."""
+    try:
+        for l in io.open(chemin, encoding='utf-8', errors='replace'):
+            if not l.startswith('dsh: '):
+                continue
+            t = l[5:].split(':', 1)[0].strip()
+            if t in TYPES_FATAL:
+                return t
+    except OSError:
+        return None
+    return None
+
+
+def _morts_fournisseur(chemin_jsonl, racine=None):
+    """{(rep, effort, tache, tour): TYPE}, ou None si aucune trace au sol.
+
+    None et {} ne disent PAS la meme chose : {} veut dire "regarde, rien" ;
+    None veut dire "pas regarde" -- et c est ce que le rapport doit ecrire.
+    """
+    base = os.path.basename(chemin_jsonl)
+    if not base.startswith('resultats_') or not base.endswith('.jsonl'):
+        return None
+    etiq = base[len('resultats_'):-len('.jsonl')]
+    rac = racine or os.path.join(os.path.dirname(os.path.abspath(chemin_jsonl)), 'runs')
+    d = os.path.join(rac, etiq)
+    if not os.path.isdir(d):
+        return None
+    out = {}
+    for rep_dir in sorted(os.listdir(d)):
+        if not rep_dir.startswith('r'):
+            continue
+        try:
+            rep = int(rep_dir[1:].split('_')[0])
+        except ValueError:
+            continue
+        for cur, _sous, fichiers in os.walk(os.path.join(d, rep_dir)):
+            for f in fichiers:
+                if not (f.startswith('_dsh') and f.endswith('.out')):
+                    continue
+                t = _type_fatal(os.path.join(cur, f))
+                if not t:
+                    continue
+                # _dsh_t3.out -> tour 3 ; _dsh.out -> tour 1 (un seul coup).
+                milieu = f[len('_dsh'):-len('.out')]
+                tour = int(milieu[2:]) if milieu.startswith('_t') and milieu[2:].isdigit() else 1
+                # La tache DOIT etre dans la cle. Sans elle, une campagne
+                # multi-taches ecrase ses 9 morts en 1 -- mesure du 23/08 sur
+                # oxviafree, trouvee par le bras known-BAD de ce garde meme.
+                tache = os.path.basename(cur)
+                effort = os.path.basename(os.path.dirname(cur))
+                out[(rep, effort, tache, tour)] = t
+    return out
+
+def _marques(r, morts=None):
     out = []
+    rep = r.get('rep')
     for t in r.get('par_tour') or []:
         why = t.get('why') or ''
-        out.append('C' if why.startswith('timeout')
-                   else ('P' if t.get('verdict') == 'PASS' else 'F'))
+        cle = (rep, r.get('effort'), r.get('tache'), t.get('tour'))
+        if morts and cle in morts:
+            out.append('X')          # tue par la dorsale : ni echec ni reussite
+        elif why.startswith('timeout'):
+            out.append('C')
+        else:
+            out.append('P' if t.get('verdict') == 'PASS' else 'F')
     return ''.join(out) or '-'
 
 
@@ -36,11 +112,11 @@ def _comparer(chemins):
     bras = []
     for c in chemins:
         rs = [json.loads(l) for l in io.open(c, encoding='utf-8') if l.strip()]
-        bras.append((os.path.basename(c), rs))
+        bras.append((os.path.basename(c), rs, _morts_fournisseur(c)))
 
     print('=== provenance : quel enonce chaque bras a-t-il recu ? ===')
     shas = []
-    for nom, rs in bras:
+    for nom, rs, _m in bras:
         e = sorted({r.get('enonce_sha') or '(aucune)' for r in rs})
         shas.append(tuple(e))
         b = sorted({(r.get('timeout_tour'), r.get('tours_max')) for r in rs})
@@ -58,29 +134,57 @@ def _comparer(chemins):
         print('  seulement si cette difference EST l axe teste.')
 
     print()
-    print('=== les runs, tour par tour  (P=passe  F=juge et rate  C=coupe) ===')
-    for nom, rs in bras:
+    print('=== tours tues par la dorsale (ni echec ni reussite du modele) ===')
+    for nom, rs, m in bras:
+        if m is None:
+            print('  %-28s SANS TRACE : pas de repertoire runs/ pour cette' % nom[:28])
+            print('  %-28s campagne. On ne sait pas -- ce n est pas "aucun".' % '')
+            continue
+        if not m:
+            print('  %-28s aucun' % nom[:28])
+            continue
+        print('  %-28s %d tour(s) :' % (nom[:28], len(m)))
+        for (rep, eff, tac, tour), t in sorted(m.items()):
+            print('       r%-2s %-7s %-5s tour %s : %s' % (rep, eff, tac, tour, t))
+    if any(m for _n, _r, m in bras if m):
+        print('  Ces tours sont marques X ci-dessous et RETIRES de la mesure.')
+        print('  Un tour tue par la dorsale a pu etre juge sur un brouillon que')
+        print('  le modele etait en train de remplacer : son verdict est un')
+        print('  artefact, pas un resultat.')
+
+    print()
+    print('=== les runs, tour par tour  (P=passe  F=juge et rate  C=coupe  X=dorsale) ===')
+    for nom, rs, m in bras:
         for r in sorted(rs, key=lambda z: z.get('rep', 0)):
             faites = sum(1 for x in (r.get('recherches_banc') or []) if x.get('requete'))
             print('  %-18s r%-2s %-4s %7.1fs julia=%-3s [%s] rech=%d'
                   % (nom[:18], r.get('rep'), r.get('verdict'), r.get('wall_s') or 0,
-                     r.get('julia_runs'), _marques(r), faites))
+                     r.get('julia_runs'), _marques(r, m), faites))
 
     print()
     print('=== la mesure : PARMI les runs qui n ont pas passe au tour 1 ===')
-    for nom, rs in bras:
-        pose = [r for r in rs if (r.get('par_tour') or [{}])[0].get('verdict') != 'PASS']
+    nets = []
+    for nom, rs, m in bras:
+        sales = {(rep, eff, tac) for (rep, eff, tac, _t) in (m or {})}
+        propres = [r for r in rs
+                   if (r.get('rep'), r.get('effort'), r.get('tache')) not in sales]
+        nets.append(len(propres))
+        pose = [r for r in propres if (r.get('par_tour') or [{}])[0].get('verdict') != 'PASS']
         gagne = [r for r in pose if r.get('verdict') == 'PASS']
         print('  %-28s la question se pose sur %d run(s) sur %d ; %d finissent PASS'
-              % (nom[:28], len(pose), len(rs), len(gagne)))
-    petit = min(len(rs) for _, rs in bras)
+              % (nom[:28], len(pose), len(propres), len(gagne)))
+        if sales:
+            print('  %-28s (%d run(s) mis de cote : %s -- dorsale)'
+                  % ('', len(sales), ', '.join('r%s/%s' % (a, c)
+                                                for a, _b, c in sorted(sales))))
+    petit = min(nets)
     if petit < 10:
         print('  n=%d par bras : aucun ecart n est separable ici. Le tableau' % petit)
         print('  ci-dessus se lit, il ne se conclut pas.')
 
     print()
     print('=== tours sans verdict (coupes au delai) ===')
-    for nom, rs in bras:
+    for nom, rs, _m in bras:
         tours = [t for r in rs for t in (r.get('par_tour') or [])]
         coup = [t for t in tours if (t.get('why') or '').startswith('timeout')]
         t1 = [r for r in rs if ((r.get('par_tour') or [{}])[0].get('why') or '').startswith('timeout')]
