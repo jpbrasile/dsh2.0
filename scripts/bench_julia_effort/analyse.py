@@ -130,8 +130,16 @@ def _comparer(chemins):
         print('  avant l ajout de l empreinte) : cet enonce est INCONNU.')
         print('  L ecart mesure ci-dessous ne peut pas etre attribue a l axe teste.')
     elif len(set(shas)) > 1:
-        print('  Les deux bras ont des enonces DIFFERENTS. C est correct si et')
-        print('  seulement si cette difference EST l axe teste.')
+        # Avec plus de deux bras, "les deux bras different" est faux : il faut
+        # dire QUI partage avec QUI. Un rapport qui resume mal la provenance
+        # est un rapport qu on cesse de lire.
+        groupes = {}
+        for (nom, _rs, _m), e in zip(bras, shas):
+            groupes.setdefault(e, []).append(nom[:24])
+        print('  %d enonce(s) distinct(s) pour %d bras :' % (len(groupes), len(bras)))
+        for e, noms in sorted(groupes.items(), key=lambda kv: -len(kv[1])):
+            print('    %-14s <- %s' % (', '.join(e), ' + '.join(noms)))
+        print('  C est correct si et seulement si CE decoupage est l axe teste.')
 
     print()
     print('=== tours tues par la dorsale (ni echec ni reussite du modele) ===')
