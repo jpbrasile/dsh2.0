@@ -1063,7 +1063,9 @@ def _etages():
     if _ETAGES is not None:
         return _ETAGES
     import importlib.util
-    chemin = os.path.join(BASE, "..", "..", ".opencode", "mcp", "web_search.py")
+    # Copie locale de .opencode/mcp/web_search.py du depot plasma (agentic-flow),
+    # importee ici le 23/08/2026 : le banc vit desormais dans son propre depot.
+    chemin = os.path.join(BASE, "web_search.py")
     chemin = os.path.abspath(chemin)
     try:
         spec = importlib.util.spec_from_file_location("depot_web_search", chemin)

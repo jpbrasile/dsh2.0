@@ -7,7 +7,11 @@ mesure porte sur un autre modele que celui qu'on croit epingler.
 """
 import json, subprocess, sys, time, urllib.request, urllib.error
 BASE = "http://127.0.0.1:31415/v1"
-LECTEUR = "C:/Users/test/Documents/agentic-flow-fresh/scripts/freellm_key.py"
+import os
+# scripts/freellm_key.py, un niveau au-dessus de ce dossier (chemin relatif au
+# depot dsh2.0, plus l'absolu de agentic-flow-fresh).
+LECTEUR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                       "freellm_key.py")
 KEY = subprocess.run([sys.executable, LECTEUR],
                      capture_output=True, text=True, check=True).stdout.strip()
 OUTILS = [{"type": "function", "function": {

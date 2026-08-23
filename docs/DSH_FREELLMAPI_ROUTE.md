@@ -297,4 +297,5 @@ c'est `/v1/models` qui fait foi.
 | variables d'environnement de FreeLLMAPI | `C:\Users\test\Documents\freellmapi\.env.example` |
 
 Le dépôt source est cloné en `C:\Users\test\Documents\freellmapi` — **hors** de
-`agentic-flow-fresh`, pour ne pas polluer l'index git partagé.
+ce dépôt (`dsh2.0`) comme du dépôt plasma `agentic-flow-fresh`, pour ne pas
+polluer leurs index git.
