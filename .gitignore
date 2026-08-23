@@ -1,0 +1,9 @@
+# Secrets: never versioned
+.env
+.env.*
+
+# Runtime / build artefacts
+node_modules/
+__pycache__/
+*.log
+.opencode/websearch.jsonl
