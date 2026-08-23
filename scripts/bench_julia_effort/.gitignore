@@ -17,3 +17,10 @@ __pycache__/
 # l arbre (constate le 23/08) -- un garde sans son bras BAD ne mesure rien.
 !fixtures/*/resultats.jsonl
 !fixtures/*/wire.jsonl
+# Espaces de travail et archives de campagne (deplaces depuis agentic-flow le
+# 23/08) : generes par bench.py (`_shim/` par preparer_shim, `_par/<etiq>/wK/`
+# par --par), ou mis de cote a la main (`archive_*`). Jamais versionnes.
+_par/
+_shim/
+archive_*
+wire_*.jsonl
