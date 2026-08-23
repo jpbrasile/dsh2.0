@@ -1,0 +1,3 @@
+{"kind": "mark", "tag": "off|t01|r1|t1|debut", "t": 1787000000000}
+{"kind": "call", "t0": 1787000000100, "ms": 100000, "status": 200, "sent": {"model": "x", "n_messages": 1, "n_tools": 27}, "usage": {"completion_tokens": 10, "prompt_tokens": 10, "total_tokens": 20}, "timings": {"cache_n": 0, "prompt_n": 10, "prompt_ms": 10.0, "predicted_n": 10, "predicted_ms": 100000.0}}
+{"kind": "mark", "tag": "off|t01|r1|t1|fin", "t": 1787000010000}

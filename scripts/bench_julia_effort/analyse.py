@@ -269,13 +269,38 @@ if len(sys.argv) > 2 and sys.argv[1] == '--comparer':
     raise SystemExit(0)
 
 
-def _charger(nom, pourquoi):
-    p = os.path.join(B, nom)
-    if not os.path.exists(p):
-        raise SystemExit(
-            "%s absent. %s\nLancer d'abord : python bench.py off,low,medium,high,xhigh"
-            % (nom, pourquoi))
+def _lire(p):
     return [json.loads(l) for l in io.open(p, encoding="utf-8") if l.strip()]
+
+
+def _charger(nom, pourquoi):
+    """Lit B/<nom>. Si le fichier manque, tente la disposition que `bench.py
+    --par` produit : B = _par/<etiq>/ avec w*/wire.jsonl par ouvrier, et les
+    verdicts dans ../../resultats_<etiq>_<bras>.jsonl. Ce qui a ete assemble
+    est DIT, ligne par ligne : l instrument nomme ce qu il a lu."""
+    p = os.path.join(B, nom)
+    if os.path.exists(p):
+        return _lire(p)
+    import glob
+    etiq = os.path.basename(B)
+    if nom == "wire.jsonl":
+        morceaux = sorted(glob.glob(os.path.join(B, "w*", "wire.jsonl")))
+    else:
+        morceaux = sorted(glob.glob(os.path.join(B, "..", "..", "resultats_%s_*.jsonl" % etiq)))
+    if morceaux:
+        print("NOTE : %s absent dans %s ; assemble depuis %d fichier(s) :" % (nom, B, len(morceaux)))
+        for m in morceaux:
+            print("       %s" % os.path.relpath(m, B))
+        out = []
+        for m in morceaux:
+            out += _lire(m)
+        if nom == "wire.jsonl":
+            out.sort(key=lambda r: r.get("t") or r.get("t0") or 0)
+        print()
+        return out
+    raise SystemExit(
+        "%s absent. %s\nLancer d'abord : python bench.py off,low,medium,high,xhigh"
+        % (nom, pourquoi))
 
 
 res = _charger("resultats.jsonl", "C'est le journal des verdicts, ecrit par bench.py.")
@@ -300,34 +325,123 @@ wire = _charger("wire.jsonl", "C'est le journal du proxy : sans lui il n'y a AUC
 # campagnes anterieures ecrivaient `effort|tache|debut` ; elles sont relues
 # comme la repetition 1 plutot que d'etre silencieusement ignorees.
 def _cle(t):
+    """Rend (cle_du_run, bout, tour). Trois formes de marque existent :
+      effort|tache|rN|tM|bout   mode BOUCLE  (bench.py, un_run_boucle)
+      effort|tache|rN|bout      mode simple  (bench.py, un_run)
+      effort|tache|bout         campagnes d avant la repetition
+    Mesure du 23/08 (red team, t31e) : 55 marques au sol, TOUTES a cinq
+    champs, 785 appels, ZERO attribue -- cette fonction ne connaissait que
+    quatre et trois champs et rendait (None, None) sans le dire. La colonne
+    appels affichait 0 partout, et deux controles cables (horloge, partage)
+    passaient au vert sur une liste vide. Leur bras known-BAD tirait sur des
+    marques a quatre champs : le chemin reel n avait jamais ete parcouru.
+    Bras known-BAD a cinq champs : `python analyse.py fixtures/horloge_bad_boucle`.
+
+    Quatrieme forme, depuis le 23/08 apres-midi (bras dans la marque) :
+      effort|tache|rN|tM|bras|bout
+    La cle rendue est (effort, tache, rep, bras, slot) ; bras et slot valent
+    None quand la marque ne les porte pas. Sans le bras, `sans` et `web` a
+    repetition egale partagent une cle ; sans le slot, deux ouvriers dont les
+    fils sont assembles se donnent leurs appels. Le slot vient de
+    l enregistrement de marque, pas du tag (voir la boucle ci-dessous).
+    Bras known-BAD : `python analyse.py fixtures/bras_melanges_bad`."""
+    if len(t) == 6 and t[2].startswith("r") and t[3].startswith("t"):
+        return (t[0], t[1], int(t[2][1:]), t[4]), t[5], int(t[3][1:])
+    if len(t) == 5 and t[2].startswith("r") and t[3].startswith("t"):
+        return (t[0], t[1], int(t[2][1:]), None), t[4], int(t[3][1:])
     if len(t) == 4 and t[2].startswith("r"):
-        return (t[0], t[1], int(t[2][1:])), t[3]
+        return (t[0], t[1], int(t[2][1:]), None), t[3], 1
     if len(t) == 3:
-        return (t[0], t[1], 1), t[2]
-    return None, None
+        return (t[0], t[1], 1, None), t[2], 1
+    return None, None, None
 
 
-par_run, bornes, courant, rejoues = {}, {}, None, 0
+def _compatible(cle, l):
+    """La fenetre `cle` = (effort, tache, rep, bras, slot) peut-elle etre celle
+    du run `l` ? bras et slot ne departagent que s ils sont connus des DEUX cotes."""
+    if cle[:3] != (l["effort"], l["tache"], l.get("rep", 1)):
+        return False
+    if l.get("bras") and cle[3] is not None and cle[3] != l["bras"]:
+        return False
+    if l.get("slot") is not None and cle[4] is not None and cle[4] != l["slot"]:
+        return False
+    return True
+
+
+def appels_de(l):
+    """Les appels du run `l` (une ligne de resultats).
+
+    Candidates : les fenetres du fil compatibles (effort, tache, repetition,
+    puis bras et slot quand les deux cotes les portent). Une seule : ses
+    appels. Plusieurs, et `l` est la SEULE ligne de resultats qui leur
+    corresponde : c est un rejeu (campagne relancee dans le meme fil), la
+    derniere fenetre est retenue -- la convention d avant, gardee pour ce
+    pour quoi elle a ete ecrite. Plusieurs fenetres ET plusieurs lignes :
+    AMBIGU, rien n est attribue et c est dit. Attribuer au hasard produit un
+    debit faux qui a l air mesure : c est ce que faisait le dict a une
+    entree par cle (fixtures/bras_melanges_bad, 23/08)."""
+    cands = [w for w in fenetres if _compatible(w["cle"], l)]
+    if len(cands) == 1:
+        return cands[0]["calls"]
+    if not cands:
+        return []
+    concurrents = [x for x in res if any(_compatible(w["cle"], x) for w in cands)]
+    if len(concurrents) == 1:
+        return cands[-1]["calls"]
+    ambigus.append((l["effort"], l["tache"], l.get("rep", 1), l.get("bras"), l.get("slot"),
+                    [w["cle"] for w in cands]))
+    return []
+
+
+fenetres, rejoues, inconnues, ambigus = [], 0, [], []
+ouverts = {}          # slot -> fenetre ouverte
 for r in wire:
     if r.get("kind") == "mark":
-        cle, bout = _cle(r["tag"].split("|"))
-        if cle and bout == "debut":
-            courant = cle
-            if courant in par_run:
+        cle, bout, tour = _cle(r["tag"].split("|"))
+        if cle is None:
+            # UNE MARQUE NON RECONNUE EST DITE, pas avalee : c est exactement
+            # l absence qui a cache la trouvaille du 23/08.
+            inconnues.append(r["tag"])
+            continue
+        s = r.get("slot")
+        cle = cle + (s,)
+        if bout == "debut":
+            if tour > 1:
+                # Tour suivant du MEME run : la `fin` du tour precedent a
+                # ferme sa fenetre, on ROUVRE la meme -- les appels du tour
+                # d avant restent attribues, ceux qui viennent s y ajoutent.
+                # (Premiere version : une fenetre neuve par tour, 13 "rejeux"
+                # sur t31e et des jetons divises par deux.)
+                anc = [x for x in fenetres if x["cle"] == cle]
+                if anc:
+                    ouverts[s] = anc[-1]
+                    continue
+            if any(x["cle"] == cle for x in fenetres):
                 rejoues += 1
-            par_run[courant] = []
-            bornes[courant] = [r.get("t", 0), None]
+            w = {"cle": cle, "calls": [], "a": r.get("t", 0), "b": None}
+            fenetres.append(w)
+            ouverts[s] = w
         else:
-            if courant in bornes:
-                bornes[courant][1] = r.get("t", 0)
-            courant = None
+            w = ouverts.pop(s, None)
+            if w is not None:
+                w["b"] = r.get("t", 0)
         continue
-    if courant and r.get("kind") == "call":
-        par_run[courant].append(r)
+    if r.get("kind") == "call":
+        # Une fenetre ouverte PAR SLOT : dans un fil assemble de plusieurs
+        # ouvriers, la `fin` du slot 1 ne ferme pas la fenetre du slot 0.
+        w = ouverts.get(r.get("slot"))
+        if w is not None:
+            w["calls"].append(r)
+if inconnues:
+    print("!!! %d MARQUE(S) DE FORME INCONNUE dans wire.jsonl -- leurs appels ne "
+          "sont attribues a AUCUN run, et tout controle fonde sur l attribution "
+          "regarde une liste vide. Exemple : %s" % (len(inconnues), inconnues[0]))
+    print()
 if rejoues:
-    print("NOTE : %d tache(s) apparaissent plusieurs fois dans wire.jsonl "
-          "(campagnes successives). Seule la DERNIERE fenetre de chacune est "
-          "retenue.\n" % rejoues)
+    print("NOTE : %d fenetre(s) de wire.jsonl portent la cle d une fenetre "
+          "precedente (campagnes successives dans le meme fil). Pour un run "
+          "unique, la DERNIERE est retenue ; pour plusieurs runs, voir AMBIGUS.\n"
+          % rejoues)
 
 def agrege(calls):
     """`ntim` : combien d appels portent REELLEMENT un bloc timings.
@@ -340,6 +454,13 @@ def agrege(calls):
     a zero. C est l un des trois instruments annonces en tete de ce fichier.
     """
     gen = dec_ms = pre_n = pre_ms = ntim = 0
+    # Second instrument, quand `timings` manque : `usage.completion_tokens`
+    # sur `ms` (duree de l appel vue par le proxy). Mesure du 23/08 (pair,
+    # t31e) : 799 appels sur 803 le portent -- la donnee etait la depuis le
+    # debut, et la colonne disait "-". C est un debit BOUT-EN-BOUT (prefill
+    # et reseau compris), pas un debit de decodage : il est affiche avec un
+    # "~" et jamais fondu dans l autre.
+    gen_u = e2e_ms = nusage = 0
     for c in calls:
         t = c.get("timings") or {}
         if t:
@@ -348,14 +469,46 @@ def agrege(calls):
         dec_ms += t.get("predicted_ms") or 0
         pre_n += t.get("prompt_n") or 0
         pre_ms += t.get("prompt_ms") or 0
+        u = c.get("usage") or {}
+        if u.get("completion_tokens") is not None and c.get("ms"):
+            nusage += 1
+            gen_u += u["completion_tokens"]
+            e2e_ms += c["ms"]
     return dict(appels=len(calls), ntim=ntim, gen=gen, dec_s=dec_ms/1000.0,
-                pre_n=pre_n, pre_s=pre_ms/1000.0)
+                pre_n=pre_n, pre_s=pre_ms/1000.0,
+                nusage=nusage, gen_u=gen_u, e2e_s=e2e_ms/1000.0)
+
+
+def _debit(l):
+    """(jetons, 'dec_t/s' ou '~e2e_t/s', source) du run, ou (None, None, None)."""
+    if l["ntim"]:
+        return l["gen"], (l["gen"]/l["dec_s"] if l["dec_s"] else 0.0), "timings"
+    if l["nusage"]:
+        return l["gen_u"], (l["gen_u"]/l["e2e_s"] if l["e2e_s"] else 0.0), "usage"
+    return None, None, None
 
 lignes = []
 for r in res:
     rep = r.get("rep", 1)
-    a = agrege(par_run.get((r["effort"], r["tache"], rep), []))
-    lignes.append({**r, "rep": rep, **a})
+    a = agrege(appels_de({**r, "rep": rep}))
+    # Enregistrement de SECOURS (ouvrier mort avant le verdict) : pas de
+    # wall_s, pas de why. Il est garde et NOMME, jamais converti en zero --
+    # et il n entre dans aucune moyenne ni aucun controle chronometre.
+    secours = "wall_s" not in r
+    lignes.append({**r, "rep": rep, **a, "secours": secours,
+                   "why": r.get("why") or ("(secours : ouvrier mort, aucun verdict)"
+                                           if secours else "")})
+if ambigus:
+    print("!!! %d run(s) AMBIGUS : plusieurs fenetres du fil portent leur effort/tache/"
+          "repetition et ni le bras ni le slot ne departagent. RIEN ne leur est "
+          "attribue (appels=0, debit '-'). Exemple : %s -> %s"
+          % (len(ambigus), ambigus[0][:5], ambigus[0][5]))
+    print()
+mesures = [l for l in lignes if not l["secours"]]
+if len(mesures) < len(lignes):
+    print("NOTE : %d enregistrement(s) de secours (ouvrier mort avant le verdict) : "
+          "affiches, exclus des moyennes et des controles chronometres.\n"
+          % (len(lignes) - len(mesures)))
 nreps = len({l["rep"] for l in lignes})
 
 ordre = ["off", "low", "medium", "high", "xhigh"]
@@ -365,13 +518,19 @@ print("=== par run ===")
 print("%-3s %-6s %-5s %-4s %7s %7s %7s %6s  %s" % ("rep","effort","tache","ok","temps_s","gen_tok","dec_t/s","appels","pourquoi"))
 for e in efforts:
     for l in sorted([x for x in lignes if x["effort"] == e], key=lambda x: (x["tache"], x["rep"])):
-        tps = l["gen"]/l["dec_s"] if l["dec_s"] else 0
+        jet, tps, src = _debit(l)
         # '-' veut dire NON MESURE. Zero voudrait dire mesure et nulle.
-        jt = ("%7d" % l["gen"]) if l["ntim"] else "      -"
-        db = ("%7.1f" % tps) if l["ntim"] else "      -"
-        print("r%-2d %-6s %-5s %-4s %7.1f %7s %7s %6d  %s"
-              % (l["rep"], e, l["tache"], l["verdict"], l["wall_s"], jt, db, l["appels"], l["why"][:52]))
+        # '~' veut dire bout-en-bout (usage/ms), pas decodage (timings).
+        jt = ("%7d" % jet) if src else "      -"
+        db = ("%7.1f" % tps) if src == "timings" else (("~%6.1f" % tps) if src else "      -")
+        ws = ("%7.1f" % l["wall_s"]) if not l["secours"] else "      -"
+        print("r%-2d %-6s %-5s %-4s %7s %7s %7s %6d  %s"
+              % (l["rep"], e, l["tache"], l["verdict"], ws, jt, db, l["appels"], l["why"][:52]))
 
+if any(_debit(l)[2] == "usage" for l in lignes):
+    print("    ~ : debit BOUT-EN-BOUT = usage.completion_tokens / duree de l appel "
+          "(prefill et reseau compris). Ce n est pas le debit de decodage des "
+          "lignes sans ~ ; les deux ne se comparent pas entre eux.")
 print()
 iteratif = any(l.get("mode") == "iterate" for l in lignes)
 print("=== synthese par niveau ===")
@@ -381,26 +540,36 @@ if iteratif:
 print(entete)
 synth = {}
 for e in efforts:
-    g = [x for x in lignes if x["effort"] == e]
-    ok = sum(1 for x in g if x["verdict"] == "PASS")
+    tous = [x for x in lignes if x["effort"] == e]
+    g = [x for x in tous if not x["secours"]]
+    # Reussite sur TOUS les enregistrements : un ouvrier mort est un run perdu
+    # et il compte comme son FAIL. Temps et debit sur les seuls mesures.
+    ok = sum(1 for x in tous if x["verdict"] == "PASS")
     avec = [x for x in g if x["ntim"]]
-    tot_gen = sum(x["gen"] for x in avec); tot_dec = sum(x["dec_s"] for x in avec)
-    s = dict(n=len(g), ok=ok, ntim=len(avec),
-             med=st.median([x["wall_s"] for x in g]),
-             moy=st.mean([x["wall_s"] for x in g]),
+    src = "timings"
+    if avec:
+        tot_gen = sum(x["gen"] for x in avec); tot_dec = sum(x["dec_s"] for x in avec)
+    else:
+        # Secours : bout-en-bout depuis usage/ms, sur les runs qui le portent.
+        avec = [x for x in g if x["nusage"]]
+        src = "usage" if avec else None
+        tot_gen = sum(x["gen_u"] for x in avec); tot_dec = sum(x["e2e_s"] for x in avec)
+    s = dict(n=len(tous), ok=ok, ntim=len(avec), src=src,
+             med=st.median([x["wall_s"] for x in g]) if g else float("nan"),
+             moy=st.mean([x["wall_s"] for x in g]) if g else float("nan"),
              gen=(tot_gen/len(avec) if avec else None),
              tps=((tot_gen/tot_dec if tot_dec else 0) if avec else None),
-             ap=st.mean([x["appels"] for x in g]),
-             jl=st.mean([x.get("julia_runs", 0) for x in g]),
+             ap=st.mean([x["appels"] for x in g]) if g else float("nan"),
+             jl=st.mean([x.get("julia_runs", 0) for x in g]) if g else float("nan"),
              # Un run sans mytest.jl en mode iteratif n'est pas une donnee
              # manquante : le modele a repondu DONE sans faire ce qu'on lui a
              # explicitement demande. C'est une mesure d'obeissance.
              sans=sum(1 for x in g if not x.get("a_teste", False)))
     synth[e] = s
     ligne = "%-8s %2d/%-5d %9.1f %9.1f %10s %10s %9.1f" % (
-        e, ok, len(g), s["med"], s["moy"],
+        e, ok, len(tous), s["med"], s["moy"],
         ("%.0f" % s["gen"]) if avec else "-",
-        ("%.1f" % s["tps"]) if avec else "-", s["ap"])
+        (("%.1f" if src == "timings" else "~%.1f") % s["tps"]) if avec else "-", s["ap"])
     if iteratif:
         ligne += " %8.1f %9s" % (s["jl"], "%d/%d" % (s["sans"], len(g)))
     print(ligne)
@@ -418,7 +587,7 @@ if "high" in synth and "xhigh" in synth:
         # Deux absences comparees rendent un ecart de 0 %, qui se lit
         # "identiques" -- exactement la conclusion que le temoin doit
         # rendre impossible a atteindre sans mesure.
-        print("    jetons    NON MESURES (aucun appel ne porte de timings)")
+        print("    jetons    NON MESURES (aucun appel ne porte ni timings ni usage)")
     else:
         print("    jetons    %.0f vs %.0f  (ecart %.0f %%)" % (h["gen"], x["gen"], 100*abs(h["gen"]-x["gen"])/max(h["gen"],1e-9)))
 
@@ -460,16 +629,35 @@ for t in sorted({l["tache"] for l in lignes}):
 #   - un bras "sans" qui cherche quand meme  -> les bras ne sont pas disjoints ;
 #   - un bras "avec" qui ne cherche jamais   -> il n'y a qu'un seul bras, et
 #     l'ecart mesure est un ecart entre deux tirages du meme reglage.
+def _web_de(l):
+    """Activite web d un run : nombre de recherches COTE BANC (`rech_faites`,
+    design --web-apres-julia : le banc cherche quand Julia a echoue N fois) si
+    l enregistrement en porte, sinon les appels-outil web de l agent
+    (`appels_web`, design ou l agent cherche lui-meme). -1 = non mesure.
+    Mesure du 23/08 : t31e (banc chercheur) affichait appels_web=0 sur les 5
+    runs du bras web et le controle criait "un seul bras" -- il lisait le
+    compteur de l autre design."""
+    if "recherches_banc" in l:
+        return l.get("rech_faites", len(l["recherches_banc"] or []))
+    return l.get("appels_web", -1)
+
+
+banc_cherche = any("recherches_banc" in l for l in lignes)
 bras = sorted({l.get("bras_web", False) for l in lignes})
-if len(bras) > 1 or any(l.get("appels_web", -1) > 0 for l in lignes):
+if len(bras) > 1 or any(_web_de(l) > 0 for l in lignes):
     print()
     print("=== bras web ===")
+    if banc_cherche:
+        print("    (recherches faites PAR LE BANC apres echec Julia ; un run du bras "
+              "web sans recherche est un run qui n a pas echoue assez pour en declencher une)")
     print("%-12s %-9s %9s %10s %10s %9s" % ("bras", "reussite", "temps_moy",
-                                            "gen_tok_moy", "appels_web", "runs_web"))
+                                            "gen_tok_moy",
+                                            "rech_banc" if banc_cherche else "appels_web",
+                                            "runs_web"))
     for b in bras:
-        g = [x for x in lignes if x.get("bras_web", False) == b]
-        mes = [x for x in g if x.get("appels_web", -1) >= 0]
-        aw = [x["appels_web"] for x in mes]
+        g = [x for x in mesures if x.get("bras_web", False) == b]
+        mes = [x for x in g if _web_de(x) >= 0]
+        aw = [_web_de(x) for x in mes]
         print("%-12s %2d/%-6d %9.1f %10s %10s %9s"
               % ("avec web" if b else "sans web",
                  sum(1 for x in g if x["verdict"] == "PASS"), len(g),
@@ -479,16 +667,29 @@ if len(bras) > 1 or any(l.get("appels_web", -1) > 0 for l in lignes):
                  ("%.1f" % st.mean(aw)) if aw else "n/a",
                  "%d/%d" % (sum(1 for v in aw if v > 0), len(mes)) if mes else "n/a"))
 
-    triche = [l for l in lignes if not l.get("bras_web", False) and l.get("appels_web", -1) > 0]
-    muet = [l for l in lignes if l.get("bras_web", False) and l.get("appels_web", -1) == 0]
+    triche = [l for l in lignes if not l.get("bras_web", False) and _web_de(l) > 0]
+    # Banc chercheur : le banc ECRIT chaque refus de chercher avec sa raison
+    # (seuil julia non atteint, plafond, delai). "Muet" est alors un run du
+    # bras web qui a echoue, n a rien cherche ET n a aucune raison ecrite :
+    # la branche n a jamais ete atteinte. Un refus motive n est pas un
+    # silence.
+    def _muet(l):
+        if not l.get("bras_web", False) or _web_de(l) != 0:
+            return False
+        if "recherches_banc" not in l:
+            return True
+        return (l.get("verdict") != "PASS"
+                and not any(r.get("raison") for r in (l["recherches_banc"] or [])))
+    muet = [l for l in lignes if _muet(l)]
     if triche:
         print("!!! %d run(s) du bras SANS web ont appele un outil web : les bras "
               "ne sont pas disjoints." % len(triche))
         for l in triche[:8]:
-            print("      %-6s %-5s r%d : %d appel(s)" % (l["effort"], l["tache"], l["rep"], l["appels_web"]))
+            print("      %-6s %-5s r%d : %d appel(s)" % (l["effort"], l["tache"], l["rep"], _web_de(l)))
     if muet:
-        print("!!! %d run(s) du bras AVEC web n'ont appele AUCUN outil web : pour "
-              "ces runs il n'y a pas deux bras, il y en a un." % len(muet))
+        print("!!! %d run(s) du bras AVEC web n'ont fait AUCUNE recherche alors "
+              "qu'ils le pouvaient : pour ces runs il n'y a pas deux bras, il y en a un."
+              % len(muet))
         for l in muet[:8]:
             print("      %-6s %-5s r%d" % (l["effort"], l["tache"], l["rep"]))
     if not triche and not muet and len(bras) > 1:
@@ -557,9 +758,10 @@ def _union_s(calls):
 # que produit une porte qui ne mesure rien. Bras known-BAD :
 # `python analyse.py fixtures/horloge_bad`.
 print()
+JUGE_TIMEOUT = int(os.environ.get("BENCH_JUGE_TIMEOUT", "600"))   # meme source que bench.py
 impossibles = []
-for l in lignes:
-    somme_s = _union_s(par_run.get((l["effort"], l["tache"], l.get("rep", 1)), []))
+for l in mesures:
+    somme_s = _union_s(appels_de(l))
     if somme_s > l["wall_s"] * 1.15 + 2:
         impossibles.append((l["effort"], l["tache"], l["wall_s"], somme_s))
 if impossibles:
@@ -569,8 +771,14 @@ if impossibles:
         print("      %-6s %-5s  duree %.1f s  mais %.1f s d'appels" % (e, t, w, s))
     print("      Les debits ci-dessus sont FAUX pour ces lignes. Ne pas les citer.")
 else:
+    attribues = sum(1 for l in mesures if appels_de(l))
     print("controle d'horloge : %d/%d runs coherents (aucun ne passe plus de temps "
-          "en appels qu'il n'a dure)." % (len(lignes), len(lignes)))
+          "en appels qu'il n'a dure) -- %d/%d ont des appels attribues."
+          % (len(mesures), len(mesures), attribues, len(mesures)))
+    if mesures and attribues == 0:
+        print("      !!! AUCUN run n a d appels attribues : ce controle n a rien "
+              "regarde. Un compte egal a la population sur une liste vide n est "
+              "pas une mesure.")
 
 # --- CONTROLE D'ECHEANCE, cable : il tourne a chaque analyse ------------------
 # Un run ne peut pas durer plus longtemps que sa propre echeance. S'il le fait,
@@ -591,8 +799,15 @@ except Exception:
 
 print()
 debordements = []
-for l in lignes:
-    echeance = TIMEOUT_ITER if l.get("mode") == "iterate" else TIMEOUT
+for l in mesures:
+    if l.get("mode") == "boucle" and l.get("timeout_tour") and l.get("tours_max"):
+        # Mode BOUCLE : chaque tour a son delai, puis un verdict Julia borne
+        # par JUGE_TIMEOUT. L echeance du run est la somme. Sans cette branche
+        # le controle lisait TIMEOUT (900 s, un seul tour) et denoncait
+        # 7 runs sur 14 de t31e "non fermes" -- ils etaient dans leur budget.
+        echeance = l["tours_max"] * (l["timeout_tour"] + JUGE_TIMEOUT)
+    else:
+        echeance = TIMEOUT_ITER if l.get("mode") == "iterate" else TIMEOUT
     # 60 s = la seconde echeance que lancer_borne s'accorde apres le kill, plus
     # le temps du verdict Julia. Au-dela, l'arbre n'a pas ete ferme.
     if l["wall_s"] > echeance + 60:
@@ -640,27 +855,33 @@ def _conversations(wire):
         n = env.get("n_messages")
         if n is None or (env.get("n_tools") or 0) == 0:
             continue
-        c = ouverts.pop(n - 2, None)
+        # Chainage PAR SLOT : dans un fil assemble, le n=5 de l ouvrier 0
+        # ne prolonge pas le n=3 de l ouvrier 1.
+        s = r.get("slot")
+        c = ouverts.pop((s, n - 2), None)
         if c is None:
             c = {"n0": n, "calls": []}
             convs.append(c)
         c["calls"].append(r)
         c["n1"] = n
-        ouverts[n] = c
+        ouverts[(s, n)] = c
     return convs
 
 
-def _fenetre_de(ts, bornes):
-    for cle, (a, b) in bornes.items():
+def _fenetre_de(ts, fenetres, slot=None):
+    for i, w in enumerate(fenetres):
+        cle, a, b = w["cle"], w["a"], w["b"]
+        if slot is not None and cle[4] is not None and cle[4] != slot:
+            continue
         if a and a <= ts and (b is None or ts <= b):
-            return cle
+            return i
     return None
 
 
 print()
 intrus = []
 for c in _conversations(wire):
-    vues = {_fenetre_de(x["t0"], bornes) for x in c["calls"]}
+    vues = {_fenetre_de(x["t0"], fenetres, x.get("slot")) for x in c["calls"]}
     vues.discard(None)
     if len(vues) > 1:
         intrus.append((c, vues))

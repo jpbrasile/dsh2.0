@@ -1,0 +1,9 @@
+{"kind": "mark", "tag": "off|t01|r1|t1|debut", "slot": 0, "t": 1787000000000}
+{"kind": "call", "t0": 1787000001000, "ms": 20000, "status": 200, "slot": 0, "sent": {"model": "x", "n_messages": 3, "n_tools": 27}, "usage": {"completion_tokens": 50, "prompt_tokens": 10, "total_tokens": 60}, "servi": "x"}
+{"kind": "call", "t0": 1787000022000, "ms": 20000, "status": 200, "slot": 0, "sent": {"model": "x", "n_messages": 5, "n_tools": 27}, "usage": {"completion_tokens": 50, "prompt_tokens": 10, "total_tokens": 60}, "servi": "x"}
+{"kind": "mark", "tag": "off|t01|r1|t1|fin", "slot": 0, "t": 1787000100000}
+{"kind": "mark", "tag": "off|t01|r1|t1|debut", "slot": 0, "t": 1787000200000}
+{"kind": "call", "t0": 1787000201000, "ms": 30000, "status": 200, "slot": 0, "sent": {"model": "x", "n_messages": 3, "n_tools": 27}, "usage": {"completion_tokens": 50, "prompt_tokens": 10, "total_tokens": 60}, "servi": "x"}
+{"kind": "call", "t0": 1787000232000, "ms": 30000, "status": 200, "slot": 0, "sent": {"model": "x", "n_messages": 5, "n_tools": 27}, "usage": {"completion_tokens": 50, "prompt_tokens": 10, "total_tokens": 60}, "servi": "x"}
+{"kind": "call", "t0": 1787000263000, "ms": 30000, "status": 200, "slot": 0, "sent": {"model": "x", "n_messages": 7, "n_tools": 27}, "usage": {"completion_tokens": 50, "prompt_tokens": 10, "total_tokens": 60}, "servi": "x"}
+{"kind": "mark", "tag": "off|t01|r1|t1|fin", "slot": 0, "t": 1787000300000}

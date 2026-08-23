@@ -1,0 +1,10 @@
+{"kind": "mark", "tag": "off|t01|r1|debut", "t": 1787000000000}
+{"kind": "call", "t0": 1787000001000, "ms": 5000, "status": 200, "sent": {"model": "x", "n_messages": 3, "n_tools": 27}, "usage": {"completion_tokens": 10, "prompt_tokens": 10, "total_tokens": 20}, "timings": {"cache_n": 0, "prompt_n": 10, "prompt_ms": 10.0, "predicted_n": 10, "predicted_ms": 5000.0}}
+{"kind": "call", "t0": 1787000002000, "ms": 5000, "status": 200, "sent": {"model": "x", "n_messages": 41, "n_tools": 27}, "usage": {"completion_tokens": 10, "prompt_tokens": 10, "total_tokens": 20}, "timings": {"cache_n": 0, "prompt_n": 10, "prompt_ms": 10.0, "predicted_n": 10, "predicted_ms": 5000.0}}
+{"kind": "call", "t0": 1787000010000, "ms": 5000, "status": 200, "sent": {"model": "x", "n_messages": 5, "n_tools": 27}, "usage": {"completion_tokens": 10, "prompt_tokens": 10, "total_tokens": 20}, "timings": {"cache_n": 0, "prompt_n": 10, "prompt_ms": 10.0, "predicted_n": 10, "predicted_ms": 5000.0}}
+{"kind": "mark", "tag": "off|t01|r1|fin", "t": 1787000100000}
+{"kind": "mark", "tag": "off|t02|r1|debut", "t": 1787000101000}
+{"kind": "call", "t0": 1787000102000, "ms": 5000, "status": 200, "sent": {"model": "x", "n_messages": 3, "n_tools": 27}, "usage": {"completion_tokens": 10, "prompt_tokens": 10, "total_tokens": 20}, "timings": {"cache_n": 0, "prompt_n": 10, "prompt_ms": 10.0, "predicted_n": 10, "predicted_ms": 5000.0}}
+{"kind": "call", "t0": 1787000103000, "ms": 5000, "status": 200, "sent": {"model": "x", "n_messages": 43, "n_tools": 27}, "usage": {"completion_tokens": 10, "prompt_tokens": 10, "total_tokens": 20}, "timings": {"cache_n": 0, "prompt_n": 10, "prompt_ms": 10.0, "predicted_n": 10, "predicted_ms": 5000.0}}
+{"kind": "call", "t0": 1787000110000, "ms": 5000, "status": 200, "sent": {"model": "x", "n_messages": 45, "n_tools": 27}, "usage": {"completion_tokens": 10, "prompt_tokens": 10, "total_tokens": 20}, "timings": {"cache_n": 0, "prompt_n": 10, "prompt_ms": 10.0, "predicted_n": 10, "predicted_ms": 5000.0}}
+{"kind": "mark", "tag": "off|t02|r1|fin", "t": 1787000201000}

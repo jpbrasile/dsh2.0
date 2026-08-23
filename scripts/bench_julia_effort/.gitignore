@@ -11,3 +11,9 @@ wire.jsonl
 proxy.out
 sweep.log
 __pycache__/
+# Les bras known-BAD / known-GOOD de analyse.py SONT versionnes : ce sont des
+# fixtures, pas des sorties de campagne. Sans ces exceptions, les regles
+# ci-dessus les avalaient et `horloge_bad` n a jamais eu son wire.jsonl dans
+# l arbre (constate le 23/08) -- un garde sans son bras BAD ne mesure rien.
+!fixtures/*/resultats.jsonl
+!fixtures/*/wire.jsonl

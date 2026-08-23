@@ -1135,6 +1135,31 @@ def recherche_basique(question, n=3, delai=25):
     return [], "aucun etage: " + "; ".join(sautes or ["aucun etage charge"])
 
 
+def _sans_chemins(why):
+    """Retire du message du juge ce qui est propre a la machine : chemins et
+    numeros de ligne. Sert la requete de recherche ET l enonce du tour suivant.
+
+    Mesure du 23/08 (red team, t31e) : le message du juge etait recopie BRUT
+    dans TASK.md du tour 2, avec le chemin absolu de tasks/tNN_checks.jl. Le
+    modele a un outil de lecture de fichiers ; une lecture lui donnerait les
+    assertions et les valeurs attendues. 2 espaces de travail de t31e portent
+    ce chemin -- jamais exploite (un trou, pas un resultat corrompu), et
+    surtout dans le bras temoin : un temoin qui triche fait passer le
+    traitement pour inutile."""
+    t = why or ""
+    # ANCRE EN DEBUT DE MOT. Sans le "(^| )", le motif attrapait tout
+    # jeton contenant ":" -- "check:" devenait "chec", "LoadError:"
+    # devenait "LoadErro". La requete partait amputee de ses mots-cles,
+    # et elle rendait quand meme trois resultats : rien ne le signalait.
+    t = re.sub("(^| )[A-Za-z]:[^ ]*", " ", t)     # chemins Windows
+    t = re.sub("(^| )/[^ ]*", " ", t)             # chemins POSIX
+    # Les chiffres RESTENT : "Float64", "Int8", "v1.12" portent le sens.
+    # Seuls les numeros de ligne accroches a un deux-points partent, et
+    # les chemins qui les portaient sont deja retires ci-dessus.
+    t = re.sub(":[0-9]+", " ", t)
+    return re.sub("  +", " ", t).strip()
+
+
 def _question_depuis_echec(tache, why):
     """La requete est construite a partir du message d'ECHEC, pas de l'enonce.
 
@@ -1142,16 +1167,7 @@ def _question_depuis_echec(tache, why):
     ligne interroge une incertitude supposee ; celle-ci interroge une erreur
     reelle. On retire les chemins et les numeros de ligne, qui sont propres a
     la machine et polluent la recherche."""
-    t = why or ""
-    # ANCRE EN DEBUT DE MOT. Sans le "(^| )", le motif attrapait tout
-    # jeton contenant ":" -- "check:" devenait "chec", "LoadError:"
-    # devenait "LoadErro". La requete partait amputee de ses mots-cles,
-    # et elle rendait quand meme trois resultats : rien ne le signalait.
-    t = re.sub("(^| )[A-Za-z]:[^ ]*", " ", t)     # chemins Windows
-    # Les chiffres RESTENT : "Float64", "Int8", "v1.12" portent le sens.
-    # Seuls les numeros de ligne accroches a un deux-points partent, et
-    # les chemins qui les portaient sont deja retires ci-dessus.
-    t = re.sub(":[0-9]+", " ", t)
+    t = _sans_chemins(why)
     # Couper le JARGON DU BANC et la queue de bruit. Mesure du 22/08, t24 en
     # boucle locale : la requete partait avec "check:" -- un mot du banc, pas
     # de Julia -- et se terminait par "in expression starting at". Elle a
@@ -1246,6 +1262,11 @@ def _bloc_retour(tour, historique, trouvailles, cherche, journal=None, tours=Non
     tour ne sait pas qu il vient de retenter ce qui a deja rate au tour
     precedent -- et la boucle tourne sur elle-meme jusqu au plafond."""
     why = historique[-1]["why"] if historique else ""
+    # Ce qui part vers le modele ne porte NI chemin NI numero de ligne du
+    # banc (voir _sans_chemins). Le prefixe "timeout" est garde intact : il
+    # pilote la branche ci-dessous.
+    if not (why or "").startswith("timeout"):
+        why = _sans_chemins(why)
     # UN TOUR COUPE N EST PAS UN TOUR RATE. Mesure du 22/08, t31 rep3 : le
     # tour 1 est tombe sur le delai, et le bloc annoncait au tour 2 que "le
     # verificateur a lance votre solution et rapporte : timeout tour 600s".
@@ -1296,7 +1317,7 @@ def _bloc_retour(tour, historique, trouvailles, cherche, journal=None, tours=Non
                 L += ["  - attempt %d: cut off by the time limit -- no verdict"
                       % h["tour"]]
             else:
-                L += ["  - attempt %d: %s" % (h["tour"], (h["why"] or "")[:120])]
+                L += ["  - attempt %d: %s" % (h["tour"], _sans_chemins(h["why"])[:120])]
         # LA REPETITION EST NOMMEE. Un modele qui relit trois echecs
         # differents cherche trois causes ; s ils sont IDENTIQUES, la cause
         # est que le correctif n a rien change, et c est ca qu il faut dire.
@@ -1350,6 +1371,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
     Ce que ce mode mesure et que `--web` ne mesurait pas : l'apport de la
     documentation QUAND ON EST BLOQUE. Le bras V3 avait montre qu'un modele ne
     se declare jamais bloque ; ici la question ne lui est pas posee."""
+    bras = "web" if web else ("promesse" if promesse else "sans")
     ws = os.path.join(BASE, "runs", etiq_bras(web, promesse),
                       "r%02d" % rep, effort, tache)
     if os.path.isdir(ws):
@@ -1381,10 +1403,15 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
     for tour in range(1, tours + 1):
         io.open(os.path.join(ws, "TASK.md"), "w", encoding="utf-8",
                 newline=chr(10)).write(base_consigne + retour)
-        marquer("%s|%s|r%d|t%d|debut" % (effort, tache, rep, tour), slot, proxy_base)
+        # La marque porte le BRAS (6 champs). Sans lui, la cle d attribution
+        # (effort, tache, rep) est la meme pour `sans` et `web` a repetition
+        # egale : t31e fait tourner les bras sur les ouvriers (sans aux slots
+        # 0,2,0,2,0 ; web 2,0,2,0), et analyse.py donnerait a un run les appels
+        # d un autre. Lecture : analyse.py, _cle.
+        marquer("%s|%s|r%d|t%d|%s|debut" % (effort, tache, rep, tour, bras), slot, proxy_base)
         sortie, rc, depasse = lancer_borne(
             [DSH, "--profile", "headless", CONSIGNE], ws, env, TIMEOUT_TOUR)
-        marquer("%s|%s|r%d|t%d|fin" % (effort, tache, rep, tour), slot, proxy_base)
+        marquer("%s|%s|r%d|t%d|%s|fin" % (effort, tache, rep, tour, bras), slot, proxy_base)
         io.open(os.path.join(ws, "_dsh_t%d.out" % tour), "w", encoding="utf-8",
                 errors="replace").write(str(sortie))
         with SEM_JUGE:
@@ -1476,7 +1503,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
            # 23/08 le budget EST un axe compare (600x3 contre 900x2) : un
            # axe qu on ne peut lire que sur les runs rates n en est pas un.
            "timeout_tour": TIMEOUT_TOUR, "tours_max": tours,
-           "bras": "web" if web else ("promesse" if promesse else "sans"),
+           "bras": bras,
            "verdict": v, "why": why, "wall_s": round(dt, 1),
            "julia_runs": julia_runs, "rc": rc,
            "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")),
