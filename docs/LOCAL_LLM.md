@@ -68,6 +68,19 @@ Raising ctx does not slow a short request. Native model ctx is 262 144.
 or the card. Short-context speculation gains (dflash2 +28…+80 % tok/s) do not carry to long
 context. The decision rule for keeping/removing DFlash2 is written in that document.
 
+## Consumers of the bench that live in the other repo
+
+The bench (`scripts/bench_julia_effort/`) was born as the instrument of a hardware decision
+written in `agentic-flow-fresh/docs/SPECDEC_4090_BENCH.md`: DFlash2 is removed only if a
+4090 coding-agent A/B shows its extra VRAM/complexity does not improve median wall-clock per
+solved task. That A/B line is still **NOT-RUN** there; its driver
+`agentic-flow-fresh/scripts/run_harness_ab.ps1` (ready since 2026-08-20) stays in that repo
+because it also drives the llama.cpp launchers and OpenCode leg that only exist there.
+The two repos point at each other explicitly — that document names this repo's bench path,
+this page names that document — so the decision and its instrument are never silently
+separated. When the A/B is run: driver and launchers from `agentic-flow`, bench and `analyse.py`
+from here, result recorded in both documents.
+
 ## How the harness spec uses this
 
 Spec Phase 5 ("Local Qwen (RTX 4090)": embeddings, repo index, digests, log distillation,
