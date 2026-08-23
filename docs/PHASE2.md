@@ -315,3 +315,27 @@ Limites dites : le budget 30 s de la porte exclut toujours les modules dont les 
 dépassent 30 s à chaud (gpu2, gpu3d_integration, electrical_model : 104–236 s) — pour eux le
 Done de la phase 2 n'est pas reproductible tel quel ; le mur de tests est une regex, pas un bac à
 sable OS ; le parent paie la recopie du plan (106 s / 4,5 k tokens) et du rapport (154 s).
+
+## 7. Red team payé (2-done) — la claim tient, 1 LOW, dont une moitié corrigée
+
+`harness/redteam_run.py 2-done` : deepseek-v4-pro, 17 appels, 593 k tokens d'entrée (69,5 %
+servis par le cache), 18,7 k de sortie, 345 s, **0,1014 USD** (grand livre `redteam:2-done`),
+aucun fichier suivi modifié. Rapport brut et décision dans `redteam/2-done.md`.
+
+Ce qu'il a recoupé sans rien casser : le VERT de la porte (sortie dsh, DONE.md, diff, chemins de
+`porte.py` — pas de sortie 0 sans relecture), la somme des coûts sur le fil (0,135777 USD),
+le grand livre (0,7332 USD pour les 3 runs), l'ordre écriture-livre-avant-affichage de
+`claude_code.py`, le contexte parent plat (les 6 appels du coder n'y entrent jamais), les tests
+intacts, les unités 32/32.
+
+Trouvaille LOW, « mur de tests contournable » :
+- par le shell (`"te"+"st/"`, `cd te*`, base64, alias, `iex`, variable d'environnement) —
+  **acceptée**, c'est la limite déclarée au §3 (regex, pas bac à sable OS) ;
+- par les préfixes de périphérique DOS `\\?\` / `\\.\` sur `write` / `edit` — ce n'était pas
+  déclaré, c'était un trou de `sousRacine()` : **corrigé**, `canon()` retire `\\?\`, `\\.\`,
+  `//?/`, `\\?\UNC\` avant la comparaison ; `harness/test_wall_unit.mjs` 35/35 (3 cas ajoutés),
+  le script du red team rend REFUSED pour ces deux cas.
+
+Coût total de la phase 2 au 23/08 (grand livre) : searcher 0,010 + RT 0,068, coder 0,079 +
+RT 0,123, planner 0,066 + RT 0,041, Done 0,733, red team payé 0,101 = **1,22 USD**, plus
+0,31 USD notionnels de `claude -p` (compte, pas de clé API).

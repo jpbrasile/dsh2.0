@@ -35,7 +35,11 @@ const GIT_TREE = /\bgit\b[^|;&\n]*\b(checkout|restore|reset|stash|clean|rm|mv)\b
 const JULIA = /(^|[\s;&|(])(julia(\.exe)?|Pkg\.test|runtests)\b/i;
 const REL_TEST = /(^|[\s"'`=(])(\.[\\/])?test[\\/]/i;
 
-function canon(p) { return String(p).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase(); }
+// Les prefixes de peripherique DOS (\\?\, \\.\, \\?\UNC\) designent le meme fichier que le chemin
+// nu : on les retire avant de comparer aux racines (trouvaille red team 2-done du 23/08, LOW).
+function canon(p) {
+  return String(p).replace(/\\/g, '/').replace(/^\/\/[?.]\/(unc\/)?/i, (m, unc) => (unc ? '//' : '')).replace(/\/+$/, '').toLowerCase();
+}
 function reel(p) { try { return realpathSync.native(p); } catch { return p; } }
 
 function sousRacine(chemin, roots) {

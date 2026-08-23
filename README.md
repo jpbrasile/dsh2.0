@@ -259,7 +259,9 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
   report only). Run 1 NOT met (coder killed by OpenRouter 402; porte.py cp1252 crash read as
   ROUGE → fixed), run 2 NOT met (gate ORANGE ×5: a cold 31 s replay was memorised and the
   server killed → porte.py now keeps the busy server and memorises measurements only).
-  3 runs = 0.733 USD. `docs/PHASE2.md` §6. Red team: `redteam/2-done.md`.
+  3 runs = 0.733 USD. `docs/PHASE2.md` §6. Paid red team (deepseek-v4-pro, 17 calls, 0.10 USD):
+  claim holds, 1 LOW (test wall = regex, declared; DOS device-path prefixes on write/edit
+  → fixed, wall unit 35/35). `redteam/2-done.md`, `docs/PHASE2.md` §7. Phase 2 total 1.22 USD.
 
 ### 3 — Memory
 - [ ] Session-end distiller (DeepSeek off-peak; local Qwen after Phase 5):
