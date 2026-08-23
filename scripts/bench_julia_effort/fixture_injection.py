@@ -287,6 +287,45 @@ exiger("Already tried, and still failing" in melange,
        "des qu un essai a ete JUGE, l en-tete d origine revient")
 
 
+print("=== 9sexies. le budget est un CHAMP, lisible sans coupure ===")
+# Il ne se lisait que dans le texte d un `why` de coupure ("timeout tour
+# 900s") -- donc invisible sur un run jamais coupe. Depuis le 23/08 le budget
+# EST un axe compare : un axe qu on ne peut lire que sur les runs rates n en
+# est pas un.
+import json as _json
+import glob as _glob
+
+
+def _runs(motif):
+    for f in _glob.glob(os.path.join(bench.BASE, motif)):
+        for l in io.open(f, encoding="utf-8"):
+            if l.strip():
+                yield _json.loads(l)
+
+
+sans_coupure = [r for r in _runs("resultats_t31c*.jsonl")
+                if r.get("par_tour") and not any(
+                    (t.get("why") or "").startswith("timeout")
+                    for t in r["par_tour"])]
+exiger(bool(sans_coupure),
+       "un run sans AUCUNE coupure existe dans le corpus mesure")
+exiger(sans_coupure[0].get("timeout_tour") is None,
+       "KNOWN-BAD : sur ce run, le budget etait ILLISIBLE avant le champ")
+
+# Preuve d EXECUTION si elle existe, claim sur la SOURCE sinon -- et le
+# fixture DIT laquelle des deux il vient de faire.
+avec_champ = [r for r in _runs("resultats_*.jsonl")
+              if r.get("timeout_tour") is not None]
+if avec_champ:
+    exiger(isinstance(avec_champ[0]["timeout_tour"], int)
+           and avec_champ[0].get("tours_max"),
+           "un enregistrement REEL porte le budget (%d run(s))" % len(avec_champ))
+else:
+    src = io.open(os.path.join(bench.BASE, "bench.py"), encoding="utf-8").read()
+    exiger(src.count(chr(34) + "timeout_tour" + chr(34) + ":") == 2,
+           "les DEUX enregistreurs ecrivent le champ (claim sur la SOURCE)")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2

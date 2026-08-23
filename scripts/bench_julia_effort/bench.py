@@ -1345,6 +1345,12 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
     julia_runs = compter_julia(journal_julia)
     rec = {"effort": effort, "tache": tache, "rep": rep, "mode": "boucle",
            "enonce_sha": empreinte_enonce(base_consigne),
+           # LE BUDGET EST UN CHAMP, pas une chaine a dechiffrer. Il ne se
+           # lisait que dans le texte d un `why` de coupure ("timeout tour
+           # 900s") -- donc invisible sur un run jamais coupe. Depuis le
+           # 23/08 le budget EST un axe compare (600x3 contre 900x2) : un
+           # axe qu on ne peut lire que sur les runs rates n en est pas un.
+           "timeout_tour": TIMEOUT_TOUR, "tours_max": tours,
            "verdict": v, "why": why, "wall_s": round(dt, 1),
            "julia_runs": julia_runs, "rc": rc,
            "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")),
@@ -1454,6 +1460,10 @@ def un_run(effort, tache, rep=1, iteratif=False, web=False,
     appels_web = compter_web(ws, t0, accueil)
     rec = {"effort": effort, "tache": tache, "rep": rep,
            "enonce_sha": empreinte_enonce(consigne),
+           # `delai` et pas TIMEOUT_TOUR : le mode un-coup a son propre
+           # budget (TIMEOUT ou TIMEOUT_ITER). Enregistrer la mauvaise
+           # variable donnerait un champ qui a l air juste.
+           "timeout_tour": delai, "tours_max": 1,
            "mode": "iterate" if iteratif else "oneshot", "verdict": v,
            "why": why, "wall_s": round(dt, 1), "julia_runs": julia_runs,
            "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")), "rc": rc,

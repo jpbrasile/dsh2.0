@@ -43,7 +43,12 @@ def _comparer(chemins):
     for nom, rs in bras:
         e = sorted({r.get('enonce_sha') or '(aucune)' for r in rs})
         shas.append(tuple(e))
-        print('  %-28s %s' % (nom[:28], ', '.join(e)))
+        b = sorted({(r.get('timeout_tour'), r.get('tours_max')) for r in rs})
+        # Budget ABSENT = 'inconnu', jamais un nombre par defaut : les
+        # campagnes anterieures au 23/08 ne l enregistrent pas.
+        bud = ', '.join('inconnu' if t is None else ('%ss x%s' % (t, n))
+                        for t, n in b)
+        print('  %-28s %-14s budget %s' % (nom[:28], ', '.join(e), bud))
     if any('(aucune)' in e for e in shas):
         print('  Au moins un bras N ENREGISTRE PAS son enonce (campagne lancee')
         print('  avant l ajout de l empreinte) : cet enonce est INCONNU.')
