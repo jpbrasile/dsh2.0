@@ -267,6 +267,26 @@ exiger(len(bench.empreinte_enonce(base)) == 12,
        "l empreinte est courte -- elle se lit dans un tableau")
 
 
+print("=== 9quinquies. l en-tete de l historique dit la verite sur sa liste ===")
+# Mesure du 23/08, t31b r01 tour 3 : "Already tried, and still failing"
+# coiffait une liste qui ne contenait que des coupures. Rien n avait ete
+# essaye, rien n avait ete juge -- l entree etait bien etiquetee, l en-tete
+# la dementait.
+exiger(bench.compter_julia(None) == -1,
+       "KNOWN-BAD : journal None rend -1 au lieu de lever")
+CO = {"tour": 1, "why": "timeout tour 600s", "cle": "timeout tour 600s"}
+CO2 = {"tour": 2, "why": "timeout tour 600s", "cle": "timeout tour 600s"}
+JU = {"tour": 1, "why": "check: LoadError: Z", "cle": "check: loaderror: z"}
+tout_coupe = bench._bloc_retour(2, [CO, CO2], [], False, None, 3)
+exiger("Already tried, and still failing" not in tout_coupe,
+       "KNOWN-BAD : que des coupures -> pas de \"still failing\"")
+exiger("none of them reached a verdict" in tout_coupe,
+       "l en-tete dit ce que la liste contient vraiment")
+melange = bench._bloc_retour(2, [JU, CO2], [], False, None, 3)
+exiger("Already tried, and still failing" in melange,
+       "des qu un essai a ete JUGE, l en-tete d origine revient")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2

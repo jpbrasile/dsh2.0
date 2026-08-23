@@ -326,7 +326,11 @@ def compter_julia(journal):
     cela s est lu comme un resultat. Un compteur qui rend le meme nombre pour
     "rien mesure" et pour "mesure a zero" ne mesure rien.
     """
-    if not os.path.exists(journal):
+    # `None` est le meme cas qu un fichier absent -- aucune mesure -- et il
+    # doit rendre le meme -1, pas lever. Attrape par la fixture le 23/08 :
+    # un appelant qui ne passe pas de journal faisait planter la
+    # construction du bloc de retour sur un tour coupe.
+    if not journal or not os.path.exists(journal):
         return -1
     return sum(1 for _ in io.open(journal, encoding="utf-8", errors="replace"))
 
@@ -1170,7 +1174,13 @@ def _bloc_retour(tour, historique, trouvailles, cherche, journal=None, tours=Non
              "Your workspace still contains your previous solution.jl. Fix it, and",
              "RUN IT before you finish."]
     if len(historique) > 1:
-        L += ["", "Already tried, and still failing -- do not repeat these:"]
+        # L EN-TETE DOIT DIRE LA VERITE SUR CE QUI SUIT. Mesure du 23/08,
+        # t31b : "Already tried, and still failing" coiffait une liste qui
+        # ne contenait que des COUPURES -- rien n avait ete essaye ni juge.
+        juges = [h for h in historique[:-1]
+                 if not (h["why"] or "").startswith("timeout")]
+        L += ["", "Already tried, and still failing -- do not repeat these:"
+              if juges else "Earlier attempts (none of them reached a verdict):"]
         for h in historique[:-1]:
             # Un tour coupe n a rien "essaye qui rate" : le dire tel quel,
             # sinon le modele evite une piste qui n a jamais ete jugee.
