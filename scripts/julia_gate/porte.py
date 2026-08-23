@@ -87,6 +87,9 @@ def demarrer(repo, port):
     while time.time() - t0 < 600:
         r = ping(port)
         if r:
+            if not _meme_projet(r, repo):
+                print("  PANNE : le serveur repond pour le projet %s, pas pour %s" % (r.get("projet"), repo))
+                return None, time.time() - t0
             return r, time.time() - t0
         time.sleep(1)
     return None, time.time() - t0
@@ -103,6 +106,13 @@ def _durees():
 def _ecrire_durees(d):
     os.makedirs(ETAT, exist_ok=True)
     io.open(os.path.join(ETAT, "durees.json"), "w", encoding="utf-8").write(json.dumps(d, indent=1))
+
+
+def _meme_projet(pong, repo):
+    """Vrai si le serveur dit avoir charge --project=repo. Un vieux serveur (sans champ
+    `projet`) ne peut pas le prouver : on le considere different, il sera relance."""
+    p = pong.get("projet")
+    return bool(p) and C._norm(os.path.abspath(p)).lower() == repo.lower()
 
 
 def _pid_vivant(port):
@@ -191,6 +201,13 @@ def main(argv):
     if o["statut"]:
         print("serveur :", r or "absent")
         return 0 if r else 3
+    if r and not _meme_projet(r, repo):
+        # trouve le 23/08 en preparant le red team 0-done : un serveur deja vivant etait
+        # reutilise sans regarder son --project ; un VERT sur la copie pouvait donc avoir
+        # charge le module du vrai depot. On relance sur le bon depot, jamais en silence.
+        print("serveur sur %d charge un autre projet (%s) que --repo (%s) : relance" % (port, r.get("projet"), repo))
+        _tuer_serveur(port)
+        r = None
     if not r:
         print("serveur absent sur %d : lancement (chargement du paquet)..." % port)
         r, dt = demarrer(repo, port)

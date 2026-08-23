@@ -30,3 +30,5 @@ One line per check with the command and the result.
 One of: `DONE-CLAIM HOLDS`, `DONE-CLAIM HOLDS WITH LOW/MEDIUM FINDINGS`, `DONE-CLAIM FALSIFIED` — and one sentence why.
 
 Rules: do not modify any file in this repository; do not run anything that spends money other than what is listed above; do not run `essai_murs.py` or `fumee_route.py` (those spawn paid agents). Do not ask questions — finish and stop.
+
+TIME AND REPORT DISCIPLINE (mandatory): you have about 20 minutes of wall-clock. Create `_rt_scratch/rapport.md` in the current directory BEFORE your first check and APPEND each finding or "checked, not broken" line to it as soon as you have it (use the write/edit tools; keep the Output format above). The operator reads that file if you run out of time, so an unwritten finding is a lost finding. After roughly 15 minutes, stop exploring, write the `## Verdict` section into the file with what you have, then print the whole file content as your final answer and stop. Do not read large files whole (the --dump-config YAML, plugin lib/index.js): grep them for what you need.

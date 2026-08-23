@@ -29,11 +29,26 @@ ap.add_argument("prompt", help="fichier du prompt (UTF-8)")
 ap.add_argument("--modele", default="deepseek/deepseek-v4-pro")
 ap.add_argument("--provider", default="openrouter-banc")
 ap.add_argument("--effort", default="off")
-ap.add_argument("--delai", type=int, default=900)
+ap.add_argument("--delai", type=int, default=1500)
 ap.add_argument("--cwd", default=DEPOT)
+ap.add_argument("--prep", action="append", default=[],
+                help="commande (shell) lancee AVANT le red team, depuis cwd, sortie dans "
+                     "_rt_scratch/prep_<n>.txt : ce que le red team ne peut pas lancer lui-meme "
+                     "depuis le sandbox (ex. dsh --dump-config, qui ecrit hors espace)")
 A = ap.parse_args()
 
 avant = subprocess.run(["git", "-C", A.cwd, "status", "--porcelain"], capture_output=True, text=True).stdout
+scratch = os.path.join(A.cwd, "_rt_scratch")
+import shutil
+shutil.rmtree(scratch, ignore_errors=True)     # le rapport au fil de l eau du run precedent
+if A.prep:
+    os.makedirs(scratch, exist_ok=True)
+    for n, cmd in enumerate(A.prep, 1):
+        pr = subprocess.run(cmd, shell=True, cwd=A.cwd, capture_output=True, text=True,
+                            encoding="utf-8", errors="replace", timeout=600)
+        io.open(os.path.join(scratch, "prep_%d.txt" % n), "w", encoding="utf-8").write(
+            "$ %s\n(rc=%s)\n%s\n%s" % (cmd, pr.returncode, pr.stdout, pr.stderr))
+        print("prep %d : rc=%s -> _rt_scratch/prep_%d.txt" % (n, pr.returncode, n))
 env = dict(os.environ, DSH_PERMISSION_MODE="workspace-write")
 for k in ("OPENROUTER_API_KEY", "ZAI_API_KEY", "DEEPSEEK_API_KEY"):
     env.pop(k, None)
@@ -56,6 +71,11 @@ servis = sorted({c.get("servi") for c in calls})
 tok_in = sum((c.get("usage") or {}).get("prompt_tokens") or 0 for c in calls)
 tok_out = sum((c.get("usage") or {}).get("completion_tokens") or 0 for c in calls)
 reponse = io.open(os.path.join(S, "dsh_stdout.txt"), encoding="utf-8").read().strip() if os.path.exists(os.path.join(S, "dsh_stdout.txt")) else ""
+partiel = os.path.join(scratch, "rapport.md")
+if not reponse and os.path.exists(partiel):
+    reponse = ("_Rapport PARTIEL : le red team n a pas rendu de reponse finale (delai %ds) ; "
+               "ci-dessous son fichier au fil de l eau `_rt_scratch/rapport.md` tel quel._\n\n" % A.delai
+               + io.open(partiel, encoding="utf-8").read().strip())
 verdict_fumee = [l for l in r.stdout.splitlines() if l.startswith("VERDICT")]
 
 os.makedirs(os.path.join(DEPOT, "redteam"), exist_ok=True)

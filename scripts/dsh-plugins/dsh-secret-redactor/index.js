@@ -38,7 +38,17 @@
  *   Il ne lit pas les ARGUMENTS des appels (un secret que le modele ecrit
  *   lui-meme est deja dans son contexte) et ne touche pas aux messages de
  *   l'utilisateur. Ce n'est pas une frontiere noyau : un outil qui ecrit le
- *   secret dans un fichier puis le relit par morceaux de 5 caracteres passe.
+ *   secret dans un fichier puis le relit par morceaux de 5 caracteres passe ;
+ *   une cle coupee sur deux lignes (continuation `\`) passe de la meme
+ *   facon (red team 0-walls, 23/08 : meme classe, documentee). Les autres
+ *   greffons `tools/post-execute` places AVANT lui dans la cascade voient la
+ *   valeur brute : c'est le contrat de la cascade, pas un defaut local.
+ *
+ * RED TEAM 0-walls (23/08), corrige ici : `Bearer:jeton` (deux-points), noms
+ *   d'env vars ACCESS_KEY / SECRET_KEY / *_PASS / CREDENTIAL, valeurs vives
+ *   des 8 caracteres (etait 12), motifs AWS / HuggingFace / Groq / Stripe /
+ *   SendGrid / Twilio, et relecture des fichiers de secrets a chaque resultat
+ *   (les valeurs etaient figees au demarrage).
  *
  * @module dsh-secret-redactor
  */
@@ -50,6 +60,10 @@ export const inject = ['tools'];
 
 const KEEP = 6;
 const MARK = '***REDACTED***';
+const MIN_LIVE = 8;                 // longueur minimale d'une valeur vive masquee (red team : 12 laissait passer 11)
+/** Noms d'env vars dont la valeur est un secret. Large a dessein : un faux positif masque
+ *  une valeur non secrete dans un resultat d'outil, un faux negatif laisse partir une cle. */
+const NOM_SECRET = /(API_?KEY|ACCESS_?KEY|SECRET|TOKEN|PASSW(?:OR)?D|_PASS$|_KEY$|CREDENTIAL|PRIVATE_KEY)/i;
 
 /** Motifs de jetons connus. L'ordre compte : les plus specifiques d'abord. */
 const PATTERNS = [
@@ -61,7 +75,13 @@ const PATTERNS = [
   /github_pat_[A-Za-z0-9_]{20,}/g,
   /xox[abp]-[A-Za-z0-9-]{20,}/g,
   /freellmapi-[A-Za-z0-9_-]{16,}/g,
-  /(Bearer\s+)[A-Za-z0-9._~+/=-]{20,}/gi,
+  /AKIA[0-9A-Z]{16}/g,                          // AWS access key id
+  /hf_[A-Za-z0-9]{30,}/g,                       // HuggingFace
+  /gsk_[A-Za-z0-9]{30,}/g,                      // Groq
+  /sk_(?:live|test)_[A-Za-z0-9]{20,}/g,         // Stripe
+  /SG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}/g, // SendGrid
+  /\bSK[0-9a-f]{32}\b/g,                        // Twilio
+  /(Bearer[\s:]+)[A-Za-z0-9._~+/=-]{20,}/gi,
   /([A-Z0-9_]*(?:API_KEY|APIKEY|TOKEN|SECRET|PASSWORD)[A-Z0-9_]*\s*[=:]\s*['"]?)([A-Za-z0-9._~+/=-]{12,})/g,
 ];
 
@@ -76,7 +96,7 @@ function valuesFromFile(path, yamlRefs) {
     const m = yamlRefs
       ? /^\s+([A-Za-z0-9_]+):\s*(\S+)\s*$/.exec(line)
       : /^\s*(?:export\s+)?([A-Za-z0-9_]+)\s*=\s*['"]?([^'"\s#]+)/.exec(line);
-    if (m && m[2].length >= 12) out.push(m[2]);
+    if (m && m[2].length >= MIN_LIVE) out.push(m[2]);
   }
   return out;
 }
@@ -84,7 +104,7 @@ function valuesFromFile(path, yamlRefs) {
 function liveValues() {
   const vals = new Set();
   for (const [k, v] of Object.entries(process.env)) {
-    if (/(_API_KEY|APIKEY|_TOKEN|_SECRET|PASSWORD)$/i.test(k) && typeof v === 'string' && v.length >= 12) vals.add(v);
+    if (NOM_SECRET.test(k) && typeof v === 'string' && v.length >= MIN_LIVE) vals.add(v);
   }
   const home = process.env.DSH_HOME || join(process.env.USERPROFILE || process.env.HOME || '', '.dsh');
   for (const v of valuesFromFile(join(home, '.credentials.yaml'), true)) vals.add(v);
@@ -98,17 +118,27 @@ function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 
 export function apply(ctx, config = {}) {
   const values = liveValues();
-  const liveRes = values.map((v) => new RegExp(escapeRe(v), 'g'));
   let hits = 0;
 
   function maskString(s) {
     let out = s;
-    for (const re of liveRes) out = out.replace(re, (m) => { hits++; return keep(m); });
+    // relu a chaque resultat : un .env ou un credentials modifie pendant la session
+    // etait invisible (red team 0-walls). Trois petits fichiers, cout negligeable.
+    for (const v of liveValues()) out = out.replace(new RegExp(escapeRe(v), 'g'), (m) => { hits++; return keep(m); });
     for (const re of PATTERNS) {
-      out = out.replace(re, (m, g1, g2) => {
+      // Le callback de String.replace recoit (match, ...groupes, offset, chaine) :
+      // pour un motif SANS groupe, le 2e argument est l'OFFSET et le 3e la chaine
+      // entiere. La version du matin lisait `(m, g1, g2)` et, sur les motifs sans
+      // groupe, renvoyait offset + keep(chaine entiere) : la cle disparaissait
+      // (le banc sur le fil disait OK) mais TOUT le resultat d'outil etait detruit,
+      // et le motif Bearer (un groupe) plantait sur keep(offset). Trouve par
+      // harness/murs_unit.mjs le 23/08, pas par le banc a agents.
+      out = out.replace(re, (...args) => {
         hits++;
-        if (g2 !== undefined) return g1 + keep(g2);      // NOM=valeur : on garde le nom
-        if (g1 !== undefined && /^Bearer/i.test(g1)) return g1 + MARK;
+        const m = args[0];
+        const g = args.slice(1, -2);                       // groupes captures seulement
+        if (g.length >= 2 && g[1] !== undefined) return g[0] + keep(g[1]);   // NOM=valeur : on garde le nom
+        if (g.length >= 1 && typeof g[0] === 'string' && /^Bearer/i.test(g[0])) return g[0] + MARK;
         return keep(m);
       });
     }

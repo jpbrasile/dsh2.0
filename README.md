@@ -132,6 +132,12 @@ is performed by that agent in this order:
 
 Every step marked **⚑ RT** ends with a red-team gate (Loop 3) before the next step
 starts. Phase done-criteria are always ⚑ RT.
+**Decision 2026-08-23 (user):** one paid red team per phase, on the phase's Done
+criterion only. Intermediate ⚑ RT steps are covered by free, repeatable controls
+(`harness/pin_check.py`, `harness/lean_check.py`, `node harness/murs_unit.mjs`,
+`scripts/julia_gate/porte.py`) that replay every finding of the Phase 0 red teams
+(`redteam/0-lean.md`, `0-walls.md`, `0-done.md`). Reason: each red-team run costs
+10–12 min and found mostly what a unit control now catches in 3 s.
 
 ### 0 — Foundation
 - [x] Repo init; this spec as README.
@@ -156,6 +162,14 @@ starts. Phase done-criteria are always ⚑ RT.
       the log store; plant a fake key in a tool result and check it is masked.
 - **Done (⚑ RT):** Lean agent completes a small real framework task end-to-end; an
   OPEN worker provably cannot read the framework repo.
+  2026-08-23, half met: Lean agent (glm-5.3 on z.ai, 20 calls, 492 s) adds a real
+  testset to a `git archive` copy of the framework, Julia gate VERT (118 tests) —
+  red team 0-done (`redteam/0-done.md`): HOLDS WITH MEDIUM FINDINGS, the testset
+  covers 3 of the 5 checks the task asked for; the
+  same task on qwen/qwen3.8-27b was RED then silent in 2 x 600 s. "Provably cannot
+  read" is NOT met: the read wall is a policy fence (wildcard shell path leaks); the
+  OS-level wall is deferred by the user. Measurements: `docs/PHASE0.md`, red team:
+  `redteam/0-done.md`.
 
 ### 0.5 — Fast Julia test gate (blocks Phase 2; executed first)
 - [x] Targeted runner: changed files → affected test items — static map

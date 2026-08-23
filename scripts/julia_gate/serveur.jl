@@ -5,7 +5,7 @@
 #
 # Charge Revise puis le paquet une fois (10 s tiede, mesure 2026-08-23), puis
 # attend sur 127.0.0.1:<port> des lignes JSON :
-#   {"ping": true}                       -> {"pong": true, "paquet": "...", "charge_s": ...}
+#   {"ping": true}                       -> {"pong": true, "paquet": "...", "charge_s": ..., "projet": "<dossier --project>"}
 #   {"fichier": "C:/.../test_x.jl"}      -> {"fichier", "passes", "echecs", "erreurs",
 #                                            "casses", "s", "etat", "sortie_fin"}
 #   {"arret": true}                      -> fin du processus
@@ -126,8 +126,12 @@ while true
                 close(sock)
                 exit(0)
             elseif get(req, "ping", false)
+                # "projet" : le dossier --project reellement charge ; porte.py le compare a --repo et
+                # relance si ce n est pas le meme (sinon un serveur lance sur le vrai depot
+                # validerait en silence un fichier de la copie avec le Physics du vrai depot)
                 println(sock, JSON.json(Dict("pong" => true, "paquet" => PAQUET, "charge_s" => CHARGE_S,
-                                             "julia" => string(VERSION), "rejeux" => compteur)))
+                                             "julia" => string(VERSION), "rejeux" => compteur,
+                                             "projet" => replace(dirname(Base.active_project()), "\\" => "/"))))
             elseif haskey(req, "fichier")
                 println(sock, JSON.json(rejouer(String(req["fichier"]))))
             else

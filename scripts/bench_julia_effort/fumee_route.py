@@ -139,7 +139,10 @@ t0 = time.time()
 # que l enfant direct (dsh.cmd) ; le node dsh orphelin continue d appeler le
 # modele ET garde les tubes ouverts, donc run() bloque pour toujours (constate
 # le 23/08 : 33 appels payes apres le delai, script fige).
-p = subprocess.Popen(args, cwd=ws, env=env2, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+# encoding explicite : sans lui, text=True decode en cp1252 et le rapport UTF-8 de
+# l'agent arrive en mojibake (constate sur redteam/0-lean.md et 0-walls.md le 23/08)
+p = subprocess.Popen(args, cwd=ws, env=env2, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                     text=True, encoding="utf-8", errors="replace")
 try:
     so, se = p.communicate(timeout=A.delai)
     rc, out, sortie = p.returncode, (so or "") + (se or ""), (so or "")

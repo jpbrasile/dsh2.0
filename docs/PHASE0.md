@@ -9,7 +9,7 @@ OpenRouter, ouvrier `qwen/qwen3.8-27b`, red team `deepseek/deepseek-v4-pro`
 | # | Étape README | Livré | Contrôle | Mesure du 23/08 |
 |---|---|---|---|---|
 | 1 | dsh épinglé | `harness/runtime/package{,-lock}.json`, `harness/PIN.md`, `dsh.ps1 -InstallRuntime` (npm ci) | `python harness/pin_check.py` | OK, 188 paquets `@deepseek-ai/dsh*` conformes au lock ; un octet changé dans le lock → ECHEC |
-| 2 | Preset Lean | `harness/lean.patch.yml` (couche `--patch` sur `headless`) | `python harness/lean_check.py` ; `fumee_route.py --patch harness/lean.patch.yml` | 84 lignes (82 actives) → 87 (68 actives) ; dérive = exactement les lignes déclarées ; **25 → 18 outils**, **8144 → 4920 tokens d'entrée** par tour outillé ; pwsh persistant garde l'état (`$x=6*7` puis `Set-Content` → 42) |
+| 2 | Preset Lean | `harness/lean.patch.yml` (couche `--patch` sur `headless`) | `python harness/lean_check.py` ; `fumee_route.py --patch harness/lean.patch.yml` | 84 lignes (82 actives) → 88 (69 actives) après le redacteur ; dérive = exactement les lignes déclarées (17 désactivées, 4 insérées) ; **25 → 18 outils**, **8144 → 4920 tokens d'entrée** par tour outillé ; pwsh persistant garde l'état (`$x=6*7` puis `Set-Content` → 42) |
 | 3 | OpenRouter | `harness/providers.yaml` (`openrouter`, `openrouter-banc` enregistré :8050), `providers_install.py` | `fumee_route.py qwen/qwen3.8-27b openrouter-banc` | OK 5,2 s, fichier écrit, chaque appel servi par le modèle demandé ; `stealth/ox-alpha` OK ; `z-ai/glm-5.2:free` 429 ×3 (rate-limité amont) |
 | 4 | z.ai + DeepSeek | mêmes fichiers (`zai`, `deepseek`) | `fumee_route.py glm-5.3 zai --effort low` ; `fumee_route.py deepseek-v4-flash deepseek` | OK 10,3 s et 3,2 s |
 | 5 | Murs | `scripts/dsh-plugins/dsh-secret-redactor`, `dsh-read-wall`, `harness/open-wall.patch.yml` | `python harness/essai_murs.py` | **7/7** (détail §3) |
@@ -40,11 +40,21 @@ Gardé : `read write edit str_replace_editor glob grep`, `pwsh` (persistant),
 `agent-instructions` (AGENTS.md : c'est ainsi que les prompts du harnais
 atteignent le modèle ; ce n'est pas un skill).
 
+Ce que `lean_check.py` prouve, et rien de plus (red team 0-lean, MEDIUM) :
+l'**arbre composé** (`--dump-config`) ne diffère du défaut que par les lignes
+déclarées. Il ne voit pas un comportement qui change à config égale ; pour
+les outils, c'est le catalogue **sur le fil** (ci-dessous, relu par
+`lean_check.py --fil`) qui juge. `--dump-config` écrit
+`~/.dsh/profiles/headless/cordis.yml` : depuis l'intérieur d'une session dsh
+en `workspace-write` il échoue (EPERM) — le red team l'a constaté ; l'opérateur
+le lance depuis un shell normal, et `redteam_run.py --prep` dépose sa sortie
+dans `_rt_scratch/` avant de lancer un red team.
+
 Catalogue mesuré sur le fil (1er appel outillé) : `edit exit_plan_mode glob
 grep interrupt_agent job_kill job_list job_output list_agents pwsh read
 read_image send_message str_replace_editor subagent subagent_fork todo_write
-write` ; absents : `skill web_search workflow ralph create_goal get_goal
-update_goal subagent_vision`.
+write` ; absents : `skill web_search web_fetch workflow ralph create_goal
+get_goal update_goal subagent_vision`.
 
 Note : `~/.dsh/profiles/headless/cordis.patch.yml` de cette machine contient
 encore une ligne `mcp-effitech` qui pointe vers
@@ -91,6 +101,30 @@ Deux défauts trouvés par le banc et corrigés :
 - un marqueur guetté qui contient des guillemets n'est jamais trouvé (JSON les
   échappe en `\"` sur le fil) : le marqueur est l'UUID nu.
 
+**Red team 0-walls (23/08, `redteam/0-walls.md`) : 8 failles démontrées, verdict
+« étape 5 NON atteinte » accepté.** Corrigées le jour même dans les greffons :
+`Bearer:jeton` ; valeurs vives dès 8 caractères (était 12) ; noms d'env
+`ACCESS_KEY` / `SECRET_KEY` / `*_PASS` / `CREDENTIAL` ; relecture des fichiers de
+secrets à chaque résultat (valeurs figées au démarrage) ; motifs AWS / HuggingFace /
+Groq / Stripe / SendGrid / Twilio ; noms courts 8.3 (`AGENTI~1`) et jonctions
+résolus par `realpathSync.native`, y compris dans le texte d'une commande shell ;
+formes UNC `\\?\C:`, `\\localhost\C$`, `\\127.0.0.1\C$`, `\\<hôte>\C$` ;
+`DSH_READ_WALL` vide = mur NON CONFIGURÉ → **tout** appel d'outil refusé (fermé par
+défaut). Gardées et écrites dans l'en-tête des greffons : clé coupée sur deux lignes,
+ordre de la cascade, indirection `$env:X` dans le shell persistant, joker — même
+classe, même réponse (le mur OS, plus tard).
+
+**Contrôle unitaire gratuit : `node harness/murs_unit.mjs`** — charge les deux
+greffons avec un faux contexte, rejoue chaque trouvaille du red team comme un cas
+(27 cas le 23/08, **27/27** ; les limites gardées sont des cas `GARDEE` qui
+échoueront le jour où elles bougent). Il a trouvé un bug que ni le banc payant ni
+le red team n'avaient vu : le callback de `String.replace` du redacteur lisait
+l'offset comme un groupe capturé, donc sur un motif sans groupe **tout le résultat
+d'outil était remplacé** par l'offset suivi du texte tronqué (la clé disparaissait
+bien, le banc disait OK) et le motif `Bearer` plantait. Leçon : le banc sur le fil
+prouve l'absence de fuite, pas l'intégrité de ce qui reste — le contrôle unitaire
+fait l'autre moitié.
+
 ## 4. Clés : un seul endroit
 
 Les smokes des étapes 3–4 tournent avec `env -u OPENROUTER_API_KEY -u
@@ -104,10 +138,68 @@ lit les mêmes sources pour connaître les valeurs vives à masquer.
 
 ## 5. Critère Done
 
-Voir la section « Done » ci-dessous, remplie par la mesure (agent Lean sur une
-tâche réelle du framework, porte Julia comme juge), et `redteam/0-*.md`.
+Mesure ci-dessous ; red team dans `redteam/0-done.md`.
 
 Contrainte du 23/08 : **rien ne touche `agentic-flow-fresh`**. La tâche réelle
 tourne sur une copie des fichiers suivis du framework
 (`git archive HEAD` → `scripts/bench_julia_effort/_fumee/framework/`,
 gitignoré) et la porte juge la copie (`porte.py --repo <copie>`).
+
+## Done — mesuré le 23/08
+
+**Moitié 1 : « un agent Lean boucle une petite tâche réelle du framework ».**
+Tâche : `harness/taches/phase0_done_gas_species.md` — ajouter à
+`test/physics/test_gas_species.jl` un testset pour les aides génériques de
+`src/physics/GasSpecies.jl` jamais exercées (`is_inelastic`, branche d'erreur
+de `get_process`, `Base.show` générique). Juge : la porte Julia
+(`scripts/julia_gate/porte.py --repo <copie> --budget 120`). Copie = `git
+archive HEAD` du framework sous `_fumee/framework/` ; le dépôt réel n'a pas
+bougé (`git status -- src test` : 0 ligne, vérifié après chaque tour).
+
+| Tour | Ouvrier | Route | Appels | Durée | Fichier écrit | Porte |
+|---|---|---|---|---|---|---|
+| 1 | `qwen/qwen3.8-27b` (effort off) | OpenRouter | 33 | > 600 s (tué) | oui, testset de 80 lignes | **ROUGE** : 107 ok, 3 faux, 3 erreurs |
+| 2 | `qwen/qwen3.8-27b` | OpenRouter | 8 | 600 s (tué) | **non** | — |
+| 2' | `glm-5.3` (effort low) | z.ai | 20 | 492 s | oui | **VERT** : 118 ok, 0 faux, 0 erreur, rejeu 2,1 s |
+
+Ce que le tour 1 a trouvé de vrai : `is_inelastic` n'est **pas ré-exporté** par
+`Physics.jl` (l'énoncé le supposait) ; tous les types concrets masquent le
+`Base.show` générique, qu'on n'atteint que par un type stub. Ce qu'il a raté :
+des méthodes de stub définies comme fonctions *locales* (`mass(g::_StubGas)`
+au lieu de `Physics.GasSpecies.mass`), et `err = @test_throws …` qui rend un
+résultat de test, pas l'exception. Le tour 2 donnait la sortie de la porte
+comme retour ; qwen a passé ses 600 s en deux générations de 6 700 et 7 700
+tokens (171 s et 266 s) sans écrire. glm-5.3 a corrigé en un tour — en créant
+au passage deux fichiers brouillon (`scratch_verify_fix.jl`,
+`test/physics/_scratch_probe.jl`) et en lançant Julia lui-même, contre la
+consigne : laissés dans la copie, notés pour le red team.
+
+Conclusion honnête : **oui avec glm-5.3, non avec qwen3.8-27b** en 2 × 600 s —
+et « oui » veut dire : VERT sur un testset qui couvre **3 des 5 contrôles demandés**
+(red team 0-done, `redteam/0-done.md`, MEDIUM : manquent la décomposition de
+`total_cross_section` et `creates_negative_ion` ; nom du testset différent). Tour 3
+non lancé, décision humaine.
+Pour la phase 2, le `coder` sur tâche Julia réelle n'est pas qwen3.8-27b à
+effort off ; le classement des ouvriers (phase 1) le mesurera.
+
+Défaut d'outillage trouvé par ce critère : `subprocess.run(timeout=)` ne tuait
+que `dsh.cmd` ; le node dsh orphelin continuait à payer des appels (33 mesurés
+après le délai) et tenait les tubes — `fumee_route.py` passe par Popen +
+`tuer_arbre`, vérifié au tour 2 (rc=timeout, 600,2 s, arbre mort).
+
+Second défaut, trouvé en préparant le red team 0-done : `porte.py` réutilisait
+un serveur Julia déjà vivant **sans regarder son `--project`**. Le VERT de 14:08
+sur la copie a donc pu charger le module `Physics` du dépôt réel (même contenu,
+puisque la copie est un `git archive HEAD`, mais rien ne le prouvait). Corrigé :
+le pong renvoie `projet` (dossier `--project` réellement chargé), `porte.py`
+relance si ce n'est pas `--repo`, et un serveur ancien sans ce champ est relancé
+aussi. Re-mesuré à 15:24 : relance en 48 s, pong `projet = …/_fumee/framework`,
+**VERT 118 ok / 0 faux / 0 err en 3,4 s** — cette fois avec le `Physics` de la
+copie, prouvé.
+
+**Moitié 2 : « un ouvrier OPEN ne peut prouvablement pas lire le dépôt
+framework ».** **Non atteinte**, et dite comme telle : le mur de lecture
+refuse les chemins épelés (bras `lecture`, `shell` : OK) mais un shell à
+jokers passe (bras `evasion`). La preuve demande un compte Windows dédié + un
+refus NTFS ; décision de l'utilisateur le 23/08 : plus tard. La case Done du
+README reste donc ouverte sur cette moitié.

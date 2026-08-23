@@ -38,9 +38,21 @@
  *   en lecture (pas seulement WRITE_RESTRICTED) -- decision de l'utilisateur,
  *   voir docs/PHASE0.md.
  *
+ * RED TEAM 0-walls (23/08), corrige ici : noms courts 8.3 (`AGENTI~1`) et
+ *   jonctions -- le chemin est resolu par `realpathSync.native` quand il
+ *   existe, et les racines aussi ; formes UNC `\\?\C:\...`,
+ *   `\\localhost\C$\...`, `\\127.0.0.1\C$\...`, `\\<hote>\C$\...` ramenees a
+ *   `C:\...` ; et `DSH_READ_WALL` vide = mur NON CONFIGURE : tout appel d'outil
+ *   est refuse (ferme par defaut) au lieu de proteger seulement ~/.dsh.
+ *   Reste documente, meme classe que le joker : l'indirection par variable
+ *   dans le shell persistant (`$env:X = ...` a un tour, `Get-Content $env:X` au
+ *   suivant) -- le texte de la commande n'epelle jamais la racine.
+ *
  * @module dsh-read-wall
  */
 import { resolve, isAbsolute, join } from 'node:path';
+import { realpathSync } from 'node:fs';
+import { hostname } from 'node:os';
 
 export const name = 'read-wall';
 export const inject = ['tools'];
@@ -49,9 +61,29 @@ const SHELL_TOOLS = new Set(['pwsh', 'bash', 'shell']);
 
 function home() { return process.env.USERPROFILE || process.env.HOME || ''; }
 
-/** Forme canonique : minuscules, barres obliques, sans barre finale. */
+const HOTE = hostname().toLowerCase();
+
+/** Ramene les formes UNC locales a un chemin de lecteur : `\\?\C:\x`, `\\localhost\C$\x`,
+ *  `\\127.0.0.1\C$\x`, `\\<hote>\C$\x` -> `C:\x`. */
+function deUnc(p) {
+  let s = String(p);
+  s = s.replace(/^\\\\\?\\(?:UNC\\)?/i, (m) => (/unc/i.test(m) ? '\\\\' : ''));
+  const m = /^[\\/]{2}([^\\/]+)[\\/]([a-z])\$(?=[\\/]|$)/i.exec(s);
+  if (m) {
+    const h = m[1].toLowerCase();
+    if (h === 'localhost' || h === '127.0.0.1' || h === HOTE || h === '.') s = m[2] + ':' + s.slice(m[0].length);
+  }
+  return s;
+}
+
+/** Forme canonique : sans UNC locale, minuscules, barres obliques, sans barre finale. */
 function canon(p) {
-  return String(p).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+  return deUnc(p).replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
+}
+
+/** Chemin reel (8.3 developpe, jonctions suivies) quand il existe ; sinon le chemin tel quel. */
+function reel(p) {
+  try { return realpathSync.native(p); } catch { return p; }
 }
 
 /** Developpe les formes `~`, `$HOME`, `$env:USERPROFILE`, `%USERPROFILE%` en debut de chemin. */
@@ -68,12 +100,13 @@ export function apply(ctx, config = {}) {
   const h = home();
   const dshHome = process.env.DSH_HOME || join(h, '.dsh');
   const roots = new Set();
-  for (const r of config.roots || []) if (r) roots.add(canon(r));
+  const CONFIGURES = (config.roots || []).filter(Boolean);
+  for (const r of CONFIGURES) { roots.add(canon(r)); roots.add(canon(reel(r))); }
   for (const r of [
     join(h, '.dsh', 'sessions'), join(h, '.dsh', '.credentials.yaml'), join(h, '.dsh', '.env'),
     join(dshHome, 'sessions'), join(dshHome, '.credentials.yaml'), join(dshHome, '.env'),
     join(process.cwd(), '.env'),
-  ]) roots.add(canon(r));
+  ]) { roots.add(canon(r)); roots.add(canon(reel(r))); }
   const ROOTS = [...roots];
   // Segments marquants des racines configurees (pas ceux de ~/.dsh, trop
   // generiques) : `agentic-flow-fresh`, `plasma-digital-twin`... Un shell qui
@@ -92,8 +125,9 @@ export function apply(ctx, config = {}) {
     if (!isAbsolute(t) && !/^[a-z]:/i.test(t) && /^[.~\w]/.test(t) && !/\s/.test(t)) {
       try { abs = resolve(process.cwd(), t); } catch { abs = t; }
     }
-    const c = canon(abs);
-    for (const r of ROOTS) if (c === r || c.startsWith(r + '/')) return r;
+    for (const c of [canon(abs), canon(reel(deUnc(abs)))]) {
+      for (const r of ROOTS) if (c === r || c.startsWith(r + '/')) return r;
+    }
     const raw = canon(t);
     for (const r of ROOTS) if (raw.includes(r)) return r;   // racine epelee au milieu d'un texte (commande shell)
     return null;
@@ -105,6 +139,13 @@ export function apply(ctx, config = {}) {
       const r = hit(v);
       if (r) return { r, s: v };
       if (shell) {
+        // chaque jeton qui ressemble a un chemin (X:\..., \\serveur\..., ~/...) passe
+        // par hit(), donc par realpath : un nom court 8.3 ou une jonction au milieu
+        // d'une commande est resolu (red team 0-walls : `Get-Content C:\PROGRA~1\...`)
+        for (const tok of v.match(/(?:[a-z]:|\\\\[^\s'"<>|]+|~|\$env:userprofile|%userprofile%)[\\/][^\s'"<>|;,)]*/gi) || []) {
+          const r = hit(tok);
+          if (r) return { r, s: v };
+        }
         const c = canon(expandHome(v));
         for (const seg of SEGMENTS) if (c.includes(seg)) return { r: seg, s: v };
       }
@@ -116,6 +157,11 @@ export function apply(ctx, config = {}) {
   }
 
   ctx.on('tools/pre-execute', async (exec, next) => {
+    if (!CONFIGURES.length) {
+      refus++;
+      console.error(`read-wall: REFUS ${refus} -- mur NON CONFIGURE (DSH_READ_WALL vide), ${exec.name} refuse`);
+      return { kind: 'deny', reason: 'read wall: DSH_READ_WALL is empty, so this OPEN worker has no configured framework root to protect; every tool call is refused until the operator sets it.' };
+    }
     const shell = SHELL_TOOLS.has(exec.name);
     const k = scan(exec.arguments, shell);
     if (!k) return next();
@@ -129,5 +175,6 @@ export function apply(ctx, config = {}) {
     };
   });
 
-  console.error(`read-wall: arme -- ${ROOTS.length} racine(s) interdite(s), ${SEGMENTS.size} segment(s) marquant(s) pour le shell, cwd ${process.cwd()}`);
+  if (!CONFIGURES.length) console.error('read-wall: NON CONFIGURE -- DSH_READ_WALL vide : tout appel d\'outil sera refuse');
+  else console.error(`read-wall: arme -- ${ROOTS.length} racine(s) interdite(s) (${CONFIGURES.length} configuree(s)), ${SEGMENTS.size} segment(s) marquant(s) pour le shell, cwd ${process.cwd()}`);
 }

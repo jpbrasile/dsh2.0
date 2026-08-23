@@ -34,7 +34,9 @@
 # ── stripped: web search ────────────────────────────────────────────────────
 # The shipped provider is DeepSeek's search API behind DEEPSEEK_API_KEY. The
 # spec gives search to the `searcher` agent (Phase 2) on OPEN chains, not to
-# every worker. Three rows: service, provider, tool.
+# every worker. Three rows: service, provider, tool -- and the tool row
+# registers TWO model-facing tools, `web_search` AND `web_fetch` (red team
+# 0-lean, 23/08: the annotation below listed only the first).
 - id: web
   disabled: true
 - id: web-search-deepseek
@@ -84,7 +86,10 @@
 # subagent / subagent_fork / list_agents / interrupt_agent / send_message (the
 # scheduler, bounded by the local dsh-subagent-timeout plugin), jobs,
 # todo_write, ask-user, plan mode, compaction + tool-result pruner, token
-# meter, the sandbox/approval stack, agent-instructions.
+# meter, the sandbox/approval stack, agent-instructions. Also kept, on purpose:
+# the chat commands `command-feedback` and `command-compact` (red team 0-lean,
+# LOW): they are slash commands of the interactive surface, not model tools;
+# the headless run never exposes them to the model.
 
 # ── swapped: one-shot pwsh -> persistent pwsh ───────────────────────────────
 # "Keep persistent bash": on Windows that is a persistent PowerShell. The
@@ -122,4 +127,4 @@
       name: dsh-secret-redactor
 
 # tools: edit exit_plan_mode glob grep interrupt_agent job_kill job_list job_output list_agents pwsh read read_image send_message str_replace_editor subagent subagent_fork todo_write write
-# tools-absent: skill web_search workflow ralph create_goal get_goal update_goal subagent_vision
+# tools-absent: skill web_search web_fetch workflow ralph create_goal get_goal update_goal subagent_vision
