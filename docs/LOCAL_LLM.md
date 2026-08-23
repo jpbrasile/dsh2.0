@@ -12,7 +12,7 @@ route without owning it.
 | provider | baseURL | model id served | role |
 |---|---|---|---|
 | `local` | `http://127.0.0.1:8004/v1` | `qwen36-35b-a3b` | production llama-server (plasma project). **Down on 2026-08-23.** |
-| `local-vision` | `http://127.0.0.1:8005/v1` | `specdec-q38-plain-vision` (or whatever `-Config` the launcher served: `specdec-q38-mtp` on 2026-08-23) | bench / vision server, launched on demand |
+| `local-vision` | `http://127.0.0.1:8005/v1` | `specdec-q38-plain-vision` (or whatever `-Config` the launcher served: `specdec-q38-mtp` on 2026-08-23) | bench / vision server, launched on demand. **Stopped 2026-08-23 ~12:00** (port free, GPU at 0.4 GB — verified 13:20) |
 | `local-think` | `http://127.0.0.1:8006/v1` | same as 8005 | **recorder proxy** `scripts/bench_julia_effort/proxy.mjs` 8006 → 8005; `wire.jsonl` says what really left |
 | `freellm` | `http://127.0.0.1:8007/v1` | `auto`, `auto:smartest`, pinned ids | recorder proxy 8007 → FreeLLMAPI Desktop `:31415` (see `DSH_FREELLMAPI_ROUTE.md`) |
 

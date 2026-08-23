@@ -107,6 +107,10 @@ la carte a un trou. Les quatre bras laissent l'arbre du framework intact (md5 v�
   `include(mapexpr, …)`). Leçon : **un ROUGE de la porte se confirme par un lancement
   standard avant d'être attribué au framework.**
 
+- 2026-08-23 — information du thread agentic-flow (Known Issue 45) : 3 des 15 contrôles de
+  `validation/38_fine_efield/run_validation.jl` sont des identités sur des constantes. Sans
+  effet sur la porte : `validation/` n'est pas sous `test/`, la carte ne le compte pas.
+
 - 2026-08-23 — première version. Trois défauts d'instrument trouvés et corrigés par le bras
   `bon` : scripts de diagnostic pris pour des tests ; runner et ses fichiers inclus rejoués
   deux fois ; budget non dur (un script a tiré à 37 s et bloqué le serveur → budget dur,
