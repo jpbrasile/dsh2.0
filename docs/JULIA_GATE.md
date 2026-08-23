@@ -66,7 +66,7 @@ electrical_model, gpu3d) demandent 450 s de plus. Voir les mesures.
 | rejeu `test/physics/test_gas_species.jl` (99 tests), serveur tiède | 2–3 s ; 2,9 s bout en bout |
 | `physics/runtests.jl` (1 149 tests) | 8 s |
 | `gpu2/runtests.jl` (2 003 tests, CUDA) | 116 s (premier rejeu) |
-| `electrical_model/runtests.jl` (2 279 tests, MTK) | 229 s — 3 erreurs, voir ci-dessous |
+| `electrical_model/runtests.jl` (2 279 tests, MTK) | 229–235 s (premier rejeu), 148 s (second) — les 3 « erreurs » étaient un faux rouge de la porte, corrigé (Journal) |
 | `gpu3d_integration/runtests.jl` (4 897 tests, CUDA) | 104 s |
 
 À compléter : second rejeu des suites lourdes dans la même session (le code du paquet reste
@@ -95,6 +95,17 @@ la carte a un trou. Les quatre bras laissent l'arbre du framework intact (md5 v�
   suites restantes en arrière-plan, pas être lu comme un vert. Pas de redesign nécessaire.
 
 ## Journal
+
+- 2026-08-23 — **faux ROUGE trouvé et corrigé.** `electrical_model/runtests.jl` donnait 3
+  erreurs par la porte (`MethodError sample_sdf_surface`) et **0** lancé à la manière
+  standard. Cause : `test_capacitance.jl` écrit `Main.ElectricalModel.…` en dur ; dans le
+  module neuf de la porte, `Main.ElectricalModel` désignait le module du paquet, et les
+  types venaient de la copie incluse par le test. 14 fichiers de test écrivent `Main.X`,
+  133 utilisent une garde `@isdefined` (qui interdit de tourner dans `Main` : le code ne se
+  rechargerait plus après une modification). Correction dans `serveur.jl` : à l'inclusion,
+  le symbole `Main` est réécrit vers le module neuf (`remplacer_main`, via
+  `include(mapexpr, …)`). Leçon : **un ROUGE de la porte se confirme par un lancement
+  standard avant d'être attribué au framework.**
 
 - 2026-08-23 — première version. Trois défauts d'instrument trouvés et corrigés par le bras
   `bon` : scripts de diagnostic pris pour des tests ; runner et ses fichiers inclus rejoués

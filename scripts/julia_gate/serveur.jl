@@ -34,6 +34,15 @@ mkpath(journaux)
 
 compteur = 0
 
+"""Remplace le symbole `Main` par le module `m` dans une expression lue d un fichier
+de test : `Main.X` -> `m.X`, `isdefined(Main, :X)` -> `isdefined(m, :X)`.
+Les QuoteNode (symboles litteraux) ne sont pas touches."""
+function remplacer_main(ex, m::Module)
+    ex === :Main && return m
+    ex isa Expr || return ex
+    return Expr(ex.head, (remplacer_main(a, m) for a in ex.args)...)
+end
+
 function comptes(ts)
     c = Test.get_test_counts(ts)
     if c isa Tuple
@@ -64,8 +73,12 @@ function rejouer(fichier::String)
     end
     m = Module(Symbol("Porte", compteur))
     Core.eval(m, :(using Test))
-    Core.eval(m, :(include(f::AbstractString) = Base.include($m, f)))
-    Core.eval(m, :(include(mapexpr::Function, f::AbstractString) = Base.include(mapexpr, $m, f)))
+    # Le module neuf joue le role de Main : `Main.X` et `isdefined(Main, :X)` ecrits en dur
+    # dans les tests (14 fichiers) doivent viser les copies incluses par le test, pas le
+    # paquet charge dans le vrai Main (sinon faux ROUGE : MethodError entre deux copies
+    # du meme module, vu sur electrical_model le 23/08).
+    Core.eval(m, :(include(f::AbstractString) = Base.include(ex -> Main.remplacer_main(ex, $m), $m, f)))
+    Core.eval(m, :(include(mapexpr::Function, f::AbstractString) = Base.include(ex -> mapexpr(Main.remplacer_main(ex, $m)), $m, f)))
     Core.eval(m, :(eval(x) = Core.eval($m, x)))
     ts = Test.DefaultTestSet("porte")
     journal = joinpath(journaux, "rejeu_$(compteur)_$(basename(dirname(fichier)))_$(basename(fichier)).log")
@@ -75,7 +88,7 @@ function rejouer(fichier::String)
     try
         redirect_stdio(stdout = journal, stderr = journal) do
             cd(dirname(fichier)) do
-                Base.include(m, fichier)
+                Base.include(ex -> remplacer_main(ex, m), m, fichier)
             end
         end
     catch e
