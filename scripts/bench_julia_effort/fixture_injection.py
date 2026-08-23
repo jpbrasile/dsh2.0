@@ -609,6 +609,71 @@ exiger("[FP]" in _txt,
        "et le run qui a bien deux tours garde ses marques")
 
 
+print("=== 9terdecies. mes propres defauts sortent de la mesure, pas ceux du modele ===")
+# Deux regles, et la difficulte est qu elles doivent TIRER dans trois cas et
+# SE TAIRE dans deux autres. Une regle qui ecarte tout ne mesure rien.
+_soc = {"effort": "medium", "tache": "t31", "enonce_sha": "bbbbbbbbbbbb",
+        "timeout_tour": 900, "tours_max": 2, "wall_s": 100.0,
+        "julia_runs": 5, "recherches_banc": []}
+def _tour(v, why=""):
+    return {"tour": 1, "verdict": v, "why": why}
+def _run(rep, verdict, tours, **kw):
+    return dict(_soc, rep=rep, verdict=verdict, par_tour=tours, **kw)
+
+_rate = _tour("FAIL", "check: nope")
+_ok = {"tour": 2, "verdict": "PASS", "why": ""}
+_coupe = _tour("FAIL", "timeout tour 900s")
+
+_cas = [
+    # DOIVENT tirer
+    _run(1, "PASS", [_coupe, _ok], bras_web=False, rech_faites=0, rech_refusees=0),
+    _run(2, "FAIL", [_rate, _ok], bras_web=True, rech_faites=0, rech_refusees=1),
+    # DOIVENT se taire
+    _run(3, "FAIL", [_rate, _ok], bras_web=True, rech_faites=1, rech_refusees=0),
+    _run(4, "PASS", [_rate, _ok], bras_web=False, rech_faites=0, rech_refusees=1),
+    _run(5, "PASS", [_rate, _ok], bras_web=False, rech_faites=0, rech_refusees=0),
+]
+_dk = _tf.mkdtemp(prefix="fixecart_")
+_fk = os.path.join(_dk, "faux_melange.jsonl")
+with io.open(_fk, "w", encoding="utf-8") as _h:
+    for _r in _cas:
+        _h.write(_json.dumps(_r) + chr(10))
+_b = io.StringIO()
+with _cl.redirect_stdout(_b):
+    _g["_comparer"]([_fk])
+_t = _b.getvalue()
+_sh.rmtree(_dk, ignore_errors=True)
+
+exiger("la question se pose sur 3 run(s) sur 3" in _t,
+       "3 runs restent dans la mesure : ni le coupe, ni le web sans recherche")
+exiger("COUPE AU DELAI" in _t and "r1 PASS" in _t,
+       "known-BAD : le tour coupe est ecarte et NOMME -- mon budget, pas le modele")
+exiger("SANS recherche delivree" in _t and "r2 FAIL" in _t,
+       "known-BAD : le run web sans traitement est ecarte et NOMME")
+exiger("r3" not in _t.split("SANS recherche delivree")[1][:80],
+       "known-GOOD : un run web AVEC recherche delivree reste dans la mesure")
+exiger("mon budget" in _t,
+       "et la sortie dit POURQUOI, au lieu d ecarter en silence")
+
+# Le bras PROMESSE : sa recherche est annoncee et jamais livree, c est SON
+# traitement. La regle web ne doit PAS l ecarter -- sinon elle viderait le
+# bras entier et on conclurait sur zero run.
+_dp = _tf.mkdtemp(prefix="fixprom_")
+_fp = os.path.join(_dp, "faux_promesse.jsonl")
+with io.open(_fp, "w", encoding="utf-8") as _h:
+    for _r in (_cas[3], _cas[4]):
+        _h.write(_json.dumps(_r) + chr(10))
+_b = io.StringIO()
+with _cl.redirect_stdout(_b):
+    _g["_comparer"]([_fp])
+_tp = _b.getvalue()
+_sh.rmtree(_dp, ignore_errors=True)
+exiger("la question se pose sur 2 run(s) sur 2" in _tp,
+       "known-GOOD : le bras promesse garde ses runs -- la promesse EST le traitement")
+exiger("SANS recherche delivree" not in _tp,
+       "et la regle web ne tire pas sur lui")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2
