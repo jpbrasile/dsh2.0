@@ -128,6 +128,9 @@ VERROU = threading.Lock()
 # Le JUGE est serialise meme quand les agents ne le sont pas : douze harnais
 # Julia lances ensemble se battent pour le CPU de la campagne locale voisine.
 N_JUGES = int(os.environ.get("BENCH_JUGES", "4"))
+# Delai du JUGE, distinct du delai du tour. Une solution qui boucle sans fin
+# est un echec du MODELE ; sans borne, elle bloque l ouvrier sans rien rendre.
+JUGE_TIMEOUT = int(os.environ.get("BENCH_JUGE_TIMEOUT", "600"))
 SEM_JUGE = threading.Semaphore(N_JUGES)
 
 TACHES = ["t%02d" % i for i in range(1, 11)]
@@ -385,18 +388,29 @@ def marquer(tag, slot=None, base=None):
                            timeout=30).read()
 
 
-def juger(fichier_solution, tache):
+def juger(fichier_solution, tache, delai=None):
     """Rend (verdict, pourquoi). Le harnais imprime une seule ligne VERDICT :
     un `showerror` Julia tient sur plusieurs lignes et un `tail -1` y attrapait
     'in expression starting at ...' au lieu de la cause (defaut du 22/08)."""
     if not os.path.exists(fichier_solution):
         return "FAIL", "aucun solution.jl ecrit"
-    p = subprocess.run(
-        [JULIA, "--startup-file=no", "--color=no",
-         os.path.join(BASE, "tasks", "harness.jl"),
-         fichier_solution,
-         os.path.join(BASE, "tasks", "%s_checks.jl" % tache)],
-        capture_output=True, text=True, timeout=600, cwd=BASE)
+    delai = JUGE_TIMEOUT if delai is None else delai
+    try:
+        p = subprocess.run(
+            [JULIA, "--startup-file=no", "--color=no",
+             os.path.join(BASE, "tasks", "harness.jl"),
+             fichier_solution,
+             os.path.join(BASE, "tasks", "%s_checks.jl" % tache)],
+            capture_output=True, text=True, timeout=delai, cwd=BASE)
+    except subprocess.TimeoutExpired:
+        # Une solution qui NE SE TERMINE PAS est un echec du modele, pas une
+        # panne du banc. Sans ce filet l exception remontait jusqu a l ouvrier,
+        # qui rangeait le run en FAIL SANS par_tour, SANS cause et SANS tours :
+        # un echec MUET, que l analyse laisse tomber en silence. Mesure du
+        # 22/08 (t31e, bras promesse, r2). Et au tour 1 c etait pire -- le run
+        # entier mourait la, donc le tour 2, celui qui existe pour corriger,
+        # n avait jamais lieu. Nomme, l echec redevient une CAUSE lisible.
+        return "FAIL", "juge: la solution ne se termine pas (>%d s)" % delai
     for l in (p.stdout or "").splitlines():
         if l.startswith("VERDICT PASS"):
             return "PASS", ""

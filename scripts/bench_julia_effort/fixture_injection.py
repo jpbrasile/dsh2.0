@@ -490,6 +490,46 @@ exiger(len({bench.etiq_bras(*wp) for wp in bench.BRAS_CONNUS.values()}) == 1,
        "hors campagne entrelacee, l etiquette est INCHANGEE (rien ne bouge)")
 
 
+print("=== 9decies. une solution qui NE SE TERMINE PAS : cause nommee, pas exception ===")
+import subprocess as _sp
+import tempfile as _tf
+import shutil as _sh
+
+_dossier = _tf.mkdtemp(prefix="fixjuge_")
+_boucle = os.path.join(_dossier, "solution.jl")
+io.open(_boucle, "w", encoding="utf-8").write(
+    "s = 0" + chr(10) + "while true" + chr(10) + "    global s += 1" + chr(10) + "end" + chr(10))
+
+# Bras known-BAD : la FORME D AVANT. Le meme fichier, juge par un appel direct
+# sans filet, doit LEVER -- c est exactement ce qui remontait a l ouvrier et
+# produisait un FAIL muet. Sans ce bras, le filet ci-dessous ne prouve rien.
+_leve = False
+try:
+    _sp.run([bench.JULIA, "--startup-file=no", "--color=no",
+             os.path.join(bench.BASE, "tasks", "harness.jl"), _boucle,
+             os.path.join(bench.BASE, "tasks", "t31_checks.jl")],
+            capture_output=True, text=True, timeout=8, cwd=bench.BASE)
+except _sp.TimeoutExpired:
+    _leve = True
+exiger(_leve, "known-BAD : sans filet, le juge LEVE TimeoutExpired (forme d avant)")
+
+# Bras corrige : meme fichier, meme delai, mais par juger().
+_v, _why = bench.juger(_boucle, "t31", delai=8)
+exiger(_v == "FAIL", "avec filet : verdict FAIL, et non une exception")
+exiger("ne se termine pas" in _why, "la cause NOMME la non-terminaison, elle ne dit pas 'aucun verdict'")
+exiger("8" in _why, "et elle porte le delai reellement applique")
+
+# Known-GOOD : le chemin normal n est pas casse par le filet.
+_ref = os.path.join(bench.BASE, "ref", "t31.jl")
+if os.path.exists(_ref):
+    _v2, _why2 = bench.juger(_ref, "t31", delai=180)
+    exiger(_v2 == "PASS", "known-GOOD : ref/t31.jl passe toujours (le filet ne mange pas le cas sain)")
+else:
+    print("  (ref/t31.jl absent : bras known-GOOD non parcouru)")
+
+_sh.rmtree(_dossier, ignore_errors=True)
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2
