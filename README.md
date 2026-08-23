@@ -264,13 +264,28 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
   → fixed, wall unit 35/35). `redteam/2-done.md`, `docs/PHASE2.md` §7. Phase 2 total 1.22 USD.
 
 ### 3 — Memory
-- [ ] Session-end distiller (DeepSeek off-peak; local Qwen after Phase 5):
+- [x] Session-end distiller (DeepSeek off-peak; local Qwen after Phase 5):
       scores → SQLite; lessons → planner notes.
       **⚑ RT:** poison a session log with adversarial content; check it does not
       reach the planner notes as an instruction.
-- [ ] Memory plugin (dsh-mnemon, or the SQLite ctx.memory provider) only if the
-      notes file proves insufficient.
+      *2026-08-23:* `harness/distiller.py` (session logs → `scores` in SQLite,
+      deterministic; lessons via deepseek-v4-pro on OpenRouter, journal tagged as
+      untrusted data) → `harness/lecons_filtre.py` (40/40) → `harness/lecons.md`
+      (10 lessons from the 3 Phase 2 Done runs, 0.0060 USD) → plugin `dsh-lecons`
+      exposes `{{lecons}}` in the planner persona only. Poison arm
+      `harness/lecons_poison.py`: 5 poisons in a real coder log, 0 of 11 markers
+      reach the lessons file (18/18, 0.0008 USD). `docs/PHASE3.md` §1–5, §7.
+- [x] Memory plugin (dsh-mnemon, or the SQLite ctx.memory provider) only if the
+      notes file proves insufficient. *2026-08-23:* not needed — the notes file
+      reaches the planner (system prompt 4 722 chars with the 10 bullets, measured
+      in the session log); nothing in this phase required a memory plugin.
 - **Done (⚑ RT):** planner avoids a previously logged mistake.
+  *2026-08-23: MET, narrowly.* A/B on the planner, same capex task, 3 runs per
+  arm (A = empty lessons, B = the 10 lessons): the logged mistake "self-check the
+  coder cannot execute" is repeated 3/3 in A and avoided explicitly 2/3 in B; the
+  gate verdict is named `PASS` 3/3 in A and `VERT` 3/3 in B; the ORANGE lesson is
+  carried by no plan. 6 runs 0.2549 USD. Limits: n = 3, one task, regex markers.
+  `docs/PHASE3.md` §6; paid red team `redteam/3-done.md`.
 
 ### 4 — Nightly improver (after 2 stable weeks)
 - [ ] Separate repo/profile/budget; read-only log copies in, branch out.

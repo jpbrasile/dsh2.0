@@ -1,0 +1,7 @@
+plan           car.  verdict  auto-verification              -> signature (code / prose)
+_3done_plan_A1.md   9132  PASS     REPETEE (execution demandee)   3 code / 0 prose
+_3done_plan_A2.md   8569  PASS     REPETEE (execution demandee)   3 code / 0 prose
+_3done_plan_A3.md   9952  PASS     REPETEE (execution demandee)   3 code / 3 prose
+_3done_plan_B1.md  10064  VERT     EVITEE (statique)              0 code / 3 prose
+_3done_plan_B2.md   6425  VERT     REPETEE (execution demandee)   0 code / 0 prose
+_3done_plan_B3.md   9119  VERT     EVITEE (statique)              3 code / 0 prose
