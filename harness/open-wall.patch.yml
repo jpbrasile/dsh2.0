@@ -1,0 +1,36 @@
+# OPEN-worker wall -- Phase 0 of the README, 2026-08-23. Second layer, applied
+# AFTER the Lean layer:
+#
+#     dsh --profile headless --patch harness/lean.patch.yml --patch harness/open-wall.patch.yml "<task>"
+#
+# with, in the launching environment:
+#     DSH_READ_WALL=<framework repo>;<other forbidden root>;...   (semicolon-separated)
+#     DSH_PERMISSION_MODE=workspace-write                          (the base default; named here
+#                                                                   so a run never inherits
+#                                                                   danger-full-access by accident)
+#
+# What it adds: the local plugin scripts/dsh-plugins/dsh-read-wall, a
+# `tools/pre-execute` deny gate. Every tool call whose arguments name a
+# forbidden root (absolute, relative to the workspace, ~/$HOME/%USERPROFILE%
+# forms, both slash styles, any case) is refused before it runs; for the shell
+# tools the same rule is applied to the command text, plus the distinctive
+# segments of the configured roots. ~/.dsh/sessions, ~/.dsh/.credentials.yaml
+# and <workspace>/.env are always forbidden.
+#
+# What it is NOT: a kernel boundary. The shipped Windows sandbox restricts
+# WRITES only (its own README says so); this layer is a policy fence over
+# model-controlled arguments. A shell command that reaches the framework
+# without spelling its path (wildcards, fragments) passes -- measured and kept
+# as a known failure by `python harness/essai_murs.py --evasion`. The provable
+# wall needs the OS (dedicated Windows account + NTFS deny ACE); see
+# docs/PHASE0.md.
+#
+# The write wall is the shipped sandbox (`sandbox-policy` mode workspace-write,
+# enforced by the ACL restricted token for the shell and by the fs fence for
+# the file tools) and needs no row here; essai_murs.py proves it fires.
+
+- insert:
+    - id: read-wall
+      name: dsh-read-wall
+      config:
+        roots: !!js (process.env.DSH_READ_WALL || '').split(';').map((s) => s.trim()).filter(Boolean)

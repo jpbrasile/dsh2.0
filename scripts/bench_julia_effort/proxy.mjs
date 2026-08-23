@@ -23,6 +23,11 @@ const PORT = Number(process.env.PROXY_PORT || 8006);
 const LOG = process.env.PROXY_LOG || './wire.jsonl';
 
 const append = (rec) => fs.appendFileSync(LOG, JSON.stringify(rec) + '\n', 'utf8');
+// GUETTEUR (23/08, phase 0) : des chaines a chercher dans le CORPS de chaque
+// requete (separees par `|`). Si l'une y est, l'appel la nomme dans `guette`.
+// C'est la preuve, ou la refutation, qu'un secret plante ou un contenu interdit
+// est parti vers le fournisseur -- sans stocker le corps lui-meme.
+const GUETTE = (process.env.PROXY_GUETTE || '').split('|').filter(Boolean);
 
 // VOIES. En campagne parallele, N agents parlent au MEME routeur en meme
 // temps : les fenetres de temps se chevauchent, et attribuer un appel a un run
@@ -103,6 +108,10 @@ const server = http.createServer((req, res) => {
         // filtre par ouvrier rejetait tout et `servis` sortait vide alors que
         // le journal contenait bien les modeles. Mesure du 22/08.
         const rec = { kind: 'call', slot, t0, ms: Date.now() - t0, status: ur.statusCode, sent };
+        if (GUETTE.length) {
+          const corps = body.toString('utf8');
+          rec.guette = GUETTE.filter((g) => corps.includes(g));
+        }
         // `sent.model` est ce qu'on a DEMANDE ('auto') ; `servi` est ce qui a
         // REPONDU. Les deux differents, c'est tout l'interet du mode auto.
         // Le modele servi est sur CHAQUE fragment SSE, pas seulement sur celui

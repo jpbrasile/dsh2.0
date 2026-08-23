@@ -85,8 +85,28 @@ def dotenv_key(name):
     return None
 
 
+CREDENTIALS = pathlib.Path.home() / ".dsh" / ".credentials.yaml"
+
+
+def credentials_key(name):
+    """Read one ref from ~/.dsh/.credentials.yaml (phase 0: the ONE place keys
+    live; the repo .env and the user env vars were emptied of their duplicates
+    on 2026-08-23). Never logged, never echoed."""
+    try:
+        for line in CREDENTIALS.read_text(encoding="utf-8", errors="ignore").splitlines():
+            match = re.match(r"\s+%s\s*:\s*(\S+)" % re.escape(name), line)
+            if match:
+                return match.group(1).strip().strip('"').strip("'")
+    except OSError:
+        pass
+    return None
+
+
 def resolve_key(env_name, auth_section=None):
     value = os.environ.get(env_name, "").strip()
+    if value:
+        return value
+    value = credentials_key(env_name)
     if value:
         return value
     if auth_section:

@@ -40,6 +40,10 @@ ap.add_argument("--attend-present", default="")
 ap.add_argument("--amont", default=os.environ.get("FUMEE_AMONT"))
 ap.add_argument("--fichier", default="PONG.txt")
 ap.add_argument("--effort", default="off")
+ap.add_argument("--cwd", default=None, help="espace de travail de dsh (defaut : _fumee/ws) ; "
+                "un depot reel pour une tache reelle (critere Done de la phase 0)")
+ap.add_argument("--delai", type=int, default=300, help="secondes avant de tuer dsh (defaut 300)")
+ap.add_argument("--tache-fichier", default=None, help="lire la tache dans ce fichier (UTF-8)")
 A = ap.parse_args()
 MODELE, PROVIDER = A.modele, A.provider
 PORT = int(os.environ.get("FUMEE_PORT", "8050"))
@@ -47,7 +51,7 @@ ABSENTS = [x for x in A.attend_absent.split(",") if x]
 PRESENTS = [x for x in A.attend_present.split(",") if x]
 
 acc = os.path.join(S, "home")
-ws = os.path.join(S, "ws")
+ws = os.path.abspath(A.cwd) if A.cwd else os.path.join(S, "ws")
 for d in (acc, ws):
     os.makedirs(d, exist_ok=True)
 wire = os.path.join(S, "wire.jsonl")
@@ -89,6 +93,20 @@ cred = os.path.join(home, ".dsh", ".credentials.yaml")
 if os.path.exists(cred):
     shutil.copyfile(cred, os.path.join(acc, ".credentials.yaml"))
 
+# Greffons locaux (scripts/dsh-plugins/*) : l accueil isole est scaffolde par
+# dsh lui-meme (profil headless vierge), il n a donc pas les jonctions que
+# `dsh.ps1 -InstallPlugins` pose dans ~/.dsh. On les COPIE ici a chaque run
+# (accueil jetable) : une couche `--patch` qui nomme `dsh-secret-redactor` ou
+# `dsh-read-wall` echouait sinon au chargement (ERR_MODULE_NOT_FOUND, 23/08).
+greffons = os.path.join(os.path.dirname(os.path.dirname(BENCH)), "scripts", "dsh-plugins")
+nm = os.path.join(acc, "profiles", "headless", "node_modules")
+if os.path.isdir(greffons):
+    os.makedirs(nm, exist_ok=True)
+    for g in os.listdir(greffons):
+        d = os.path.join(nm, g)
+        shutil.rmtree(d, ignore_errors=True)
+        shutil.copytree(os.path.join(greffons, g), d)
+
 # Enregistreur -> amont.
 env = dict(os.environ, PROXY_PORT=str(PORT), PROXY_LOG=wire, PROXY_SLOT="0",
            UP_HOST=UP_HOST, UP_PORT=str(UP_PORT), UP_TLS=UP_TLS)
@@ -107,6 +125,8 @@ else:
     raise SystemExit("enregistreur muet sur %d (port occupe ?)" % PORT)
 
 # La tache : ecrire un fichier, puis s arreter. Pas de Julia, pas de juge.
+if A.tache_fichier:
+    A.tache = io.open(A.tache_fichier, encoding="utf-8").read()
 tache = A.tache or ("Create a file named PONG.txt in the current directory containing exactly the "
                     "single word PONG. Then stop. Do not ask questions.")
 env2 = dict(os.environ, DSH_HOME=acc)
@@ -115,14 +135,23 @@ for p in A.patch:
     args += ["--patch", os.path.abspath(p)]
 args.append(tache)
 t0 = time.time()
+# Popen + tuer_arbre, PAS subprocess.run(timeout=) : sous Windows, run() ne tue
+# que l enfant direct (dsh.cmd) ; le node dsh orphelin continue d appeler le
+# modele ET garde les tubes ouverts, donc run() bloque pour toujours (constate
+# le 23/08 : 33 appels payes apres le delai, script fige).
+p = subprocess.Popen(args, cwd=ws, env=env2, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
 try:
-    p = subprocess.run(args, cwd=ws, env=env2, capture_output=True, text=True, timeout=300)
-    rc, out = p.returncode, (p.stdout or "") + (p.stderr or "")
-except subprocess.TimeoutExpired as e:
-    rc, out = "timeout", str(e)
+    so, se = p.communicate(timeout=A.delai)
+    rc, out, sortie = p.returncode, (so or "") + (se or ""), (so or "")
+except subprocess.TimeoutExpired:
+    bench.tuer_arbre(p)
+    so, se = p.communicate()
+    rc, out, sortie = "timeout", (so or "") + (se or "") + "\n[fumee_route] delai %ds depasse : arbre dsh tue\n" % A.delai, (so or "")
 dt = time.time() - t0
 bench.tuer_arbre(px)
 io.open(os.path.join(S, "dsh_out.txt"), "w", encoding="utf-8").write(out)
+# stdout seul = la reponse finale de l agent (sans les annonces stderr des greffons)
+io.open(os.path.join(S, "dsh_stdout.txt"), "w", encoding="utf-8").write(sortie)
 
 print("route %s / %s  amont=%s%s  patchs=%s" % (PROVIDER, MODELE, UP_HOST, chemin, ",".join(A.patch) or "-"))
 print("dsh rc=%s  duree=%.1fs" % (rc, dt))

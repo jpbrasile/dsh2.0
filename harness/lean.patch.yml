@@ -16,7 +16,8 @@
 #
 # What the README asks: "duplicate Standard, strip skills injection, web-search
 # tool, workflow extras. Keep: persistent bash, str_replace_editor, subagent
-# scheduler, compaction."
+# scheduler, compaction." Plus the secret redactor of the walls step.
+# OPEN workers add a second layer on top: harness/open-wall.patch.yml.
 
 # ── stripped: skills injection ──────────────────────────────────────────────
 # Three rows: the registry, the filesystem discovery (which also WATCHES its
@@ -108,6 +109,17 @@
       name: '@deepseek-ai/dsh-tool-pwsh-persistent'
       config:
         timeoutMs: 300000
+
+# ── inserted: the secret redactor (every worker, every route) ───────────────
+# Local plugin scripts/dsh-plugins/dsh-secret-redactor, mounted in the profile
+# by `dsh.ps1 -InstallPlugins` (junction). It replaces the VALUE of successful
+# tool results (and the content of failed ones) on `tools/post-execute`, so
+# the masked form is what the model, the session log and every consumer get.
+# It announces itself on stderr: "secret-redactor: arme -- N motifs, M valeur(s)
+# vive(s)". No announcement = no guard.
+- insert:
+    - id: secret-redactor
+      name: dsh-secret-redactor
 
 # tools: edit exit_plan_mode glob grep interrupt_agent job_kill job_list job_output list_agents pwsh read read_image send_message str_replace_editor subagent subagent_fork todo_write write
 # tools-absent: skill web_search workflow ralph create_goal get_goal update_goal subagent_vision

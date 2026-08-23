@@ -135,14 +135,23 @@ starts. Phase done-criteria are always ⚑ RT.
 
 ### 0 — Foundation
 - [x] Repo init; this spec as README.
-- [ ] dsh from source, version pinned.
-- [ ] Author Lean preset (Creator mode); commit patch layers; verify --dump-config.
+- [x] dsh from source, version pinned. 2026-08-23: registry tarball + lock in git +
+      tag<->commit (`harness/PIN.md`); `harness/pin_check.py` OK on 188 packages.
+- [x] Author Lean preset (Creator mode); commit patch layers; verify --dump-config.
+      2026-08-23: `harness/lean.patch.yml` (--patch layer on headless), `lean_check.py`
+      drift == declared rows; on the wire 25 -> 18 tools, 8144 -> 4920 input tokens/turn.
       **⚑ RT:** are stripped features still reachable through another path? does
       the preset drift from Standard beyond the patch layers?
-- [ ] OpenRouter as provider: paid + free/stealth model IDs; keys in credentials
-      file only.
-- [ ] z.ai + DeepSeek as direct providers.
-- [ ] Secret-redactor installed; OPEN-worker permission walls set.
+- [x] OpenRouter as provider: paid + free/stealth model IDs; keys in credentials
+      file only. 2026-08-23: `harness/providers.yaml`; smokes pass with the three keys
+      removed from the env; user env vars and `.env` duplicates deleted.
+- [x] z.ai + DeepSeek as direct providers. 2026-08-23: z.ai needs the coding endpoint
+      and refuses effort `off`; both smoke OK (10.3 s, 3.2 s).
+- [x] Secret-redactor installed; OPEN-worker permission walls set. 2026-08-23:
+      `scripts/dsh-plugins/dsh-secret-redactor`, `dsh-read-wall`, `harness/essai_murs.py`
+      7/7 -- incl. the KNOWN LIMIT: a pwsh wildcard path (`agen*\plasma*`) passes the
+      read fence (dsh's Windows sandbox restricts writes only). OS-level wall (dedicated
+      account + NTFS deny) deferred by the user. Details: `docs/PHASE0.md`.
       **⚑ RT:** from an OPEN-route worker, attempt to read the framework repo and
       the log store; plant a fake key in a tool result and check it is masked.
 - **Done (⚑ RT):** Lean agent completes a small real framework task end-to-end; an

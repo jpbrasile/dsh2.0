@@ -7,3 +7,4 @@ node_modules/
 __pycache__/
 *.log
 .opencode/websearch.jsonl
+_wall_probe/
