@@ -570,6 +570,45 @@ else:
     exiger("annonce" in _bon, "et elle le confirme explicitement")
 
 
+print("=== 9duodecies. un run sans detail par tour ne temoigne pas du tour 1 ===")
+# L ecriture d avant, (par_tour or [{}])[0].get('verdict') != 'PASS', faisait
+# dire a un run SANS detail qu il avait rate le tour 1 : un dict vide rend
+# None, et None n est pas 'PASS'. Une supposition deguisee en donnee. Ces runs
+# existent -- juge sans reponse, exception d ouvrier -- et ils comptent comme
+# echecs, mais pas dans une statistique qui a besoin du tour 1 pour exister.
+_cmp = _g["_comparer"]
+_socle = {"effort": "medium", "tache": "t31", "enonce_sha": "aaaaaaaaaaaa",
+          "timeout_tour": 900, "tours_max": 2, "wall_s": 100.0,
+          "julia_runs": 5, "recherches_banc": []}
+_r1 = dict(_socle, rep=1, verdict="PASS",
+           par_tour=[{"tour": 1, "verdict": "FAIL", "why": "check: nope"},
+                     {"tour": 2, "verdict": "PASS", "why": ""}])
+_r2 = dict(_socle, rep=2, verdict="FAIL", why="ouvrier: Command ... timed out")
+
+_dj = _tf.mkdtemp(prefix="fixmuet_")
+_fj = os.path.join(_dj, "faux_bras.jsonl")
+with io.open(_fj, "w", encoding="utf-8") as _h:
+    for _r in (_r1, _r2):
+        _h.write(_json.dumps(_r) + chr(10))
+
+_b = io.StringIO()
+with _cl.redirect_stdout(_b):
+    _cmp([_fj])
+_txt = _b.getvalue()
+_sh.rmtree(_dj, ignore_errors=True)
+
+exiger("la question se pose sur 1 run(s) sur 1" in _txt,
+       "known-BAD : le denominateur est 1, pas 2 -- le run muet ne temoigne pas")
+exiger("sans detail par tour" in _txt,
+       "le run muet est NOMME, pas jete en silence")
+exiger("r2 FAIL" in _txt,
+       "et on lit LEQUEL et son verdict, pas seulement un total")
+exiger("[-]" in _txt,
+       "sa colonne de marques est vide, elle n invente pas un tour")
+exiger("[FP]" in _txt,
+       "et le run qui a bien deux tours garde ses marques")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2

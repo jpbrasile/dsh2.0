@@ -176,11 +176,25 @@ def _comparer(chemins):
         sales = {(rep, eff, tac) for (rep, eff, tac, _t) in (m or {})}
         propres = [r for r in rs
                    if (r.get('rep'), r.get('effort'), r.get('tache')) not in sales]
-        nets.append(len(propres))
-        pose = [r for r in propres if (r.get('par_tour') or [{}])[0].get('verdict') != 'PASS']
+        # Un run SANS detail par tour ne dit rien du tour 1. L ecriture
+        # precedente -- (par_tour or [{}])[0] -- lui faisait dire "n a pas
+        # passe au tour 1", ce qui est une SUPPOSITION deguisee en donnee :
+        # un dict vide rend None, et None != 'PASS'. Ces runs existent (juge
+        # sans reponse, exception d ouvrier) et ils comptent comme echecs --
+        # mais pas dans une statistique qui a besoin du tour 1 pour exister.
+        muets = [r for r in propres if not r.get('par_tour')]
+        detail = [r for r in propres if r.get('par_tour')]
+        nets.append(len(detail))
+        pose = [r for r in detail if r['par_tour'][0].get('verdict') != 'PASS']
         gagne = [r for r in pose if r.get('verdict') == 'PASS']
         print('  %-28s la question se pose sur %d run(s) sur %d ; %d finissent PASS'
-              % (nom[:28], len(pose), len(propres), len(gagne)))
+              % (nom[:28], len(pose), len(detail), len(gagne)))
+        if muets:
+            print('  %-28s (%d run(s) sans detail par tour, hors de CETTE'
+                  ' statistique : %s)'
+                  % ('', len(muets),
+                     ', '.join('r%s %s' % (r.get('rep'), r.get('verdict'))
+                               for r in muets)))
         if sales:
             print('  %-28s (%d run(s) mis de cote : %s -- dorsale)'
                   % ('', len(sales), ', '.join('r%s/%s' % (a, c)
