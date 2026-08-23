@@ -1,0 +1,6 @@
+{
+    "production_restored":  true,
+    "timestamp":  "2026-08-19T12:54:59.8853720Z",
+    "health_url":  "http://localhost:8004/health",
+    "restart_production_exit":  0
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "id": "longctx_32k",
+    "kind": "longctx",
+    "prompt": "Attached is a long technical context passage. In exactly one short paragraph (complete sentences, no bullets), state the single most important engineering tradeoff the passage describes and why it matters.",
+    "fill_target_tokens": 29000,
+    "fill_seed": 42,
+    "max_tokens": 256,
+    "seed": 42
+  },
+  {
+    "id": "longctx_64k",
+    "kind": "longctx",
+    "prompt": "Attached is a long technical context passage. In exactly one short paragraph (complete sentences, no bullets), compare the two methods it describes and say which you would choose for a 24 GB GPU and why.",
+    "fill_target_tokens": 58000,
+    "fill_seed": 42,
+    "max_tokens": 256,
+    "seed": 42
+  }
+]

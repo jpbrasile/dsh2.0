@@ -1,11 +1,21 @@
 # Local LLM — serving setup the harness relies on
 
 **Status:** measured 2026-08-23. Every number and path below is a snapshot; re-measure
-before relying on it. **Source of truth stays in the plasma repo** (`agentic-flow`,
-`C:\Users\test\Documents\agentic-flow-fresh`): the launchers, the 4090 benchmark
-(`docs/SPECDEC_4090_BENCH.md`) and the production server are maintained there because they
-also serve that project. This page is the harness-side pointer so `dsh2.0` can use the local
-route without owning it.
+before relying on it. **Split decided 2026-08-23 (jp.brasile):** the 4090 benchmark and the
+coding-agent A/B harness now **live here** -- `docs/SPECDEC_4090_BENCH.md`, `bench/`,
+`scripts/run_harness_ab.ps1`, `scripts/run_specdec_window.ps1`, `scripts/run_phase_minus_1_*.ps1`,
+the specdec / turboquant launchers, `scripts/test_specdec_tooling.py`, `scripts/bench_llama_ctx.py`,
+`reports/specdec_20260819_window/` (copied at their 2026-08-23 state; their history stays in
+`agentic-flow`'s git). The **generic launchers and the production server on :8004 stay in
+`agentic-flow`** (`C:\Users\test\Documents\agentic-flow-fresh`) because they also serve that
+project. Six helpers the moved scripts resolve through `$PSScriptRoot` are among them, so
+**the moved orchestrators are not runnable from this checkout as-is** -- they fail loudly on
+the first missing path: `scripts/stop_llama_port.ps1`, `scripts/restart_production.ps1`,
+`scripts/start_llama_qwen36_35b_a3b.ps1`, `scripts/start_llama_qwen36_35b_a3b_qwopus_turboquant.ps1`,
+`scripts/ops/julia_gpu_safe.ps1`, `scripts/gguf_meta.py` (+ `.opencode/agents/` for leg A of the
+A/B). Nothing in the scripts was edited during the move (untestable without the server);
+wiring a root parameter or copying those six is the next step, to be done and measured, not
+assumed.
 
 ## What the harness sees (`~/.dsh/settings.yaml`, provider block `llm-pi-ai`)
 
@@ -27,9 +37,9 @@ asks for):
 Invoke-WebRequest -UseBasicParsing http://127.0.0.1:8005/v1/models | Select-Object -Expand Content
 ```
 
-## Launcher (lives in `agentic-flow`, not here)
+## Launcher (here since 2026-08-23; needs the six `agentic-flow` helpers listed above)
 
-`agentic-flow-fresh\scripts\start_llama_qwen38_27b_specdec.ps1`
+`scripts\start_llama_qwen38_27b_specdec.ps1`
 
 - `-Config` ∈ `q38-plain` | `q38-mtp` | `q38-dflash2` → served alias `specdec-<Config>`
   (`-Mmproj` adds a `-vision` suffix).
@@ -68,23 +78,22 @@ Raising ctx does not slow a short request. Native model ctx is 262 144.
 or the card. Short-context speculation gains (dflash2 +28…+80 % tok/s) do not carry to long
 context. The decision rule for keeping/removing DFlash2 is written in that document.
 
-## Consumers of the bench that live in the other repo
+## The decision document and its driver (here since 2026-08-23)
 
 The bench (`scripts/bench_julia_effort/`) was born as the instrument of a hardware decision
-written in `agentic-flow-fresh/docs/SPECDEC_4090_BENCH.md`: DFlash2 is removed only if a
-4090 coding-agent A/B shows its extra VRAM/complexity does not improve median wall-clock per
-solved task. That A/B line is still **NOT-RUN** there; its driver
-`agentic-flow-fresh/scripts/run_harness_ab.ps1` (ready since 2026-08-20) stays in that repo
-because it also drives the llama.cpp launchers and OpenCode leg that only exist there.
-The two repos point at each other explicitly — that document names this repo's bench path,
-this page names that document — so the decision and its instrument are never silently
-separated. When the A/B is run: driver and launchers from `agentic-flow`, bench and `analyse.py`
-from here, result recorded in both documents.
+written in `docs/SPECDEC_4090_BENCH.md`: DFlash2 is removed only if a 4090 coding-agent A/B
+shows its extra VRAM/complexity does not improve median wall-clock per solved task. That A/B
+line is still **NOT-RUN** (since 2026-08-19); its driver `scripts/run_harness_ab.ps1` (ready
+since 2026-08-20) is now here too. Decision, instrument and driver live in one repo; what the
+driver still borrows from `agentic-flow` is the six helpers and the OpenCode leg-A agents
+named at the top of this page. When the A/B is run: result recorded in
+`docs/SPECDEC_4090_BENCH.md` here, and one line in `agentic-flow`'s `docs/REPO_REFERENCE.md`.
 
 ## How the harness spec uses this
 
 Spec Phase 5 ("Local Qwen (RTX 4090)": embeddings, repo index, digests, log distillation,
 probation as coder) targets this server. Until then the bench campaigns
 (`scripts/bench_julia_effort/`, `docs/DSH_QWEN_LOCAL_LOGBOOK.md`) are the only consumer.
-A campaign that needs the local route: start the launcher from `agentic-flow-fresh`, confirm
-the alias with the `/v1/models` call above, then run `bench.py` from this repo.
+A campaign that needs the local route: start the launcher (production `:8004` from
+`agentic-flow-fresh`, bench `:8005` from `scripts/start_llama_qwen38_27b_specdec.ps1` here once
+its helpers are wired), confirm the alias with the `/v1/models` call above, then run `bench.py`.

@@ -284,6 +284,7 @@ history; paths kept as they were so relative references still hold.
 - `docs/ETAT_DES_LIEUX_2026-08-23.md` — hand-over from the session that ran the campaigns:
   what works, what does not (with numbers), open defects 4.1–4.8 and the prioritised to-do
   P0–P6. **Read before any campaign; P1 and P2 first.**
-- `docs/LOCAL_LLM.md` — the local Qwen / llama.cpp serving setup on the RTX 4090. The
-  launchers and the 4090 benchmark **stay in `agentic-flow`** (they also serve that project);
-  this page is the pointer the harness needs.
+- `docs/LOCAL_LLM.md` — the local Qwen / llama.cpp serving setup on the RTX 4090. Since
+  2026-08-23 the **4090 benchmark and the A/B harness live here** (`docs/SPECDEC_4090_BENCH.md`,
+  `bench/`, `scripts/run_harness_ab.ps1`); the generic launchers and the production server
+  stay in `agentic-flow`. The page lists the six helpers the moved scripts still need from there.

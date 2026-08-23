@@ -1,0 +1,38 @@
+{
+  "version": "v1",
+  "description": "Phase -1 TurboQuant TPS bench — fixed prompts, deterministic n_predict, mixed FR/EN domains.",
+  "n_predict": 200,
+  "seeds": [11, 23, 47],
+  "prompts": [
+    {
+      "id": "p1_julia_code",
+      "domain": "code",
+      "lang": "en",
+      "text": "Write a Julia function `gauss_seidel_2d(A::Matrix{Float64}, b::Matrix{Float64}; tol=1e-6, maxiter=1000)` that solves a 2D Poisson equation discretized on a uniform grid using Gauss-Seidel iteration. Return the solution and the iteration count. Show only the function body."
+    },
+    {
+      "id": "p2_phys_explain_fr",
+      "domain": "explain",
+      "lang": "fr",
+      "text": "Explique en quatre paragraphes pourquoi la décharge à barrière diélectrique (DBD) atmosphérique est filamentaire dans l'air sec mais peut devenir homogène dans l'hélium pur, en discutant les rôles de l'attachement électronique, du temps de vie des charges et de l'effet mémoire."
+    },
+    {
+      "id": "p3_chat_short_en",
+      "domain": "chat",
+      "lang": "en",
+      "text": "I'm building a streaming voice agent. STT runs in 100 ms, LLM first-token in 300 ms, TTS first-byte in 80 ms. What is the realistic perceived latency to spoken response, and which stage is the dominant bottleneck for interactive UX?"
+    },
+    {
+      "id": "p4_long_chain_fr",
+      "domain": "reasoning",
+      "lang": "fr",
+      "text": "Une plaque de cuivre de 5 mm est entre deux électrodes ; on souhaite la chauffer à 950 °C en 8 secondes par décharge plasma à pression atmosphérique. Quelle puissance moyenne minimale est nécessaire si la chaleur massique du Cu est 385 J/kg/K et la densité 8960 kg/m³ pour une zone de 5 cm² ? Détaille les étapes."
+    },
+    {
+      "id": "p5_io_summary_en",
+      "domain": "summary",
+      "lang": "en",
+      "text": "Summarize in five bullet points the key trade-offs between weight-only quantization (Q3_K_M) and KV-cache quantization (q8_0 K, q4_0 V) when running a 35B mixture-of-experts model with 64K context on a 24 GB consumer GPU."
+    }
+  ]
+}

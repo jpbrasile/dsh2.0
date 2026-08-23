@@ -1,0 +1,29 @@
+{
+    "out_dir":  "C:\\Users\\test\\Documents\\agentic-flow-fresh\\reports\\specdec_20260819_window",
+    "production_restored":  true,
+    "timestamp":  "2026-08-19T12:54:59.8869777Z",
+    "configs_with_results":  3,
+    "results":  [
+                    {
+                        "config":  "q38-plain",
+                        "status":  "done",
+                        "has_medians":  true,
+                        "argv_file":  "C:\\Users\\test\\Documents\\agentic-flow-fresh\\reports\\specdec_20260819_window\\q38-plain.argv.txt",
+                        "bench_exit":  0
+                    },
+                    {
+                        "config":  "q38-mtp",
+                        "status":  "done",
+                        "has_medians":  true,
+                        "argv_file":  "C:\\Users\\test\\Documents\\agentic-flow-fresh\\reports\\specdec_20260819_window\\q38-mtp.argv.txt",
+                        "bench_exit":  0
+                    },
+                    {
+                        "config":  "q38-dflash2",
+                        "status":  "done",
+                        "has_medians":  true,
+                        "argv_file":  "C:\\Users\\test\\Documents\\agentic-flow-fresh\\reports\\specdec_20260819_window\\q38-dflash2.argv.txt",
+                        "bench_exit":  0
+                    }
+                ]
+}

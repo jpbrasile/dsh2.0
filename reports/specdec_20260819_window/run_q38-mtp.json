@@ -1,0 +1,208 @@
+{
+  "config_label": "q38-mtp",
+  "timestamp": "2026-08-19T12:52:11+00:00",
+  "argv": [
+    "C:\\Users\\test\\tools\\llama-cpp\\llama-cuda-b10488\\llama-server.exe",
+    "--model",
+    "C:\\Users\\test\\models\\qwen38-27b\\Qwen3.8-27B-Q4_K_M.gguf",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "8005",
+    "--ctx-size",
+    "32768",
+    "--flash-attn",
+    "on",
+    "--cache-type-k",
+    "q8_0",
+    "--cache-type-v",
+    "q4_0",
+    "--batch-size",
+    "2048",
+    "--ubatch-size",
+    "512",
+    "--n-gpu-layers",
+    "99",
+    "--parallel",
+    "1",
+    "--jinja",
+    "--reasoning-format",
+    "none",
+    "--reasoning-budget",
+    "512",
+    "--temp",
+    "0.6",
+    "--top-k",
+    "20",
+    "--top-p",
+    "0.95",
+    "--min-p",
+    "0",
+    "--presence-penalty",
+    "0.0",
+    "--repeat-penalty",
+    "1.0",
+    "--alias",
+    "specdec-q38-mtp",
+    "--spec-type",
+    "draft-mtp",
+    "--spec-draft-p-min",
+    "0.75",
+    "--spec-draft-n-max",
+    "2",
+    "--spec-draft-n-min",
+    "1"
+  ],
+  "argv_source": "file",
+  "binary_build": null,
+  "binary_build_status": "no-match",
+  "server_log_parse": {
+    "status": "parsed",
+    "matches": [
+      "0.06.313.868 I common_speculative_init_result: creating MTP draft context against the target model",
+      "0.11.518.620 I slot print_timing: id  0 | task 0 | draft acceptance = 0.77778 (    7 accepted /     9 generated), mean"
+    ]
+  },
+  "model_path": "C:\\Users\\test\\models\\qwen38-27b\\Qwen3.8-27B-Q4_K_M.gguf",
+  "binary_path": null,
+  "draft_path": null,
+  "model_sha256": "7e78da5d7e3ae28d178121f58646953305f3e5bd3cb46f4a75584e8b6c6fe169",
+  "vram_before_mb": 17684,
+  "workloads": [
+    {
+      "id": "code_module",
+      "kind": "code",
+      "max_tokens": 512,
+      "seed": 42,
+      "reps": [
+        {
+          "rep": 1,
+          "nonce": "code_module-r1-f33b0164aaf8",
+          "ttft_s": 0.4912,
+          "wall_s": 9.6074,
+          "tokens": 512,
+          "token_count_method": "usage",
+          "tok_per_s": 53.292,
+          "text": "<think>\nWe need answer user's request. Need produce final only module code in single code block, with one-line docstring and inline comments for token-bucket math. Need ensure complete self-contained Python module implementing small rate-limiter. Public API: class FixedWindowLimiter(capacity, window_seconds) methods try_acquire() -> bool and reset(), thread-safe under concurrency, plus module-level __main__ demo showing loop of acquires. Do not import outside standard library. Output only module code in single code block.\n\nNeed think about naming: FixedWindowLimiter but user mentions inline comments for token-bucket math? Fixed window vs token bucket? They ask rate-limiter, class FixedWindowLimiter, but comments for token-bucket math. Maybe implement fixed window? But token-bucket math comment? Maybe they expect token bucket? Public API FixedWindowLimiter. Need maybe implement fixed-window with capacity per window. But inline comments for token-bucket math contradictory. Could implement as fixed window using token-like? Need satisfy: inline comments for token-bucket math. Maybe implement token bucket but class named FixedWindowLimiter? It says small rate-limiter. FixedWindowLimiter suggests fixed window. But \"token-bucket math\" specifically. Could implement token bucket with capacity and window_seconds as refill rate? But name fixed window? Let's parse: \"Write a complete, self-contained Python module implementing a small rate-limiter. Public API: a class `FixedWindowLimiter(capacity, window_seconds)` with methods `try_acquire() -> bool` and `reset()`, thread-safe under concurrency, plus a module-level `__main__` demo showing a loop of acquires. Do not import anything outside the standard library. Output only the module code in a single code block, with a one-line docstring and inline comments for the token-bucket math.\"\n\nThey likely want code only. Need one-line docstring at top. Inline comments for token-bucket math. Could implement token bucket but class name fixed? Maybe use fixed window? But token-bucket math comments: tokens = min(capacity, tokens + elapsed*capacity/window). If class FixedWindowLimiter, maybe it's a fixed window limiter but they ask token-bucket math erroneously. Need decide.\n\nCould implement a fixed-window limiter: capacity tokens at start of window, window resets after window_seconds. Thread safe with lock. But then token-bucket math comments? Could comment \"fixed-window token refill: tokens = capacity at window start; no fractional</think>"
+        },
+        {
+          "rep": 2,
+          "nonce": "code_module-r2-e6b5189baa62",
+          "ttft_s": 0.3724,
+          "wall_s": 10.284,
+          "tokens": 512,
+          "token_count_method": "usage",
+          "tok_per_s": 49.786,
+          "text": "<think>\nWe need answer user's request. Need produce final only module code in single code block, with one-line docstring and inline comments for token-bucket math. Need ensure complete self-contained Python module implementing small rate-limiter. Public API: class FixedWindowLimiter(capacity, window_seconds) methods try_acquire() -> bool and reset(), thread-safe under concurrency, plus module-level __main__ demo showing loop of acquires. Do not import outside standard library. Output only module code in single code block.\n\nNeed think about implementation. Name FixedWindowLimiter but user mentions inline comments for token-bucket math. Slight mismatch: fixed window vs token bucket. Need implement fixed window? Public API says FixedWindowLimiter(capacity, window_seconds). Could implement fixed window counter with window start, remaining. But inline comments for token-bucket math? Maybe they expect token bucket math despite name? Need satisfy both? Could implement fixed-window as tokens refilled at window boundaries. Inline comments for token-bucket math maybe \"window-based token refill\". Need no external imports except standard library: use threading, time.\n\nThread-safe: lock. try_acquire: if now >= window_start + window_seconds: reset window_start=now, remaining=capacity. If remaining >0: remaining -=1 return True else False. reset: set window_start=now, remaining=capacity.\n\nBut \"token-bucket math\" maybe they want tokens float, refill rate = capacity / window_seconds, tokens = min(capacity, tokens + elapsed*rate), if tokens >=1 consume. But class name FixedWindowLimiter suggests fixed window. The prompt: \"Write a complete, self-contained Python module implementing a small rate-limiter. Public API: a class `FixedWindowLimiter(capacity, window_seconds)` ... plus ... inline comments for the token-bucket math.\" It might be a benchmark expecting token-bucket math? The class name fixed window but token-bucket math comment. Need decide.\n\nCould implement a fixed-window limiter using token bucket style: at each call, compute elapsed and refill tokens at fixed window? Hmm.\n\nNeed output only code block. One-line docstring at top. Inline comments for token-bucket math. Could implement token bucket but name FixedWindowLimiter. If tests check behavior? They may test capacity in window. Token bucket with rate capacity/window_seconds and burst capacity allows fractional accumulation and sliding window, not fixed. If they expect fixed window, token bucket may pass some but not exact? Let's inspect</think>"
+        },
+        {
+          "rep": 3,
+          "nonce": "code_module-r3-bbfd67c884e9",
+          "ttft_s": 0.4106,
+          "wall_s": 9.6387,
+          "tokens": 512,
+          "token_count_method": "usage",
+          "tok_per_s": 53.119,
+          "text": "<think>\nWe need answer user's request. Need produce final only module code in single code block, with one-line docstring and inline comments for token-bucket math. Need ensure complete self-contained Python module implementing small rate-limiter. Public API: class FixedWindowLimiter(capacity, window_seconds) methods try_acquire() -> bool and reset(), thread-safe under concurrency, plus module-level __main__ demo showing loop of acquires. Do not import outside standard library. Output only module code in single code block.\n\nNeed think about semantics. \"FixedWindowLimiter\" name suggests fixed window: capacity per window_seconds. But user says inline comments for token-bucket math. Hmm fixed window vs token bucket? They ask class FixedWindowLimiter but comments for token-bucket math. Could implement fixed window counter with time, but comments for token-bucket math? Maybe they want token bucket math despite name? Need satisfy. Public API fixed window. Maybe implement as fixed window with capacity resets every window; token-bucket math comments can explain equivalent? But \"token-bucket math\" likely expected: tokens = min(capacity, elapsed * capacity/window) etc. But class name FixedWindowLimiter. Could implement a token bucket rate limiter (capacity, refill rate) and call it fixed window? The method try_acquire and reset. Thread-safe. Demo loop of acquires.\n\nNeed decide. If implement token bucket, comments for math easy. But name FixedWindowLimiter maybe expects fixed window. The phrase \"inline comments for the token-bucket math\" strongly indicates token bucket. Maybe they intentionally ask token-bucket math but class name fixed window? Could be a trap: implement fixed window but comments for token-bucket? Need likely output code with token bucket logic and class name as requested. It's a small rate-limiter. Could be:\n\n\"\"\"Fixed-window rate limiter with token-bucket-style refill math.\"\"\"\nimport threading, time\n\nclass FixedWindowLimiter:\n    def __init__(self, capacity, window_seconds):\n        if capacity <=0: raise ValueError\n        if window_seconds <=0: raise ValueError\n        self._capacity = float(capacity)\n        self._window = float(window_seconds)\n        self._refill_rate = self._capacity / self._window  # tokens per second\n        self._tokens = float(capacity)\n        self._last_refill = time.monotonic()\n        self._lock = threading.Lock()\n\n    def try_acquire(self):\n       </think>"
+        }
+      ]
+    },
+    {
+      "id": "prose_explain",
+      "kind": "prose",
+      "max_tokens": 384,
+      "seed": 42,
+      "reps": [
+        {
+          "rep": 1,
+          "nonce": "prose_explain-r1-e7bd6c533447",
+          "ttft_s": 0.3226,
+          "wall_s": 8.2721,
+          "tokens": 384,
+          "token_count_method": "usage",
+          "tok_per_s": 46.421,
+          "text": "<think>\nWe need to answer user's request: explain in four concise paragraphs, no bullet lists, complete grammatical prose. Need be precise about where in token-generation pipeline each applies, what controls, why combining temperature with top-p common. Need include bench nonce? Probably not mention? The prompt includes nonce maybe for benchmark. Need final only four paragraphs. Need ensure no bullets. Let's craft 4 paragraphs.\n\nParagraph 1: token-generation pipeline: transformer LM produces logits for vocabulary at each step, then sampling procedure transforms logits to probabilities and draws token. Greedy sampling applies after logits, chooses argmax logit (or probability) deterministically. Controls: no randomness, selects highest-scoring token, ignores uncertainty, often repetitive/local optimum.\n\nParagraph 2: temperature scaling applies to logits before softmax. logits divided by T (or softmax(logits/T)). Controls sharpness of distribution: T<1 sharpens, T>1 flattens; changes relative probabilities and randomness. It doesn't change support unless numerical underflow; it doesn't discard tokens. After temperature, softmax yields probabilities.\n\nParagraph 3: top-k and top-p filtering apply after probabilities computed (or after temperature+softmax) and before sampling; they restrict candidate set. Top-k keeps k highest-probability tokens; top-p keeps smallest set whose cumulative probability >= p, sorted descending. Controls diversity/quality by truncating tail, preventing low-prob tokens; top-p adapts to distribution entropy. Both can be applied after temperature; if temperature first then filter.\n\nParagraph 4: combining temperature with top-p common because they address different aspects: temperature shapes global probability distribution (how peaked/flat) while top-p controls support/tail mass. Temperature alone can make distribution too flat (more random) or too sharp (less diversity); top-p alone doesn't adjust relative probabilities among kept tokens, only removes tail. Together, temperature"
+        },
+        {
+          "rep": 2,
+          "nonce": "prose_explain-r2-53ca3590c1d7",
+          "ttft_s": 0.3209,
+          "wall_s": 7.772,
+          "tokens": 384,
+          "token_count_method": "usage",
+          "tok_per_s": 49.408,
+          "text": "<think>\nWe need to answer user's request: explain in four concise paragraphs, no bullet lists, complete grammatical prose. Need be precise about where in token-generation pipeline each applies, what controls, why combining temperature with top-p common. Need likely mention greedy sampling, temperature scaling of logits, top-k/top-p filtering. Need four paragraphs. Could structure: 1 pipeline overview and greedy. 2 temperature. 3 top-k/top-p. 4 why temp+top-p common. Ensure concise. No bullets. Need maybe include bench nonce? Not necessary? The user included nonce maybe for eval. We just answer. Need final only four paragraphs. Ensure no bullet lists. Let's craft.\n\nParagraph 1: Token generation: transformer LM produces logits over vocabulary for next token. Greedy sampling applies directly to final logits by selecting argmax, no randomness, deterministic, maximizes immediate token probability, can be repetitive/degenerate, ignores alternatives. It is a decoding policy after probability normalization (or equivalent since argmax unaffected by softmax).\n\nParagraph 2: Temperature scaling applies to logits before softmax: z/T. T>0. If T<1 sharpens distribution, high prob tokens even more likely, lower temp more deterministic; T>1 flattens, more uniform, increases entropy/randomness. It controls shape/entropy of probability distribution, not candidate set. T=1 original. Can be combined with sampling.\n\nParagraph 3: Top-k/top-p filtering applies to probability distribution after softmax (or equivalently to logits before softmax? Usually after probabilities, but can threshold logits). It restricts candidate set: top-k keeps k highest-prob tokens; top-p/nucleus keeps smallest set whose cumulative prob >= p, variable size. Then renormalizes probabilities over retained set and samples from it. Controls support/tail mass, prevents low-probability tokens, adapts to confidence: high"
+        },
+        {
+          "rep": 3,
+          "nonce": "prose_explain-r3-d1015e4c02fb",
+          "ttft_s": 0.324,
+          "wall_s": 8.264,
+          "tokens": 384,
+          "token_count_method": "usage",
+          "tok_per_s": 46.466,
+          "text": "<think>\nWe need to answer user's request: explain in four concise paragraphs, no bullet lists, complete grammatical prose. Need be precise about where in token-generation pipeline each applies, what controls, why combining temperature with top-p common. Need include bench nonce? Probably not necessarily, but maybe final only prose. Need ensure four paragraphs. Let's craft.\n\nParagraph 1: greedy sampling. In pipeline: after logits for next token, before sampling? Actually greedy selects argmax logit/prob, no randomness. Applies at decision step after scoring candidate tokens and any filtering? It is a sampling policy. Controls no stochasticity, deterministic highest probability token. Could mention if tied. It doesn't change distribution.\n\nParagraph 2: temperature scaling. Applies to logits before softmax (or equivalently modifies probabilities by exponent). Controls sharpness/entropy: T<1 sharpens, T>1 flattens. If T=0 degenerates to argmax. It changes relative probabilities, affects all candidates. Need precise: logits z, T, softmax(z/T). It is a global transform.\n\nParagraph 3: top-k/top-p filtering. Applies after probabilities computed (or after temperature/softmax) and before final draw. Top-k restricts to k highest-prob tokens; top-p (nucleus) restricts to smallest set whose cumulative probability >= p, sorted descending. Controls support/mass, truncates tail, avoids low-prob tokens. Top-p adaptive size; top-k fixed. It changes distribution by renormalizing over kept set.\n\nParagraph 4: combining temperature with top-p common. Temperature shapes shape of distribution before nucleus selection; top-p adaptively prunes tail after. Together allow tunable diversity and coherence: temp controls how strongly high vs low prob tokens are favored among retained; top-p prevents rare tokens from being sampled while keeping variable nucleus. Common because top-p alone with"
+        }
+      ]
+    },
+    {
+      "id": "tool_json",
+      "kind": "tool_json",
+      "max_tokens": 256,
+      "seed": 42,
+      "reps": [
+        {
+          "rep": 1,
+          "nonce": "tool_json-r1-61918c602e21",
+          "ttft_s": 0.3733,
+          "wall_s": 1.6118,
+          "tokens": 100,
+          "token_count_method": "usage",
+          "tok_per_s": 62.041,
+          "text": "<think>\nWe need answer user's request. Need emit single JSON object only, no markdown. Need call get_weather with args city Lyon unit celsius. Include thought short string. Ensure valid JSON. Need final only JSON.\n</think>\n\n{\n  \"name\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"Lyon\",\n    \"unit\": \"celsius\"\n  },\n  \"thought\": \"Request the weather for Lyon in Celsius.\"\n}"
+        },
+        {
+          "rep": 2,
+          "nonce": "tool_json-r2-72d875ae61ec",
+          "ttft_s": 0.2528,
+          "wall_s": 3.3397,
+          "tokens": 245,
+          "token_count_method": "usage",
+          "tok_per_s": 73.36,
+          "text": "<think>\nWe need respond to user: They ask: \"You are a function-calling assistant. Emit a SINGLE JSON object (no markdown, no commentary outside it) representing a tool call. The JSON must have exactly these keys: \"name\" (string, the tool to call), \"arguments\" (object, the args for that tool), \"thought\" (short string, your reasoning). Call the tool `get_weather` with arguments {\"city\": \"Lyon\", \"unit\": \"celsius\"}. Ensure the output is valid JSON that can be parsed by json.loads.\n\n[bench-nonce-tool_json-rep2: tool_json-r2-72d875ae61ec]\"\n\nNeed output only JSON object with keys name, arguments, thought. No markdown. Need probably thought short. Ensure valid JSON. Final:\n{\"name\":\"get_weather\",\"arguments\":{\"city\":\"Lyon\",\"unit\":\"celsius\"},\"thought\":\"Call get_weather for Lyon in celsius.\"}\nNeed no extra. Ensure single JSON.\n</think>\n\n{\"name\":\"get_weather\",\"arguments\":{\"city\":\"Lyon\",\"unit\":\"celsius\"},\"thought\":\"Call get_weather for Lyon in celsius.\"}"
+        },
+        {
+          "rep": 3,
+          "nonce": "tool_json-r3-ad5605977856",
+          "ttft_s": 0.3452,
+          "wall_s": 3.8953,
+          "tokens": 256,
+          "token_count_method": "usage",
+          "tok_per_s": 65.721,
+          "text": "<think>\nWe need answer user's request. Need emit single JSON object no markdown. They ask: \"You are a function-calling assistant. Emit a SINGLE JSON object (no markdown, no commentary outside it) representing a tool call. The JSON must have exactly these keys: \"name\" (string, the tool to call), \"arguments\" (object, the args for that tool), \"thought\" (short string, your reasoning). Call the tool `get_weather` with arguments {\"city\": \"Lyon\", \"unit\": \"celsius\"}. Ensure the output is valid JSON that can be parsed by json.loads.\n\n[bench-nonce-tool_json-rep3: tool_json-r3-ad5605977856]\"\n\nNeed final only JSON. Need maybe include nonce? The prompt includes bench nonce likely expected maybe not. It says emit single JSON object exactly keys name arguments thought. So final:\n{\"name\":\"get_weather\",\"arguments\":{\"city\":\"Lyon\",\"unit\":\"celsius\"},\"thought\":\"Call get_weather for Lyon in celsius.\"}\nEnsure no markdown.\n</think>\n\n{\n  \"name\": \"get_weather\",\n  \"arguments\": {\n    \"city\": \"Lyon\",\n    \"unit"
+        }
+      ]
+    }
+  ],
+  "medians": {
+    "code_module": {
+      "ttft_s": 0.4106,
+      "wall_s": 9.6387,
+      "tok_per_s": 53.119,
+      "n_valid": 3
+    },
+    "prose_explain": {
+      "ttft_s": 0.3226,
+      "wall_s": 8.264,
+      "tok_per_s": 46.466,
+      "n_valid": 3
+    },
+    "tool_json": {
+      "ttft_s": 0.3452,
+      "wall_s": 3.3397,
+      "tok_per_s": 65.721,
+      "n_valid": 3
+    }
+  },
+  "vram_after_mb": 17722
+}

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "code_module",
+    "kind": "code",
+    "prompt": "Write a complete, self-contained Python module implementing a small rate-limiter. Public API: a class `FixedWindowLimiter(capacity, window_seconds)` with methods `try_acquire() -> bool` and `reset()`, thread-safe under concurrency, plus a module-level `__main__` demo showing a loop of acquires. Do not import anything outside the standard library. Output only the module code in a single code block, with a one-line docstring and inline comments for the token-bucket math.",
+    "max_tokens": 512,
+    "seed": 42
+  },
+  {
+    "id": "prose_explain",
+    "kind": "prose",
+    "prompt": "Explain, in four concise paragraphs, the difference between greedy sampling, temperature-scaling of the logits, and top-k/top-p filtering in a transformer language model. Be precise about where in the token-generation pipeline each technique applies, what each controls, and why combining temperature with top-p is common. Write complete, grammatical prose with no bullet lists.",
+    "max_tokens": 384,
+    "seed": 42
+  },
+  {
+    "id": "tool_json",
+    "kind": "tool_json",
+    "prompt": "You are a function-calling assistant. Emit a SINGLE JSON object (no markdown, no commentary outside it) representing a tool call. The JSON must have exactly these keys: \"name\" (string, the tool to call), \"arguments\" (object, the args for that tool), \"thought\" (short string, your reasoning). Call the tool `get_weather` with arguments {\"city\": \"Lyon\", \"unit\": \"celsius\"}. Ensure the output is valid JSON that can be parsed by json.loads.",
+    "max_tokens": 256,
+    "seed": 42
+  }
+]

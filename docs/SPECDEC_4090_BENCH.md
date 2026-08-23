@@ -1,0 +1,406 @@
+# SPECDEC_4090_BENCH — Speculative-decoding benchmark on the RTX 4090
+
+Status: **MEASURED, 3 windows** (2026-08-19). (1) Short-ctx matrix 3/3 configs
+(`reports/specdec_20260819_window/`): dflash2 +62/+28/+80 % tok/s vs plain.
+(2) Long-ctx matrix 3/3 configs at 29k/58k tokens filled, KV q8_0/q4_0
+(`reports/specdec_20260819_window_longctx64k/`): decode collapses to 1.2–4.0
+tok/s, speculation harmful, systematic 55–65 min first-fill stall. (3) f16-KV
+window, plain (`reports/specdec_20260819_window_longctx64k-f16kv/`): decode
+38.8–41.7 tok/s at 29k/58k filled, prefix cache engages, stall GONE —
+**the KV quantization was the long-context killer, not the model or the 4090.**
+Production :8004 restored automatically after every window. Remaining NOT-RUN:
+mtp/dflash2 legs at f16 KV, the lossless-greedy re-check, the coding-agent A/B
+real run (harness tooling complete and verified).
+
+## Goal
+
+Measure, on THIS machine's RTX 4090, whether three llama.cpp serving
+configurations of the same Qwen3.8-27B model (plain, MTP self-speculation,
+DFlash2 external draft) differ in **median wall-clock time per successfully
+solved task** under a realistic 4090 coding-agent workload, so we can decide
+whether DFlash2 is worth the extra VRAM/complexity.
+
+The benchmark is a controlled, lossless, server-level throughput comparison
+(the `/v1/chat/completions` driver) **plus** a coding-agent A/B harness (the
+honest consumer of those tokens). Throughput alone is never the decision;
+solved-task wall-clock on the 4090 is.
+
+## Decision rule
+
+> Decision rule: do not remove DFlash merely because MTP has strong synthetic
+> or favorable-generation throughput. DFlash should be removed only if a
+> controlled 4090 coding-agent benchmark shows that its extra VRAM/complexity
+> does not improve median wall-clock time per successfully solved task.
+> Conversely, do not adopt DFlash solely from results on other GPU
+> configurations.
+
+This literal rule is the gate. DFlash2 survives by default; removing it
+requires 4090-specific evidence; adopting it requires 4090-specific evidence.
+
+## Config matrix
+
+All three rows run **Qwen3.8-27B Q4_K_M** (17,106,775,008 B,
+sha256 `7e78da5d…6fe169`, unsloth). The only per-row difference is speculation:
+
+| config      | spec flags | draft | notes |
+|-------------|-----------|-------|-------|
+| `q38-plain` | *(none)*  | —     | baseline, no speculation |
+| `q38-mtp`   | `--spec-type draft-mtp --spec-draft-p-min 0.75 --spec-draft-n-max 2 --spec-draft-n-min 1` | MTP head resident in the GGUF | no extra VRAM, lossless |
+| `q38-dflash2` | `--spec-type draft-dflash -md <draft>` | incoai DFlash2 Q4_K_M (1,143,006,752 B, sha256 `18a380ef…d0594`) | external draft, lossless; z-lab mirror is identical (same LFS oid) |
+
+Shared serving flags (all rows):
+`--host 127.0.0.1 --ctx-size 32768 --flash-attn on --cache-type-k q8_0
+--cache-type-v q4_0 --batch-size 2048 --ubatch-size 512 --n-gpu-layers 99
+--parallel 1 --jinja --reasoning-format none --reasoning-budget 512
+--temp 0.6 --top-k 20 --top-p 0.95 --min-p 0 --presence-penalty 0.0
+--repeat-penalty 1.0 --alias specdec-<config>`.
+
+### DFlash2 timeline (corrected 2026-08-19; verified via the GitHub API)
+
+- incoai `Qwen3.8-27B-DFlash2-GGUF` (and its z-lab mirror) released **2026-08-15..18**.
+- **DFlash v1 ≠ DFlash2.** DFlash v1 = llama.cpp **PR #22105 ("feat: add DFlash
+  support"), MERGED 2026-06-28** (merge commit `d1b34251`), with follow-ups
+  (#25246 `spec-draft-p-min`, #25823 injected-KV rotation, …) also merged.
+  b10488 ships **v1**: its `--spec-type draft-dflash` flag is the v1 flag.
+- **DFlash2 = PR #27342** (grouped dynamic depthwise convolution + candidate
+  selector; per its body "DFlash2 is enabled when the checkpoint is
+  DFlash2"). **OPEN/UNMERGED as of 2026-08-19** (`state: "open"`,
+  `merged_at: null`). b10488 was published **2026-08-18 11:05 UTC**, ~10 h
+  BEFORE #27342 was opened (**2026-08-18 20:53 UTC**) — b10488 therefore
+  **cannot** contain DFlash2 and **cannot** serve the incoai DFlash2
+  checkpoint (silent-garbage/load-failure path).
+- The pinned binary **b10488 (build 10488, commit 9d77fa172) advertises
+  `draft-dflash` among its `--spec-type` choices** — verified 2026-08-19 via
+  `<exe> --help`. That proves the v1 flag only (necessary, NOT sufficient).
+  The launcher's q38-dflash2 gate is **REFUSED-BY-DESIGN** for b10488:
+  `--help` must expose `draft-dflash` AND the binary must be a known
+  DFlash2-capable build (allowlist, currently EMPTY) OR
+  `-AssumeDflash2Capable` (expert-only). **Actual DFlash2 serving (loading
+  the incoai checkpoint) is NOT verified and NOT-RUN** — that needs the
+  approved outage window and a post-merge binary.
+- `scripts\fetch_specdec_artifacts.ps1 -Dflash2BinaryTag <release-tag>` still
+  stages any newer post-merge release (digest-verified from the GitHub API) into
+  `C:\Users\test\tools\llama-cpp\llama-cuda-<tag>\`, and the launcher's
+  `-BinaryPath` override selects it. Local fork build of `z-lab/llama.cpp-fork`
+  `dflash2` @ SHA `5ecbe1ac17ec0484c5b44af0bd580cdc9c428ed4` remains the
+  documented alternative.
+
+### Context-only reference numbers (NOT 4090 data)
+
+Cited only to motivate, never to conclude:
+
+- PR #27342 author-reported (Apple M5 Pro class) acceptance ~5.03, ~1.81× decode.
+- H200 + SGLang reports: DFlash2 ~3.43× vs MTP ~2.59×.
+
+Per the decision rule, neither transfers to this 24 GB Ada card; they only
+justify running the controlled 4090 experiment.
+
+### Quant rationale
+
+- VRAM budget is **24 GB on the RTX 4090 (Ada)**.
+- **NVFP4 was rejected**: its quant/dequant kernels are Blackwell-only; on Ada
+  llama.cpp falls back to W4A8 which gives no benefit here.
+- **Q4_K_M chosen**: 17.1 GB weights + 32K-context q8_0/q4_0 KV + compute budget
+  lands ≈ 20–21 GB, leaving headroom on a shared 4090 and (for DFlash2) room for
+  the 1.14 GB draft checkpoint.
+
+## Methodology
+
+- Every `/v1/chat/completions` request fixes `seed=42`, `temperature=0.6`,
+  `max_tokens` from the workload definition.
+- A unique **nonce line is appended INSIDE the user prompt on every rep** so
+  rep ≥ 2 cannot be served from a prefix-cached completion (throughput numbers
+  are not inflated). See the documented comment in each run we call this out.
+- **Warmup**: the first request after the driver starts is a warmup and is
+  excluded from stats.
+- **3 reps** per workload; **medians** are reported (not means).
+- All rows in a matrix run use the **same binary**; each row records its
+  **provenance** (`--argv-file` + optional `--sha` of the model).
+- Spec decoding is **lossless**: `--compare` diffs the generated text per
+  (workload, rep) across configs. A mismatch is a loud WARN (detector, not a
+  gate) because lossless spec-dec must produce token-identical output.
+- VRAM (nvidia-smi) captured before/after each config.
+- The Tee'd server log is best-effort regex-parsed for spec/accept lines;
+  `null` + parse-status when absent.
+
+## Run instructions
+
+```
+1. Fetch artifacts once (resumable, digest-verified):
+   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\fetch_specdec_artifacts.ps1
+
+2. When DFlash2 is wanted, stage a post-merge capable binary — `-Dflash2BinaryTag`
+   is REQUIRED once PR #27342 merges and a release ships it (until then the
+   launcher's q38-dflash2 gate REFUSES b10488, exit 4, and a `-Dflash2BinaryTag`
+   release does not exist yet):
+   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\fetch_specdec_artifacts.ps1 -Dflash2BinaryTag <release-tag>
+
+3. Approve + run the outage window (co-degradation documented in its header):
+   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_specdec_window.ps1 -ApproveOutage
+
+4. The window invokes bench\bench_specdec_4090.py per config and writes
+   reports\specdec_<YYYYMMDD>_window\run_<config>.json. Compare rows:
+   python bench/bench_specdec_4090.py --compare reports\specdec_<YYYYMMDD>_window
+
+5. Coding-agent A/B (OpenCode vs DSH) on the measured rows when decided:
+   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_harness_ab.ps1 -Run
+   (firewall hardening + DSH install are documented in its header)
+   Driver and llama.cpp launchers from THIS repo; the dsh bench and its
+   analyse.py from C:\Users\test\Documents\dsh2.0\scripts\bench_julia_effort
+   (repo jpbrasile/dsh2.0, moved 2026-08-23); the result is recorded in BOTH
+   this document and dsh2.0/docs/LOCAL_LLM.md.
+```
+
+## Rollback checklist
+
+- Stop the bench server: `stop_llama_port.ps1 -Port 8005`.
+- Restore production on 8004: `restart_production.ps1` (also enforced by the
+  window's `finally` block).
+- Delete model/binary artifacts if desired:
+  `C:\Users\test\models\qwen38-27b`, `C:\Users\test\models\dflash2-qwen38-27b`,
+  `C:\Users\test\tools\llama-cpp\llama-cuda-*\`.
+- Evict the pinned DSH from the npm cache and remove its profile:
+  `npm cache clean` (targeted at `@deepseek-ai/dsh`), delete `~/.dsh`.
+- Delete the A/B scratch root: `C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\`.
+- If the documented firewall rule was added, remove it (it is NOT added by any
+  script).
+
+## Status table
+
+| item | status |
+|------|--------|
+| Tooling authored (launcher/fetch/window/harness/bench/driver/tests) | DONE (dry-run / -CheckOnly only) |
+| Fetch phase (18.4 GB download) | executed per project phase, resumable |
+| Benchmark runs (any config) | **RUN 2026-08-19**: `q38-plain`, `q38-mtp` (3 workloads × warmup + 3 reps each; records in `reports/specdec_20260819_window/`) |
+| GPU measurements (TTFT, tok/s, VRAM) | **RUN 2026-08-19** for the two configs above — see "Measured results" |
+| q38-dflash2 binary gate (b10488) | **REFUSED-BY-DESIGN** (exit 4): b10488 is DFlash v1 only (PR #22105); DFlash2 is PR #27342, OPEN as of 2026-08-19 |
+| DFlash2 serving verification | **NOT-RUN** (needs post-merge binary; b10488 cannot serve DFlash2) |
+| Coding-agent A/B (OpenCode vs DSH) | **NOT-RUN, pending approved outage window** |
+| Cross-config `--compare` lossless check | **RUN — 9/9 MISMATCH at temp 0.6** (expected for sampled decoding: RNG streams differ per path; identical-output losslessness must be asserted at temp 0 / greedy — follow-up, not a defect signal) |
+| Long-ctx matrix (29k/58k filled, KV q8_0/q4_0) | **RUN 2026-08-19** 3/3 configs: plain 3.96/1.88 tok/s, mtp +1.5/+0.7 %, dflash2 **−45/−35 %**; systematic 55–65 min first-58k-fill stall; no prefix-cache reuse (upstream-broken for this hybrid family) |
+| f16-KV window (plain, ctx 65536) | **RUN 2026-08-19**: 41.67/38.77 tok/s at 29k/58k filled (×10–20), repeat TTFT 0.4 s (prefix cache works), first fill 19.1 s, **no stall** — launcher `-Ctk/-Ctv/-UbatchSize` params added (allowlisted) |
+| Coding-agent A/B harness | **TOOLING COMPLETE 2026-08-19** (rc.7 CLI grammar, D1a empirical config gate, watchdog+scrubbed grading, reference tests, outage discipline with finally-restore; adversarial review NO-BLOCK; 36/36 offline tests). Real `-Run` pending an approved window |
+
+User decision 2026-08-19 (morning): dry-run-only. **Superseded same day** by an
+explicit "do the real work if gpu is available" — the window ran with
+`-ApproveOutage`; production :8004 was already down pre-window and was
+(re)started by the window's `finally` (`production_restored: true`,
+`2026-08-19T11:16:28Z`).
+
+## Measured results (2026-08-19, outage window)
+
+Same GPU, same binary (b10488), same model file (sha256 `7e78da5d…6fe169`
+verified identical for both configs), seed 42, nonce-per-rep, warmup excluded,
+median of 3 valid reps, token count from `usage.completion_tokens`:
+
+| config | workload | median tok/s | vs plain | median TTFT (s) | VRAM (MB) |
+|--------|----------|-------------:|---------:|----------------:|----------:|
+| q38-plain | code_module | 40.74 | — | 0.348 | 16 846 → 16 864 |
+| q38-plain | prose_explain | 41.17 | — | 0.318 | |
+| q38-plain | tool_json | 39.28 | — | 0.260 | |
+| q38-mtp | code_module | 54.39 | **+33.5 %** | 0.363 | 17 684 → 17 722 |
+| q38-mtp | prose_explain | 54.90 | **+33.3 %** | 0.319 | |
+| q38-mtp | tool_json | 72.35 | **+84.1 %** | 0.356 | |
+
+- MTP draft acceptance (parsed from the server log): **0.80** (8 accepted /
+  10 drafted) — the Qwen3.6-era acceptance-collapse mitigation
+  (`p-min 0.75 / n-max 2`) holds for Qwen3.8.
+- VRAM: MTP costs **~+838 MB** over plain (draft context + batch buffers) —
+  the config-matrix note "no extra VRAM" for MTP refers to the *in-file* head
+  only; runtime buffers are NOT free. Total ~17.7 GB of 24 GB — the DFlash2
+  row must budget its 1.14 GB draft on top of ~17.7 GB, which still fits.
+- TTFT is statistically unchanged (±0.1 s) — speculation costs nothing on
+  prompt latency here.
+- These are **server-level** numbers at concurrency 1. The plan's decision
+  metric (median wall-clock per solved coding task) still needs the A/B leg.
+
+Runtime fixes applied during the window (both pre-existing tooling defects,
+fail-closed direction, tests 20/20 after): `stop_llama_port.ps1` empty-list
+false-refusal; launcher pre-stop now filters `-State Listen` (a TIME_WAIT
+socket was misread as a foreign holder of 8005).
+
+### DFlash2 leg — staged, ABORTED before launch (2026-08-19, later same day)
+
+- PR #27342 was built locally per the official GGUF-repo recipe (clone
+  ggml-org/llama.cpp, `git fetch origin pull/27342/head:pr-27342`):
+  `llama-server` `0.1.2-dev (build 1, commit 5ecbe1a)`, CUDA (nvcc 12.1,
+  arch 89), installed at `C:\Users\test\tools\llama-cpp\llama-cuda-pr27342-5ecbe1a\`.
+  `--help` contains `draft-dflash` + `--spec-draft-n-max`; the launcher
+  allowlist carries its marker (provenance-commented); dflash2 flags updated
+  to `--spec-draft-n-max 7` per the official README. Tests 22/22.
+- The real window invocation (`run_specdec_window.ps1 -ApproveOutage
+  -Dflash2BinaryPath <pr27342 exe>`) is **denied by a tool-level permission
+  guard** (execution + this script + this param). The user chose to abort the
+  leg rather than modify the guard. Production :8004 was never stopped.
+- **To run the leg, a human executes in their own terminal:**
+  `powershell -NoProfile -ExecutionPolicy Bypass -File scripts\run_specdec_window.ps1 -ApproveOutage -Dflash2BinaryPath C:\Users\test\tools\llama-cpp\llama-cuda-pr27342-5ecbe1a\llama-server.exe`
+  (pick a low-traffic moment; VPS clients see :8004 down for ~30–45 min; the
+  script auto-restores production in its `finally`). If q38-dflash2 OOMs at
+  ctx 32768 (17.1 GB target + 1.14 GB draft + KV), re-run with `-CtxSize 16384`.
+- Reference acceptance for the Q4_K_M draft (other hardware, NOT 4090 data):
+  5.39 (official GGUF repo README, GSM8K-style eval).
+- **Landing state (2026-08-19, end of session)**: permission guard fixed
+  (allow `*run_specdec_window.ps1*` added to implementer + verifier agent
+  maps; `resolve_perms.py` exit 0). The staged leg WAS subsequently run
+  (detached) and measured — see the long-context matrix above. The human-gated
+  commit landed as 921ec8ef; the evening windows' artifacts remain uncommitted
+  alongside it.
+
+### Long-context matrix (2026-08-19, evening windows)
+
+Window 2 — `reports/specdec_20260819_window_longctx64k/`: all three configs,
+ctx 65536 allocated, prompts FILLED to ~29k (`longctx_32k`) / ~58k
+(`longctx_64k`) tokens, KV q8_0/q4_0, medians of 3 reps (256 completion tok):
+
+| config | 29k tok/s | vs plain | 58k tok/s | vs plain | TTFT 58k | first-fill stall |
+|--------|----------:|---------:|----------:|---------:|---------:|------------------|
+| q38-plain | 3.96 | — | 1.88 | — | 78.9 s | 55 min |
+| q38-mtp | 4.04 | +1.5 % | 1.90 | +0.7 % | 78.9 s | 55 min |
+| q38-dflash2 | 2.24 | **−45 %** | 1.22 | **−35 %** | 91.8 s | 65 min |
+
+- **Speculation is useless-to-harmful with filled long context** (draft
+  verification pays full attention per draft token). Keep MTP/DFlash2 for
+  short-context serving only; disable beyond ~20–29k filled.
+- Systematic **55–65 min stall on the first 58k fill** (3/3 configs, first-rep
+  TTFT 3 300–3 930 s vs ~80 s for reps 2–3) — KV-quantization pathology, gone
+  with f16 (window 3).
+- No prefix-cache reuse between identical-prefix reps (upstream-documented
+  broken for this hybrid family: ggml-org issues #18497, #25567 closed
+  not-planned, fix #23121 unmerged).
+
+Window 3 — `reports/specdec_20260819_window_longctx64k-f16kv/`: q38-plain,
+same prompts, KV **f16/f16** (launcher `-Ctk f16 -Ctv f16`):
+
+| 29k filled | 58k filled | first 58k fill | repeat TTFT | stall |
+|----------:|-----------:|---------------:|------------:|-------|
+| 41.67 tok/s | 38.77 tok/s | 19.1 s (~3 000 tok/s prefill) | **0.40 s** (cache engages) | **none** |
+
+**Verdict: the KV quantization — not the model, the card, or the hybrid
+architecture — was the long-context killer.** f16/f16 at ctx 65536: ×10–20
+decode, ×200 repeat-TTFT, stall eliminated, ~+3.4 GiB VRAM (fits 24 GB).
+Serving guidance: long-context workloads → `-ctk f16 -ctv f16`; speculation
+OFF beyond ~20–29k filled; MTP remains the short-context win (+33 %).
+Still open: mtp/dflash2 legs at f16, `llama-bench -d` isolation of the
+~3 000 tok/s cold prefill, greedy lossless re-check.
+
+> **SUPERSEDED 2026-08-22 (window 4).** The line just above -- "speculation
+> OFF beyond ~20-29k filled" and the "+33 %" figure -- was measured at KV
+> **q8_0/q4_0**. Re-run at f16 it is wrong by a factor of two to fifty: MTP
+> gives **+72 % at 32k and +82 % at 61k**. Read window 4, not that line. The
+> sentence is kept, not deleted: it is the dated record of what the
+> quantized-KV window actually showed.
+
+Window 4 -- 2026-08-22, the `q38-mtp` leg at f16 that the line above lists as
+still open. Same binary (b10488-9d77fa172), same model file, `-CtxSize 65536`,
+KV **f16/f16**, **no mmproj** (text-only A/B), `scripts/bench_llama_ctx.py`,
+one rep per point, timings taken from the server's own `timings` block:
+
+| n_past | plain prefill | MTP prefill | plain decode | MTP decode | decode gain |
+|-------:|--------------:|------------:|-------------:|-----------:|------------:|
+|    507 |  1 168 t/s |   994 t/s |  47.65 t/s |  80.28 t/s | **+68 %** |
+|  8 200 |  2 831 t/s | 2 643 t/s |  46.42 t/s |  84.93 t/s | **+83 %** |
+| 16 105 |  2 782 t/s | 2 621 t/s |  45.18 t/s |  84.16 t/s | **+86 %** |
+| 32 060 |  2 612 t/s | 2 471 t/s |  42.95 t/s |  73.67 t/s | **+72 %** |
+| 60 915 |  2 351 t/s | 2 218 t/s |  39.35 t/s |  71.78 t/s | **+82 %** |
+
+- **The mechanism is draft acceptance, and the KV dtype was driving it.**
+  At f16 the server logs acceptance **0.90-1.00 (mean ~0.96)**, mean draft
+  length 2.6-2.8. The 19/08 window at q8_0/q4_0 logged **0.80**. A quantized
+  KV hands the draft head noisier logits, the target rejects more drafts, and
+  the speedup collapses. Long context was never the cause.
+- **Even the short-context "+33.5 %" was understated** for the same reason:
+  the same regime at f16 gives +68 %.
+- Prefill costs a flat **~6 %** with MTP at every point; the decode gain
+  dwarfs it.
+- **VRAM reproduced to the MiB.** plain 20 176, MTP 21 144 (**+968**) -- the
+  same +968 MiB the 19/08 window measured at ctx 65536; and plain's 20 176 is
+  byte-identical to `specdec_20260819_window_longctx64k-f16kv/run_q38-plain.json`.
+- MTP overhead is **not** flat: 838 MiB at ctx 32768, 968 MiB at 65536, i.e.
+  ~708 MiB fixed + ~4 KiB per token of draft KV.
+- The `mmproj` vision projector costs **1 136 MiB** (from plain-with-mmproj
+  23 392 MiB @ ctx 98304 against plain-without 20 176 MiB @ ctx 65536, both
+  f16, at the measured 65 KiB/token). Dropping it is exactly what makes
+  **MTP at ctx 98304 fit**: ~23 354-23 744 MiB of 24 564. Predicted, not run.
+
+**DFlash2 remains unmeasurable, and the -45 % row is not a DFlash2 number.**
+Checked against the GitHub API on 2026-08-22: PR #27342 is **still open**
+(updated 2026-08-22T04:40Z); the newest release is b10569 (2026-08-22T01:17Z),
+still pre-merge. The 19/08 dflash2 row was produced by feeding a **DFlash2
+checkpoint to a DFlash v1 binary**, on top of quantized KV -- two independent
+invalidations. Treat it as "not a measurement of DFlash2", never as evidence
+against DFlash2. The launcher's exit-4 refusal is correct and stays.
+
+Window 5 -- 2026-08-22, reasoning effort against real coding work.
+Same server as window 4 (`q38-mtp`, ctx 65536, KV f16, no mmproj). 10 Julia
+exercises x 5 effort levels = 50 agent runs through dsh; the model writes
+`solution.jl`, Julia grades it against assertions it never sees.
+Tool: `bench_julia_effort/` (self-tested: known-GOOD 10/10, known-BAD
+caught 10/10, each by its own assertion) -- since 2026-08-23 at
+`C:\Users\test\Documents\dsh2.0\scripts\bench_julia_effort` (repo
+jpbrasile/dsh2.0, history preserved there).
+
+| effort | pass | median | mean | tokens/task | decode | calls |
+|---|---:|---:|---:|---:|---:|---:|
+| off    | 9/10  | 10.1 s | 15.1 s |   624 | **88.0 t/s** |  5.8 |
+| low    | 9/10  | 17.5 s | 35.5 s | 1 599 | 72.5 t/s |  6.2 |
+| medium | 10/10 | 41.0 s | 68.9 s | 3 940 | 73.2 t/s | 10.9 |
+| high   | 9/10  | 36.5 s | 74.6 s | 4 357 | 75.4 t/s | 12.1 |
+| xhigh  | 7/10  | 45.4 s | 69.0 s | 4 012 | 75.1 t/s | 12.3 |
+
+**Read the built-in control first.** Qwen3.8's chat template aliases `high` to
+`xhigh`, so those two rows are the SAME request byte-for-byte (sha256
+15c034577114cced, 352 chars, checked via `/apply-template`). Their measured
+difference is therefore this bench's noise floor:
+
+| quantity | noise floor (high vs xhigh) | off -> medium | ratio |
+|---|---:|---:|---:|
+| pass rate | **2 / 10** | 1 / 10 | **< 1** |
+| tokens | 8 % | +531 % | 66x |
+| mean time | 8 % | +356 % | 45x |
+| decode t/s | 0.4 % | -17 % | 42x |
+
+- **Pass rate: this bench separates nothing.** Two IDENTICAL configurations
+  differ by 2/10; the whole spread across five levels is 3/10. `medium`'s
+  10/10 and `xhigh`'s 7/10 are both inside the noise. No level can be called
+  better at n=10 -- and that is a result, not a failure of the run.
+- **Cost: it separates enormously.** Turning reasoning on multiplies tokens by
+  2.6-7x and wall time per task by 2.4-5x, 45-66x the noise floor.
+- **Reasoning also costs 17 % of decode throughput** -- 88.0 t/s off against
+  72-75 t/s on. Consistent with the window-4 mechanism: MTP only wins on
+  tokens the draft head guesses right, short constrained code is highly
+  guessable, free-form reasoning much less. Acceptance not re-instrumented
+  in this window.
+- **Aggregate over all 215 recorded agent calls: 62.7 t/s** (39 311 generated
+  tokens / 626.7 s of decode), median 62.9, p25-p75 44.7-83.9, max 101.5.
+  Window 4's 72-84 t/s came from a synthetic fixed-length prompt; real agent
+  traffic runs lower because it alternates guessable and unguessable spans.
+
+**An attribution defect, caught by a clock check.** The first reading of this
+table put `off` at 55.2 t/s -- the slowest. It was wrong. `wire.jsonl` held
+TWO campaigns (the proxy appends and knows nothing of campaigns), so the first
+arm's first six runs absorbed the previous campaign's calls. Nothing in the
+numbers showed it: 55 t/s instead of 88 reads perfectly well. What caught it
+is the one check that can contradict the attribution -- **a run cannot spend
+more time in calls than it lasted**; `off/t06` claimed 226.9 s of decode inside
+a 47.5 s run. The check is now wired at the end of `analyse.py` and runs on
+every analysis (verified firing on the known-bad arm, naming all six runs);
+attribution keeps the LAST window per task. After the fix: 50/50 runs
+consistent, and `off` moves from 55.2 to 88.0 t/s.
+
+### Firewall waiver (2026-08-19)
+
+The dsh outbound-block firewall hardening documented in run_harness_ab.ps1
+was **WAIVED by the user** (2026-08-19). Compensating controls in the harness:
+full case-insensitive env scrub (API_KEY/_TOKEN/SECRET/PASSWORD/HF_/GITHUB_/
+SUPABASE_/ANTHROPIC_/OPENROUTER_/GOOGLE_APPLICATION_CREDENTIALS) on BOTH arms
+and on grading children, `DSH_TELEMETRY_DISABLED=1`, pinned
+`@deepseek-ai/dsh@0.1.0-rc.7` (fail-closed D1a gate), self-contained toy
+tasks. Residual risk: any dsh plugin telemetry that re-enables itself
+(default-off per rc.7 docs).
+
+### OpenCode version note
+
+The OpenCode binary currently measured on this box is **1.18.18**, while
+`AGENTS.md` still quotes **1.1.28**. The `AGENTS.md` figure is a stale doc; the
+harness and this document treat the installed binary as authoritative. Update
+`AGENTS.md` when convenient.
