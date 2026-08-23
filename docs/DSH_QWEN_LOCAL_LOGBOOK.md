@@ -1545,6 +1545,67 @@ répétitions ne les sépare.
 `--comparer` ; bras known-BAD dans `fixture_injection.py` §9octies
 (8 assertions : 3 known-BAD, 1 known-GOOD, 2 known-ABSENT, 2 sur la lecture).
 
+### §3.28 — Trois bras propres : la recherche a servi une fois, et le sort de la tâche se joue ailleurs
+
+Campagne `t31d`, trois bras, énoncés vérifiés au codepoint (§3.27 pour le
+garde). Le bras promesse a été **relancé** (`t31d_promesse2`) après que la
+dorsale eut tué deux de ses trois runs ; les quatre runs propres du bras sont
+poolés sur `(empreinte, bras)` — jamais sur l'empreinte seule, puisque web et
+promesse la **partagent** par construction.
+
+```
+  témoin    n=3   2 PASS   tour 1 : 1/3   julia 56   2617 s   [FP] [P]  [FF]
+  promesse  n=4   3 PASS   tour 1 : 2/4   julia 84   3100 s   [CP] [P]  [FF] [P]
+  web       n=3   3 PASS   tour 1 : 2/3   julia 35   1876 s   [P]  [FP] [P]
+  (zéro coupure dorsale dans les trois bras — cette campagne est une mesure)
+```
+
+**L'ordre est le même sur les quatre colonnes, et ce n'est pas un faisceau.**
+Passer au tour 1, dépenser moins de Julia et finir plus vite sont largement la
+même chose vue trois fois : un run qui réussit d'emblée est mécaniquement court
+et sobre. Compter quatre accords dépendants comme quatre confirmations est une
+amplification, pas une preuve. `n` vaut 3 à 4 ; l'instrument écrit de lui-même
+« aucun écart n'est séparable ici ».
+
+**Une seule recherche a été faite dans tout le bras web**, et elle a servi :
+`web r2`, bloqué sur `DualN(::DualN) is ambiguous`, a reçu deux fils Discourse
+portant exactement sur l'ambiguïté de dispatch, et il est passé au tour
+suivant. Le mécanisme fonctionne. Ce n'est pas lui qui manque.
+
+**Ce qui décide réellement de t31 est un piège unique**, et il n'est pas
+cherchable. Après avoir échoué sur X, un run finit-il par passer (toutes
+campagnes t31, coupures exclues) ?
+
+```
+  confusion de perturbation    2/6   ##....
+  ambiguïté de dispatch        1/4   #...
+  dérivée d'une constante      2/2   ##
+```
+
+La confusion de perturbation est à la fois le blocage le plus fréquent et
+celui dont on se relève le moins. Dans `t31d` elle a été fatale 2 fois sur 2 :
+tout run qui y tombe échoue, tout run qui l'évite passe. Et c'est une erreur de
+**raisonnement** sur les duaux imbriqués, pas une erreur de langage — au tour 1,
+au moment où le sort se joue, rien n'a encore été livré. **On ne cherche pas
+pour éviter un bug qu'on ne sait pas encore avoir.**
+
+> **Conséquence pour le banc, et c'est le livrable.** t31 n'a pas la résolution
+> nécessaire pour mesurer un effet de recherche : son issue est décidée par un
+> piège conceptuel insensible à la documentation. Mesurer la recherche demande
+> des tâches dont les blocages sont *cherchables* — dispatch, API, versions.
+> C'est un critère de **sélection de tâches**, pas un réglage.
+
+**Le biais qui survit à la relance.** Les trois bras se sont succédé sur trois
+heures, la relance une demi-heure plus tard encore. Les douze `RATE_LIMIT` du
+matin prouvent que la dorsale change d'état dans cette fenêtre. « Le bras » et
+« l'heure » restent donc indiscernables, et **aucune quantité de répétitions ne
+les sépare** — seul l'entrelacement le fait. Prochain chantier : boucler sur
+`(répétition, bras)` au lieu de `(bras, répétition)`.
+
+**Instrument :** `resultats_t31d_{sans,promesse,promesse2,web}.jsonl` ;
+`analyse.py --comparer` (provenance groupée par empreinte, morts dorsale,
+mesure hors runs écartés).
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
