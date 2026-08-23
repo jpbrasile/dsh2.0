@@ -232,3 +232,25 @@ starts. Phase done-criteria are always ⚑ RT.
 - Single thread lengthens the sprint → each phase ships value alone; red-team
   gates keep rework from accumulating across phases.
 - Solo maintainer → improver caps review at weekly.
+
+## Layout
+
+Preliminary work imported from the plasma repo (`agentic-flow`) on 2026-08-23 with its
+history; paths kept as they were so relative references still hold.
+
+- `scripts/dsh.ps1` — dsh launcher (pinned package, profiles, `-InstallPlugins`, `-Cheap`
+  via `scripts/openrouter_cheapest_proxy.mjs`). Reads `OPENROUTER_API_KEY` from this repo's
+  `.env` (gitignored, never committed).
+- `scripts/dsh-plugins/`, `scripts/dsh-mcp/` — cordis plugins and MCP servers mounted by the
+  launcher; recipe in `docs/DSH_EXTENSION_RECIPE.md`.
+- `scripts/dsh_session_check.mjs`, `scripts/dsh_tree_check.mjs` — guards on the session log
+  and the pinned npx tree.
+- `scripts/bench_julia_effort/` — the "reasoning effort" bench (Julia tasks, arms, judge,
+  `analyse.py`); run outputs (`runs/`, `_par/`, `resultats_*.jsonl`, `wire.jsonl`) stay
+  untracked by its own `.gitignore`. `python bench.py --selftest` is the mandatory control.
+- `scripts/freellm_key.py`, `scripts/freellm_demarrage.ps1` — FreeLLMAPI key reader and
+  start-up; route described in `docs/DSH_FREELLMAPI_ROUTE.md`.
+- `docs/DSH_QWEN_LOCAL_LOGBOOK.md` — dated logbook of what was measured on the local route.
+- `docs/LOCAL_LLM.md` — the local Qwen / llama.cpp serving setup on the RTX 4090. The
+  launchers and the 4090 benchmark **stay in `agentic-flow`** (they also serve that project);
+  this page is the pointer the harness needs.
