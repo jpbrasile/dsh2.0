@@ -2,7 +2,11 @@
 # Les versionner ferait vieillir un compte dans l arbre, et un compte qui
 # vieillit se cite comme une mesure.
 runs/
+# Le motif doit couvrir ce que le commentaire promet : le 23/08,
+# `resultats.jsonl` seul a laisse passer resultats_t31d_promesse2.jsonl
+# dans un commit. Une regle qui n attrape pas son cas type n en est pas une.
 resultats.jsonl
+resultats_*.jsonl
 wire.jsonl
 proxy.out
 sweep.log
