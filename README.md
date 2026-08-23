@@ -251,6 +251,9 @@ history; paths kept as they were so relative references still hold.
 - `scripts/freellm_key.py`, `scripts/freellm_demarrage.ps1` — FreeLLMAPI key reader and
   start-up; route described in `docs/DSH_FREELLMAPI_ROUTE.md`.
 - `docs/DSH_QWEN_LOCAL_LOGBOOK.md` — dated logbook of what was measured on the local route.
+- `docs/ETAT_DES_LIEUX_2026-08-23.md` — hand-over from the session that ran the campaigns:
+  what works, what does not (with numbers), open defects 4.1–4.8 and the prioritised to-do
+  P0–P6. **Read before any campaign; P1 and P2 first.**
 - `docs/LOCAL_LLM.md` — the local Qwen / llama.cpp serving setup on the RTX 4090. The
   launchers and the 4090 benchmark **stay in `agentic-flow`** (they also serve that project);
   this page is the pointer the harness needs.
