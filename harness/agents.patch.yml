@@ -92,5 +92,66 @@
         maxChars: 1200
         identifiers: [PlasmaDigitalTwin, plasma-digital-twin, agentic-flow-fresh]
 
-# tools-added: searcher mcp__context7__resolve-library-id mcp__context7__query-docs
+# ── inserted: the Julia test gate as a model tool (Phase 0.5 behind Phase 2) ──
+# Local plugin scripts/dsh-plugins/dsh-julia-gate: `julia_gate(files)` runs
+# scripts/julia_gate/porte.py (DSH_JULIA_GATE) on the project DSH_GATE_REPO
+# (default: cwd) and returns VERT / ORANGE / ROUGE / PANNE. ORANGE is not green.
+- insert:
+    - id: julia-gate
+      name: dsh-julia-gate
+      config:
+        budget: 30
+
+# ── inserted: the test wall (every agent of the process) ─────────────────────
+# Local plugin scripts/dsh-plugins/dsh-test-wall: no edit/write/delete under
+# `<cwd>/test` (and DSH_TEST_WALL roots), no Julia or test runner from the
+# shell, no `git checkout/restore/reset/stash/clean/rm/mv`. README red-team
+# angle "green diff by deleting or weakening tests": the coder cannot reach
+# the tests, and the gate is the only test runner. A wrong or missing test is
+# a structured failure the coder must report, not a file it may write.
+- insert:
+    - id: test-wall
+      name: dsh-test-wall
+
+# ── inserted: role `coder` -- the pinned worker, files + shell + gate ─────────
+# README: "bash + editor. Loop: edit -> targeted tests -> green diff or
+# structured failure. Full suite pre-merge only." Model = the Phase 0 pinned
+# worker (head of the `ouvrier` chain, PRIVATE+OPEN). No delegation (maxDepth 0
+# would forbid its own start; 1 = it may not delegate further).
+- insert:
+    - id: tool-subagent-coder
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: coder
+        backgroundMode: one-shot
+        enableRunInBackground: false
+        maxDepth: 1
+        agentOptions:
+          provider: openrouter
+          model: qwen/qwen3.8-27b
+          maxTokens: 8192
+        persona: >-
+          You are `coder`, the implementation delegate of a Julia project. Loop:
+          read the files you need, edit source files under src/, then call the
+          `julia_gate` tool with every .jl file you changed. VERT = done.
+          ORANGE = nothing failed but heavier suites are still pending: say so,
+          it is not green. ROUGE = read the error blocks, fix the source, call the
+          gate again (at most 3 rounds). You never create, edit or delete tests
+          and never run Julia yourself: if a test is wrong or missing, stop and
+          report a structured failure (file, line, expected vs observed). Final
+          message: the files you changed, the last gate verdict, and any failure.
+        toolFilter:
+          allow:
+            - read
+            - glob
+            - grep
+            - str_replace_editor
+            - edit
+            - write
+            - pwsh
+            - julia_gate
+            - todo_write
+
+# tools-added: searcher coder julia_gate mcp__context7__resolve-library-id mcp__context7__query-docs
 # tools-removed: subagent subagent_fork

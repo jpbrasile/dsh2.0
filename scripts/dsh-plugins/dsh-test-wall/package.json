@@ -1,0 +1,11 @@
+{
+  "name": "dsh-test-wall",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Mur de tests : le coder ne modifie ni ne supprime un fichier de test, ne lance pas de tests par le shell, ne restaure pas l'arbre par git -- le seul chemin vers un diff vert est la porte.",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  }
+}

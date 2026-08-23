@@ -1,0 +1,7 @@
+Delegate the following task to the `coder` tool in ONE call, passing the task text verbatim as its prompt. When it returns, write its final message verbatim into a file named CODER.md in the current workspace, then stop. Do not do the task yourself and do not read any source file.
+
+Task for the coder (Julia): in `src/physics/GasSpecies.jl`, add a helper
+
+    processes_of_type(g::AbstractGas, t::ProcessType) -> Vector
+
+that returns the collision processes of `g` whose `process_type(p) == t`, implemented with `filter` over `collision_processes(g)`, placed right after the `has_process` function, with a docstring in the same style as the neighbouring helpers. Add `processes_of_type` to the existing `export total_cross_section, get_process, has_process` line. Then run the test gate on that file and report its verdict. Do not touch any test file.

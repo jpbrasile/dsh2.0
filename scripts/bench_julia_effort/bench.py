@@ -885,6 +885,22 @@ def lancer_enregistreurs(voies):
     return procs
 
 
+def commande_dsh():
+    """La commande dsh sous forme de liste, SANS passer par le shim `dsh.cmd`.
+
+    Constate le 23/08 (phase 2, tache `coder`) : le shim est un fichier cmd.exe
+    qui transmet `%*` ; un argument contenant un retour a la ligne y est coupe a
+    la premiere ligne -- l'agent recevait "Delegate the following task ..." sans
+    la tache. Une tache multi-ligne passe donc par node + bin.js directement.
+    Le shim reste la reference pour un DSH_BIN qui n'est pas un .cmd.
+    """
+    if DSH.lower().endswith(".cmd"):
+        binjs = os.path.normpath(os.path.join(os.path.dirname(DSH), "..", "@deepseek-ai", "dsh", "lib", "bin.js"))
+        if os.path.exists(binjs):
+            return ["node", binjs]
+    return [DSH]
+
+
 def tuer_arbre(p):
     """Tue le processus ET tous ses descendants."""
     if os.name == "nt":

@@ -1,0 +1,11 @@
+{
+  "name": "dsh-julia-gate",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Outil modele `julia_gate` : la porte de tests Julia rapide (scripts/julia_gate/porte.py) rendue comme verdict structure VERT / ORANGE / ROUGE / PANNE.",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  }
+}

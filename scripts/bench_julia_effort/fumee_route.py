@@ -138,7 +138,10 @@ if A.tache_fichier:
 tache = A.tache or ("Create a file named PONG.txt in the current directory containing exactly the "
                     "single word PONG. Then stop. Do not ask questions.")
 env2 = dict(os.environ, DSH_HOME=acc)
-args = [bench.DSH, "--profile", "headless"]
+# Phase 2 : la porte Julia (dsh-julia-gate) et le projet qu'elle teste = l'espace de travail
+env2.setdefault("DSH_JULIA_GATE", os.path.join(os.path.dirname(os.path.dirname(BENCH)), "scripts", "julia_gate", "porte.py"))
+env2.setdefault("DSH_GATE_REPO", ws)
+args = bench.commande_dsh() + ["--profile", "headless"]
 for p in A.patch:
     args += ["--patch", os.path.abspath(p)]
 args.append(tache)
