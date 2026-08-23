@@ -1,0 +1,11 @@
+{
+  "name": "dsh-lecons",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Variable de prompt {{lecons}} : les observations distillees des sessions passees (harness/lecons.md), rendues comme donnees, jamais comme instructions.",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  }
+}

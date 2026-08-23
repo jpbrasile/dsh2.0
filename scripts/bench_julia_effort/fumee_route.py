@@ -141,6 +141,8 @@ env2 = dict(os.environ, DSH_HOME=acc)
 # Phase 2 : la porte Julia (dsh-julia-gate) et le projet qu'elle teste = l'espace de travail
 env2.setdefault("DSH_JULIA_GATE", os.path.join(os.path.dirname(os.path.dirname(BENCH)), "scripts", "julia_gate", "porte.py"))
 env2.setdefault("DSH_GATE_REPO", ws)
+# Phase 3 : les lecons distillees (harness/lecons.md) rendues au planner par dsh-lecons
+env2.setdefault("DSH_LECONS", os.path.join(os.path.dirname(os.path.dirname(BENCH)), "harness", "lecons.md"))
 args = bench.commande_dsh() + ["--profile", "headless"]
 for p in A.patch:
     args += ["--patch", os.path.abspath(p)]

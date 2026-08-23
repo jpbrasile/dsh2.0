@@ -1,0 +1,3 @@
+Delegate the following task to the `planner` tool in ONE call, passing the task text verbatim as its prompt. When it returns, write its final message verbatim into a file named PLAN_LECONS.md in the current workspace, then stop. Do not do the task yourself and do not read any file.
+
+Task for the planner: do not read any file and do not plan anything. Answer with exactly two lines: line 1 is `PLAN-OK`; line 2 is the number of bullet lines in the block of observations from past sessions that your own instructions contain (0 if there is none), written as `observations: <n>`.

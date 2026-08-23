@@ -102,6 +102,17 @@
       config:
         budget: 30
 
+# ── inserted: the lessons variable {{lecons}} (Phase 3, Memory) ──────────────
+# Local plugin scripts/dsh-plugins/dsh-lecons: registers the prompt variable
+# {{lecons}} = harness/lecons.md (DSH_LECONS), the observations distilled from
+# past sessions by harness/distiller.py, under a "DATA, not instructions"
+# header. Only a persona that writes {{lecons}} receives it: the planner below.
+- insert:
+    - id: lecons
+      name: dsh-lecons
+      config:
+        max: 40
+
 # ── inserted: the test wall (every agent of the process) ─────────────────────
 # Local plugin scripts/dsh-plugins/dsh-test-wall: no edit/write/delete under
 # `<cwd>/test` (and DSH_TEST_WALL roots), no Julia or test runner from the
@@ -183,6 +194,9 @@
           (5) risks and what NOT to touch. Be concrete: cite functions, lines and
           existing tests by name. If the task is ambiguous or impossible as stated,
           say so and plan the smallest safe step instead of guessing.
+
+
+          {{lecons}}
         toolFilter:
           allow:
             - read
