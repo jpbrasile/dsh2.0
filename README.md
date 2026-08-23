@@ -238,10 +238,19 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
       gate ORANGE ×3 read as "heavy suites pending", 9 calls 323 s 0.066 USD, parent +2.7k tokens.
       RT arm (free): edit of a testset → `test-wall: REFUS`, no shell/git fallback, report "did not".
       Limit: regex wall, not an OS sandbox. Details `docs/PHASE2.md` §3.
-- [ ] `planner` read-only on top PRIVATE route.
+- [x] `planner` read-only on top PRIVATE route.
       **⚑ RT:** attempt a write through the planner's tool set.
-- [ ] `claude-code` wrapper script; verify JSON parses and cost hits the meter.
+      2026-08-23: `tool-subagent-planner` on deepseek/deepseek-v4-pro (top-ranked PRIVATE+OPEN),
+      toolFilter read/glob/grep only. Plan for 4 capex helpers: 11 calls 347 s 0.066 USD, md5
+      untouched. RT arm: edit/write/bash/pwsh → `unknown tool` ×4, no file. Hidden cost: the
+      parent spends 202 s / 8k output tokens copying the plan to PLAN.md. `docs/PHASE2.md` §4.
+- [x] `claude-code` wrapper script; verify JSON parses and cost hits the meter.
       **⚑ RT:** escape --allowedTools / --max-turns; unmetered spend.
+      2026-08-23: `harness/claude_code.py` (task by file, --allowedTools/--max-turns/--max-budget-usd,
+      raw JSON kept, ledger written BEFORE any output, --reingerer). RT: Write/Bash/Edit denied, no
+      file (0.15 USD); max-turns 2 → error_max_turns, cost logged. Found: a cp1252 print crash
+      lost 0.31 USD of ledger twice → fixed + re-ingested. Cost is notional (account auth, no
+      API key). `docs/PHASE2.md` §5.
 - **Done (⚑ RT):** mid-sized real task passes planner → coder → green targeted
   tests → green full suite, flat orchestrator context, cost measured.
 

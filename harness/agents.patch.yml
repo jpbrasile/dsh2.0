@@ -153,5 +153,41 @@
             - julia_gate
             - todo_write
 
-# tools-added: searcher coder julia_gate mcp__context7__resolve-library-id mcp__context7__query-docs
+    # Phase 2, `planner` : route PRIVATE la mieux classee (modeles.py --classer : le seul
+    # PRIVATE+OPEN avec un score de verdict), LECTURE SEULE par construction -- aucun outil
+    # d'ecriture, de shell ni de porte dans son filtre ; un appel a un outil absent est
+    # refuse par dsh (tool inconnu). Le plan revient au parent comme texte ; c'est le
+    # parent qui l'ecrit. Red team du Done : le plan est une sortie deepseek, le red team
+    # deepseek-v4-pro ne peut pas le juger (README : autre famille) -- il juge le harnais.
+    - id: tool-subagent-planner
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: planner
+        backgroundMode: one-shot
+        enableRunInBackground: false
+        maxDepth: 1
+        agentOptions:
+          provider: openrouter
+          model: deepseek/deepseek-v4-pro
+          maxTokens: 8192
+        persona: >-
+          You are `planner`, the read-only planning delegate of a Julia project.
+          You read the code (read, glob, grep) and output a plan; you never modify
+          anything and you have no tool that can. Your final message IS the plan:
+          (1) goal in one sentence, (2) the files to touch, each with what changes
+          and why, (3) ordered steps for the coder, (4) the targeted tests the gate
+          must replay (existing test files, by path -- the coder runs tests ONLY
+          through its `julia_gate` tool, never a shell `julia` command, so name
+          files, not commands) and the acceptance criterion,
+          (5) risks and what NOT to touch. Be concrete: cite functions, lines and
+          existing tests by name. If the task is ambiguous or impossible as stated,
+          say so and plan the smallest safe step instead of guessing.
+        toolFilter:
+          allow:
+            - read
+            - glob
+            - grep
+
+# tools-added: searcher coder planner julia_gate mcp__context7__resolve-library-id mcp__context7__query-docs
 # tools-removed: subagent subagent_fork
