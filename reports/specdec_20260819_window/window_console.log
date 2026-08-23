@@ -1,0 +1,141 @@
+===== run_specdec_window -ApproveOutage (REAL) =====
+[window] out-dir: C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window
+[window] 8004 listener state recorded -> C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\state_8004_before.json (1 PID(s))
+[window] stopping production llama-server on :8004 (port-scoped, name-checked)...
+Stopping llama-server PID=24796 on :8004
+[window] ===== config q38-plain =====
+[window]   argv captured -> C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-plain.argv.txt (42 tokens)
+[window]   launcher started PID=37832, log -> C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-plain-server.log
+[window]   server healthy.
+[window]   running: python C:\Users\test\Documents\agentic-flow-fresh\bench\bench_specdec_4090.py --port 8005 --config-label q38-plain --argv-file C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-plain.argv.txt --reps 3 --server-log C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-plain-server.log --out-dir C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window --sha --model-path C:\Users\test\models\qwen38-27b\Qwen3.8-27B-Q4_K_M.gguf
+[bench] config-label=q38-plain endpoint=http://127.0.0.1:8005/v1/chat/completions
+[bench] warmup...
+[bench] warmup done
+[bench] w=code_module rep=1 ... ttft=0.5632s wall=12.6977s tok/s=40.322 tokens=512
+[bench] w=code_module rep=2 ... ttft=0.4299s wall=12.5576s tok/s=40.772 tokens=512
+[bench] w=code_module rep=3 ... ttft=0.4001s wall=12.497s tok/s=40.97 tokens=512
+[bench] w=prose_explain rep=1 ... ttft=0.3667s wall=9.307s tok/s=41.259 tokens=384
+[bench] w=prose_explain rep=2 ... ttft=0.4008s wall=9.3624s tok/s=41.015 tokens=384
+[bench] w=prose_explain rep=3 ... ttft=0.3675s wall=9.3416s tok/s=41.106 tokens=384
+[bench] w=tool_json rep=1 ... ttft=0.4012s wall=6.3311s tok/s=40.435 tokens=256
+[bench] w=tool_json rep=2 ... ttft=0.4346s wall=5.9085s tok/s=39.942 tokens=236
+[bench] w=tool_json rep=3 ... ttft=0.4068s wall=2.5951s tok/s=36.993 tokens=96
+[bench] wrote C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\run_q38-plain.json
+[bench] medians: {
+  "code_module": {
+    "ttft_s": 0.4299,
+    "wall_s": 12.5576,
+    "tok_per_s": 40.772,
+    "n_valid": 3
+  },
+  "prose_explain": {
+    "ttft_s": 0.3675,
+    "wall_s": 9.3416,
+    "tok_per_s": 41.106,
+    "n_valid": 3
+  },
+  "tool_json": {
+    "ttft_s": 0.4068,
+    "wall_s": 5.9085,
+    "tok_per_s": 39.942,
+    "n_valid": 3
+  }
+}
+[window]   bench exit=0
+[window]   8005 stopped.
+[window] ===== config q38-mtp =====
+[window]   argv captured -> C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-mtp.argv.txt (50 tokens)
+[window]   launcher started PID=38204, log -> C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-mtp-server.log
+[window]   server healthy.
+[window]   running: python C:\Users\test\Documents\agentic-flow-fresh\bench\bench_specdec_4090.py --port 8005 --config-label q38-mtp --argv-file C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-mtp.argv.txt --reps 3 --server-log C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-mtp-server.log --out-dir C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window --sha --model-path C:\Users\test\models\qwen38-27b\Qwen3.8-27B-Q4_K_M.gguf
+[bench] config-label=q38-mtp endpoint=http://127.0.0.1:8005/v1/chat/completions
+[bench] warmup...
+[bench] warmup done
+[bench] w=code_module rep=1 ... ttft=0.4912s wall=9.6074s tok/s=53.292 tokens=512
+[bench] w=code_module rep=2 ... ttft=0.3724s wall=10.284s tok/s=49.786 tokens=512
+[bench] w=code_module rep=3 ... ttft=0.4106s wall=9.6387s tok/s=53.119 tokens=512
+[bench] w=prose_explain rep=1 ... ttft=0.3226s wall=8.2721s tok/s=46.421 tokens=384
+[bench] w=prose_explain rep=2 ... ttft=0.3209s wall=7.772s tok/s=49.408 tokens=384
+[bench] w=prose_explain rep=3 ... ttft=0.324s wall=8.264s tok/s=46.466 tokens=384
+[bench] w=tool_json rep=1 ... ttft=0.3733s wall=1.6118s tok/s=62.041 tokens=100
+[bench] w=tool_json rep=2 ... ttft=0.2528s wall=3.3397s tok/s=73.36 tokens=245
+[bench] w=tool_json rep=3 ... ttft=0.3452s wall=3.8953s tok/s=65.721 tokens=256
+[bench] wrote C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\run_q38-mtp.json
+[bench] medians: {
+  "code_module": {
+    "ttft_s": 0.4106,
+    "wall_s": 9.6387,
+    "tok_per_s": 53.119,
+    "n_valid": 3
+  },
+  "prose_explain": {
+    "ttft_s": 0.3226,
+    "wall_s": 8.264,
+    "tok_per_s": 46.466,
+    "n_valid": 3
+  },
+  "tool_json": {
+    "ttft_s": 0.3452,
+    "wall_s": 3.3397,
+    "tok_per_s": 65.721,
+    "n_valid": 3
+  }
+}
+[window]   bench exit=0
+[window]   8005 stopped.
+[window] ===== config q38-dflash2 =====
+[window]   argv captured -> C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-dflash2.argv.txt (48 tokens)
+[window]   launcher started PID=34644, log -> C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-dflash2-server.log
+[window]   server healthy.
+[window]   running: python C:\Users\test\Documents\agentic-flow-fresh\bench\bench_specdec_4090.py --port 8005 --config-label q38-dflash2 --argv-file C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-dflash2.argv.txt --reps 3 --server-log C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\q38-dflash2-server.log --out-dir C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window --sha --model-path C:\Users\test\models\qwen38-27b\Qwen3.8-27B-Q4_K_M.gguf
+[bench] config-label=q38-dflash2 endpoint=http://127.0.0.1:8005/v1/chat/completions
+[bench] warmup...
+[bench] warmup done
+[bench] w=code_module rep=1 ... ttft=0.5342s wall=6.5489s tok/s=78.181 tokens=512
+[bench] w=code_module rep=2 ... ttft=0.3887s wall=7.9914s tok/s=64.069 tokens=512
+[bench] w=code_module rep=3 ... ttft=0.442s wall=7.731s tok/s=66.227 tokens=512
+[bench] w=prose_explain rep=1 ... ttft=0.3491s wall=7.3815s tok/s=52.022 tokens=384
+[bench] w=prose_explain rep=2 ... ttft=0.3365s wall=6.9721s tok/s=55.077 tokens=384
+[bench] w=prose_explain rep=3 ... ttft=0.3546s wall=7.2751s tok/s=52.783 tokens=384
+[bench] w=tool_json rep=1 ... ttft=0.4648s wall=1.987s tok/s=71.969 tokens=143
+[bench] w=tool_json rep=2 ... ttft=0.4734s wall=2.3523s tok/s=73.12 tokens=172
+[bench] w=tool_json rep=3 ... ttft=0.4328s wall=1.5507s tok/s=69.645 tokens=108
+[bench] wrote C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\run_q38-dflash2.json
+[bench] medians: {
+  "code_module": {
+    "ttft_s": 0.442,
+    "wall_s": 7.731,
+    "tok_per_s": 66.227,
+    "n_valid": 3
+  },
+  "prose_explain": {
+    "ttft_s": 0.3491,
+    "wall_s": 7.2751,
+    "tok_per_s": 52.783,
+    "n_valid": 3
+  },
+  "tool_json": {
+    "ttft_s": 0.4648,
+    "wall_s": 1.987,
+    "tok_per_s": 71.969,
+    "n_valid": 3
+  }
+}
+[window]   bench exit=0
+[window]   8005 stopped.
+[window] ===== FINALLY: restoring production on :8004 =====
+14:54:41 ===== restart_production =====
+14:54:41 Step 1: stop existing llama-server
+14:54:41 Stopping llama-server PID=36516
+14:54:46 Step 2: launch production launcher in background (mode=text)
+14:54:46   production launcher PID=10388
+14:54:46 Step 3: wait for /health
+14:54:57 SUCCESS: production back online on 8004
+14:54:57   /props sample: {"default_generation_settings":{"params":{"seed":4294967295,"temperature":0.6000000238418579,"dynatemp_range":0.0,"dynatemp_exponent":1.0,"top_k":20,"top_p":0.949999988079071,"min_p":0.0,"top_n_sigma"
+14:54:57 ===== Done. Orch log: C:\Users\test\restart-production.log =====
+[window] restart_production exit=0
+[window] production restore: HEALTHY
+===== WINDOW SUMMARY =====
+production_restored : True
+configs with results : 3/3
+report               : C:\Users\test\Documents\agentic-flow-fresh\reports\specdec_20260819_window\window_report.json
