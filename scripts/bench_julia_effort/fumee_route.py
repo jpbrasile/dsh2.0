@@ -213,7 +213,7 @@ if fautes and rc not in (0, None):
         if l.strip() and "warn" not in l.lower():
             print("  dsh :", l.strip()[:160])
             break
-print("VERDICT :", ("OK -- chaque appel servi par %s%s" % (MODELE, ", fichier ecrit" if attendu else ""))
+print("VERDICT :", ("OK -- chaque appel servi par %s%s%s" % (MODELE, "".join(" ou %s (%d)" % (m, sum(1 for c in calls if c.get("servi") == m)) for m in sorted(AUSSI.values())), ", fichier ecrit" if attendu else ""))
       if not fautes else "ECHEC -- " + " ; ".join(fautes) + " (voir _fumee/dsh_out.txt)")
 # Compteur de cout (Phase 1) : chaque run verse son fil dans harness/_cout/grand_livre.jsonl.
 # Le fil est ecrase au run suivant ; le grand livre, lui, reste. Campagne = FUMEE_CAMPAGNE

@@ -1,0 +1,11 @@
+{
+  "name": "dsh-query-wall",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Mur de requete : ce qu'un agent PRIVATE envoie a un sous-agent OPEN (searcher) ne porte ni code, ni chemin, ni nom du framework, ni secret.",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  }
+}

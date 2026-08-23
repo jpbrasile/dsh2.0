@@ -213,11 +213,23 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
   5 findings fixed, unit 43/43.
 
 ### 2 — Agent split (one worker at a time, each followed by a red-team gate)
-- [ ] `searcher`: verify orchestrator context stays flat during research turns.
+- [x] `searcher`: verify orchestrator context stays flat during research turns.
       **⚑ RT:** try to make a query carry framework code; check context growth.
-- [ ] Context7: probe resolve-library-id for the framework's top Julia dependencies;
+      2026-08-23: `harness/agents.patch.yml` (role `searcher` = `dsh-tool-subagent`,
+      fresh context, `stealth/ox-alpha` on `openrouter-auto`, Context7 tools only;
+      generic `subagent`/`subagent_fork` disabled) + `scripts/dsh-plugins/dsh-query-wall`
+      on the searcher prompt and the Context7 tools. Measured: parent +925 tokens for a
+      digest, child context (4 calls, ≤4 400 tokens) never in the parent. RT arm replayed
+      for free (`harness/taches/searcher_rt.txt`): 2 refusals, then a generic question
+      passes; `node harness/query_unit.mjs` 32/32. Limit: a paraphrase passes.
+      `docs/PHASE2.md`.
+- [x] Context7: probe resolve-library-id for the framework's top Julia dependencies;
       submit missing ones via context7.com/add-library (GitHub repo or Documenter
       docs URL); wire searcher routing docs-first, web-search fallback.
+      2026-08-23: `harness/context7_sonde.py`: 43 deps → 25 covered, 7 stdlib, 10 absent
+      (list + verified repo URLs in `docs/PHASE2.md` §2). NOT done: the submission (the
+      form needs a GitHub session — user's account) and the web-search fallback (global
+      tool layer would re-expose `web_search`/`web_fetch` to every worker).
 - [ ] `coder` wired to Phase 0.5 gate.
       **⚑ RT:** can the coder obtain a green diff by deleting or weakening tests?
 - [ ] `planner` read-only on top PRIVATE route.

@@ -1,0 +1,96 @@
+# Agents layer -- Phase 2 of the README, 2026-08-23. Third patch layer, applied
+# after Lean (and after open-wall.patch.yml on an OPEN worker):
+#
+#     dsh --profile headless --patch harness/lean.patch.yml --patch harness/agents.patch.yml "<task>"
+#
+# dsh 0.1.1-rc.2 has no agent registry: a named role is ONE loaded instance of
+# `@deepseek-ai/dsh-tool-subagent` (toolName = the role the model calls, its own
+# provider/model, persona, exact-name toolFilter, depth cap). MCP servers
+# register on the GLOBAL tool layer -- a child joins its parent's composition --
+# so Context7 is visible to the orchestrator too; the searcher's toolFilter is
+# context economy, not a wall (plugin README: "not a parent-derived authority
+# ceiling"). The walls stay: the sandbox (writes), dsh-read-wall on OPEN
+# workers (reads), dsh-secret-redactor (results) and, new here, dsh-query-wall
+# on the ONE channel from a PRIVATE parent to an OPEN child: the `prompt` of
+# the delegation tool.
+#
+# Measured by `node harness/query_unit.mjs` (free) and on the wire by
+# `python scripts/bench_julia_effort/fumee_route.py ... --patch <abs>/harness/agents.patch.yml --aussi openrouter-auto=stealth/ox-alpha`.
+
+# ── inserted: Context7 docs MCP (streamable-http; `sse` is not a dsh transport) ─
+# No key: the public endpoint answers resolve-library-id / query-docs without one
+# (measured 23/08, 43 framework deps probed by harness/context7_sonde.py). A key
+# would go in `headers:` from the credentials file, never inline.
+- insert:
+    - id: mcp-context7
+      name: '@deepseek-ai/dsh-mcp-client'
+      config:
+        serverName: context7
+        transport: streamable-http
+        url: https://mcp.context7.com/mcp
+        toolCallTimeoutMs: 60000
+        failOnStartupError: true      # a silent bridge failure = a missing tool, not a quiet fallback
+
+# ── inserted: role `searcher` -- fresh child on the `open` chain, Context7 only ─
+# provider `spawn` = fresh context (the child sees only its prompt); the parent
+# gets the child's final text only. Model = head of the `open` chain in
+# harness/chaines.yaml (OPEN, out of probation). Static here: regenerate by hand
+# when chaines.yaml changes (limit noted in docs/PHASE2.md).
+- insert:
+    - id: tool-subagent-searcher
+      name: '@deepseek-ai/dsh-tool-subagent'
+      config:
+        provider: spawn
+        toolName: searcher
+        backgroundMode: one-shot
+        enableRunInBackground: false  # the digest comes back inline, always
+        maxDepth: 1                   # the searcher may not delegate further
+        agentOptions:
+          provider: openrouter-auto
+          model: stealth/ox-alpha
+          maxTokens: 4096
+        persona: >-
+          You are `searcher`, a documentation research delegate. You can only query
+          Context7 (resolve-library-id, then query-docs with the returned id). You
+          have no file, shell or web tools and no memory of the caller's project.
+          Answer the question with a compact digest: the documented signature or
+          behaviour, version if stated, and the Context7 library id you used as the
+          source. Quote documentation, never invent an API. If Context7 has no
+          matching library, say so in one line and stop.
+        toolFilter:
+          allow:
+            - mcp__context7__resolve-library-id
+            - mcp__context7__query-docs
+
+# ── stripped: the GENERIC delegation tools ───────────────────────────────────
+# Measured 23/08 (red-team arm, harness/taches/searcher_rt.txt): told to paste
+# framework code into a research question, qwen3.8-27b skipped `searcher` and
+# called the generic `subagent` -- a child on ITS OWN route with all 21 tools,
+# 232 s on one call, run killed at 300 s. Not an OPEN leak (same PRIVATE
+# model), but an uncontrolled delegation the query wall does not cover. The
+# README's agent split names its workers; from this layer on, delegation
+# happens only through named roles. The scheduler SERVICE (subagent,
+# subagent-spawn-in-process) stays: `searcher` is built on it.
+- id: tool-subagent
+  disabled: true
+- id: tool-subagent-fork
+  disabled: true
+
+# ── inserted: the query wall on every channel that leaves the PRIVATE route ──
+# Local plugin scripts/dsh-plugins/dsh-query-wall (copied into the isolated
+# home by fumee_route.py, mounted by dsh.ps1 -InstallPlugins otherwise).
+# Covers the `searcher` prompt AND the Context7 tools themselves: MCP tools are
+# global, the orchestrator sees them, and a Context7 query is a request to a
+# third-party service. Every string argument of a covered tool is checked.
+# Roots come from DSH_READ_WALL (same source as dsh-read-wall); identifiers
+# name the framework so a prose mention is refused too.
+- insert:
+    - id: query-wall
+      name: dsh-query-wall
+      config:
+        tools: [searcher, mcp__context7__resolve-library-id, mcp__context7__query-docs]
+        maxChars: 1200
+        identifiers: [PlasmaDigitalTwin, plasma-digital-twin, agentic-flow-fresh]
+
+# tools-added: searcher mcp__context7__resolve-library-id mcp__context7__query-docs
+# tools-removed: subagent subagent_fork
