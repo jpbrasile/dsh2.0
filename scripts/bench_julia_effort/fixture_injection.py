@@ -530,6 +530,46 @@ else:
 _sh.rmtree(_dossier, ignore_errors=True)
 
 
+print("=== 9undecies. pre-vol : le modele demande est-il ANNONCE ? ===")
+import contextlib as _cl
+
+# known-ABSENT d abord : port 9 (discard), personne n ecoute.
+_rien = bench.modeles_annonces("127.0.0.1", 9, False, "/v1", delai=2)
+exiger(_rien is None, "known-ABSENT : dorsale injoignable -> None")
+exiger(_rien is not [] and _rien != [],
+       "et None n est PAS une liste vide : 'pas pu demander' n est pas 'ne sert rien'")
+
+_liste = bench.modeles_annonces("127.0.0.1", 8005, False, "/v1", delai=4)
+if _liste is None:
+    print("  (llama-server 8005 eteint : bras GOOD/BAD non parcourus)")
+else:
+    exiger("specdec-q38-mtp" in _liste,
+           "known-GOOD : la dorsale locale annonce bien specdec-q38-mtp")
+    exiger("specdec-q38-plain-vision" not in _liste,
+           "known-BAD : le nom par defaut du banc n est PAS servi -- le cas vise")
+
+    _sauve = (bench.MODELE, bench.TLS_PAR, bench.CHEMIN_PAR)
+    bench.TLS_PAR, bench.CHEMIN_PAR = False, "/v1"
+    try:
+        bench.MODELE = "specdec-q38-plain-vision"
+        _b = io.StringIO()
+        with _cl.redirect_stdout(_b):
+            bench.prevol_modele("127.0.0.1", 8005)
+        _mauvais = _b.getvalue()
+        bench.MODELE = "specdec-q38-mtp"
+        _b = io.StringIO()
+        with _cl.redirect_stdout(_b):
+            bench.prevol_modele("127.0.0.1", 8005)
+        _bon = _b.getvalue()
+    finally:
+        bench.MODELE, bench.TLS_PAR, bench.CHEMIN_PAR = _sauve
+
+    exiger("ATTENTION" in _mauvais, "paire decisive : le nom perime declenche l avertissement")
+    exiger("specdec-q38-mtp" in _mauvais, "et l avertissement NOMME ce qui est reellement servi")
+    exiger("ATTENTION" not in _bon, "le nom servi ne declenche RIEN -- la sonde ne crie pas toujours")
+    exiger("annonce" in _bon, "et elle le confirme explicitement")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2

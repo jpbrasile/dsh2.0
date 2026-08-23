@@ -782,6 +782,67 @@ def _ports_libres(voies):
     return True
 
 
+def modeles_annonces(hote, port, tls=False, chemin="/v1", delai=8):
+    """Ce que la dorsale DIT servir, ou None si on n a pas pu demander.
+
+    None n est PAS une liste vide. "je n ai pas pu demander" et "elle ne sert
+    rien" sont deux faits opposes ; les confondre ferait refuser une campagne
+    parfaitement saine sur une dorsale qui n expose simplement pas /models.
+    """
+    import http.client as hc
+    cx = None
+    try:
+        cx = (hc.HTTPSConnection(hote, int(port), timeout=delai) if tls
+              else hc.HTTPConnection(hote, int(port), timeout=delai))
+        cx.request("GET", chemin.rstrip("/") + "/models",
+                   headers={"Host": hote, "Accept": "application/json"})
+        r = cx.getresponse()
+        if r.status != 200:
+            return None
+        d = json.loads(r.read().decode("utf-8", "replace"))
+    except Exception:
+        return None
+    finally:
+        if cx is not None:
+            try:
+                cx.close()
+            except Exception:
+                pass
+    lst = d.get("data") if isinstance(d, dict) else None
+    if not isinstance(lst, list):
+        return None
+    return [m.get("id") for m in lst if isinstance(m, dict) and m.get("id")]
+
+
+def prevol_modele(hote, port):
+    """Le modele demande est-il ANNONCE par la dorsale ? Dit avant, pas apres.
+
+    Un llama-server qui recoit un nom inconnu ne refuse pas : il sert son
+    modele unique. La campagne compare alors une ETIQUETTE, pas un modele, et
+    rien dans la sortie ne le montre. Mesure du 22/08 : le nom par defaut du
+    banc (specdec-q38-plain-vision) etait perime, la dorsale ne servait que
+    specdec-q38-mtp. Le fil dit deja la verite APRES coup, dans `servis` ;
+    ceci la dit AVANT, en deux secondes au lieu de deux heures.
+
+    AVERTISSEMENT, jamais refus : `servis` reste l instrument qui tranche, et
+    une liste qu on n a pas pu obtenir ne doit tuer aucune campagne saine.
+    """
+    servis = modeles_annonces(hote, port, TLS_PAR, CHEMIN_PAR)
+    if servis is None:
+        print("pre-vol : /models sans reponse -- modele NON VERIFIE "
+              "(le fil le dira apres coup, champ `servis`)")
+    elif MODELE not in servis:
+        reste = len(servis) - 6
+        print("pre-vol : ATTENTION, le modele demande n est PAS annonce.")
+        print("  demande : %s" % MODELE)
+        print("  annonces: %s%s" % (", ".join(servis[:6]),
+                                    (" (+%d)" % reste) if reste > 0 else ""))
+        print("  la campagne CONTINUE : lire `servis` dans les enregistrements.")
+    else:
+        print("pre-vol : %s est annonce par la dorsale." % MODELE)
+    return servis
+
+
 def lancer_enregistreurs(voies):
     """Un enregistreur par ouvrier, chacun sur SON port et SON journal."""
     _ports_libres(voies)
@@ -795,6 +856,7 @@ def lancer_enregistreurs(voies):
         hote, port = AMONT_PAR, ("443" if TLS_PAR else "80")
         print("amont sans port : %s -> %s:%s (TLS=%s)"
               % (AMONT_PAR, hote, port, TLS_PAR))
+    prevol_modele(hote, port)
     procs = []
     for acc, k, wire, base in voies:
         if os.path.exists(wire):
@@ -1439,8 +1501,14 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
         # nombre pour deux faits opposes, et se lit comme la branche parcourue.
         faites = sum(1 for x in recherches if x.get("requete"))
         refus = len(recherches) - faites
-        print("  r%d %-6s %s  %-4s  %6.1fs  julia=%-3s tours=%-2d rech=%d/%-2d %s%s"
-              % (rep, effort, tache, v, dt, fj(julia_runs), len(par_tour),
+        # Le BRAS sur la ligne, en campagne entrelacee. Sans lui la ligne dit
+        # `w1` -- un numero d ouvrier, qui ne designe aucun bras puisque les
+        # unites sont melangees expres. Il fallait rouvrir le jsonl pour savoir
+        # QUI venait de passer. Hors entrelacement la colonne reste absente :
+        # le bras est constant et deja dans l en-tete.
+        nb = ("%-8s " % rec.get("bras")) if BRAS_MULTI else ""
+        print("  r%d %-6s %s %s %-4s  %6.1fs  julia=%-3s tours=%-2d rech=%d/%-2d %s%s"
+              % (rep, effort, tache, nb, v, dt, fj(julia_runs), len(par_tour),
                  faites, refus, "" if slot is None else "w%-2d " % slot,
                  "" if v == "PASS" else (why or "")[:44]))
         sys.stdout.flush()
