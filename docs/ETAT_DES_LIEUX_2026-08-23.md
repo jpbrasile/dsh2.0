@@ -11,6 +11,14 @@
 > chiffre ci-dessous) · en plus : bras + slot dans la clé d'attribution (`bras_melanges_bad`),
 > `analyse.py _par/<etiq>` assemble les fils des ouvriers.
 > Le corps ci-dessous est le document du pair, inchangé.
+>
+> **Décision du 2026-08-23 (utilisateur) : campagnes gelées.** P0, P3, P5, P6 passent à
+> « plus tard ». Priorité : mettre au point le harnais dsh2.0 (README) sur OpenRouter —
+> ouvrier `qwen/qwen3.8-27b`, red team d'une autre famille (`deepseek/deepseek-v4-pro`) —
+> parce que le local n'est pas un levier de vitesse (§2.2) et que les API gratuites meurent
+> en route (§2.1). Local et FreeLLMAPI viendront quand le harnais passe ses contrôles. Le
+> selftest, le juge, l'enregistreur et les fixtures restent l'instrument de mesure du
+> harnais ; P4 (exécuter avant de dire fini) entre dans la consigne du harnais.
 
 # Passer de Claude Code à dsh + LLM locaux ou gratuits
 
