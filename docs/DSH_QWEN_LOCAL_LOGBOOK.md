@@ -1379,6 +1379,58 @@ solution.jl » ait disparu du cas coupé.
 la section « tours coupés par le délai » de `analyse.py`, et l'énoncé conservé
 `runs/t31_noweb/r02/medium/t31/TASK.md`.
 
+### §3.25 — Le bras « avec recherche » a gagné 3–1 en ne cherchant qu'une seule fois
+
+Six runs sur t31, énoncé corrigé, mêmes réglages :
+
+```
+  t31b_web   r1 PASS [CCP] rech=0    r2 PASS [FP] rech=1    r3 PASS [CCP] rech=0
+  t31b_noweb r1 FAIL [CFC] rech=0    r2 FAIL [CCC] rech=0   r3 PASS [FCP] rech=0
+  (P=passé  F=jugé et raté  C=coupé au délai, jamais jugé)
+```
+
+Trois sur trois contre un sur trois — et **une seule recherche sur les trois
+runs**. Les deux autres réussites se sont faites avec zéro. L'écart ne peut
+donc pas être attribué à l'information injectée : dans deux cas sur trois, il
+n'y en a pas eu.
+
+Ce qui distingue alors ces runs est une **phrase du préambule**, présente dans
+le seul bras web :
+
+> *If you get stuck, the harness runs one for you and puts the excerpts in the
+> next attempt statement.*
+
+Le bras « avec recherche » est aussi le bras à qui on a dit **qu'un secours
+viendrait**. L'hypothèse qui reste debout après ces six runs n'est plus
+« chercher aide » mais « savoir qu'on peut être aidé change la façon de
+dépenser son temps ». Elle se teste, et pas cher : il suffit de donner la
+phrase sans jamais fournir la recherche.
+
+> **Ce que la comparaison a coûté avant d'être lisible.** Le préambule de
+> boucle n'allait qu'au bras avec recherche : le bras sans ne savait même pas
+> qu'il aurait plusieurs tentatives. Une comparaison publiée a dû être retirée
+> à la main. Depuis, chaque run enregistre l'empreinte de l'énoncé reçu, et
+> `analyse.py --comparer` affiche l'avertissement de provenance **avant** le
+> score.
+
+**Le budget mord plus fort que l'information.** Sur les 17 tours joués, **10
+n'ont reçu aucun verdict** — coupés à 10 minutes. Un run n'a été jugé aucune
+fois sur ses trois tours, avec 30 exécutions de Julia derrière : il travaillait,
+il n'avait pas le temps. La mesure suivante est donc le budget à somme
+constante — 3 tours de 600 s contre 2 tours de 900 s — et non un axe de plus.
+
+**Ce que le message corrigé a changé, et ce qu'il n'a pas changé.** Il n'a pas
+réduit les coupures (4 tours sur 8 dans le bras web, contre 1 sur 7 avant). Il
+a changé leur coût : deux runs se sont relevés de **deux coupures
+consécutives**, cas qui ne s'était produit aucune fois auparavant, quand le
+seul run à trois coupures n'était jamais revenu. Mais il ne suffit pas — un
+`C C C` a de nouveau eu lieu, avec le bon message sous les yeux.
+
+**Instrument :** `resultats_t31b_web.jsonl`, `resultats_t31b_noweb.jsonl`,
+`analyse.py --comparer`, et la vérification au codepoint que `bench.py` n'a
+changé entre les deux bras que par l'ajout de l'empreinte (`git diff
+f690a051..8dd928bb`).
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
