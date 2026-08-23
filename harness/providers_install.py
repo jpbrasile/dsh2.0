@@ -22,6 +22,7 @@ import argparse, io, os, re, shutil, sys, time
 
 ICI = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(ICI, "providers.yaml")
+EMIS = os.environ.get("DSH_PROVIDERS_EMIS") or os.path.join(ICI, "providers.emis.yaml")  # genere par modeles.py (Phase 1) ; lu s'il existe
 HOME = os.path.join(os.path.expanduser("~"), ".dsh")
 VIVANT = os.path.join(HOME, "settings.yaml")
 CRED = os.path.join(HOME, ".credentials.yaml")
@@ -34,22 +35,35 @@ A = ap.parse_args()
 import yaml  # noqa: E402
 
 # 1. blocs du depot, en texte, re-indentes de 2 (providers: a 2 -> llm-pi-ai.providers a 4)
+def decouper(texte):
+    blocs, nom, cour, ordre = {}, None, [], []
+    for l in texte.split("\n"):
+        m = re.match(r"^  ([A-Za-z0-9_-]+):\s*$", l)
+        if m:
+            if nom: blocs[nom] = cour
+            nom, cour = m.group(1), [l]
+            ordre.append(nom)
+        elif nom is not None:
+            if l.startswith("  ") or l.strip() == "":
+                cour.append(l)
+            else:
+                blocs[nom] = cour; nom, cour = None, []
+    if nom: blocs[nom] = cour
+    return blocs, ordre
+
+
 texte = io.open(SRC, encoding="utf-8").read()
-lignes = texte.split("\n")
-blocs, nom, cour = {}, None, []
-ordre = []
-for l in lignes:
-    m = re.match(r"^  ([A-Za-z0-9_-]+):\s*$", l)
-    if m:
-        if nom: blocs[nom] = cour
-        nom, cour = m.group(1), [l]
-        ordre.append(nom)
-    elif nom is not None:
-        if l.startswith("  ") or l.strip() == "":
-            cour.append(l)
-        else:
-            blocs[nom] = cour; nom, cour = None, []
-if nom: blocs[nom] = cour
+blocs, ordre = decouper(texte)
+if os.path.exists(EMIS):
+    # le bloc emis est lu a part, memes regles, meme parseur ; un nom deja present dans
+    # providers.yaml est REFUSE (red team 1-done : un bloc `openrouter` emis ecraserait la route payante)
+    te = io.open(EMIS, encoding="utf-8").read()
+    be, oe = decouper(te)
+    collision = [n for n in oe if n in blocs]
+    if collision:
+        print("providers_install : bloc(s) emis en collision avec providers.yaml : %s -- rien ecrit" % ", ".join(collision))
+        raise SystemExit(3)
+    blocs.update(be); ordre += oe; texte += "\n" + te
 for n in blocs:
     while blocs[n] and blocs[n][-1].strip() == "":
         blocs[n].pop()

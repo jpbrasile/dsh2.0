@@ -202,4 +202,39 @@ if fautes and rc not in (0, None):
             break
 print("VERDICT :", ("OK -- chaque appel servi par %s%s" % (MODELE, ", fichier ecrit" if attendu else ""))
       if not fautes else "ECHEC -- " + " ; ".join(fautes) + " (voir _fumee/dsh_out.txt)")
+# Compteur de cout (Phase 1) : chaque run verse son fil dans harness/_cout/grand_livre.jsonl.
+# Le fil est ecrase au run suivant ; le grand livre, lui, reste. Campagne = FUMEE_CAMPAGNE
+# (redteam_run.py la pose) sinon provider/modele. Un echec d'ingestion ne change pas le verdict.
+if calls:
+    try:
+        sys.path.insert(0, os.path.join(os.path.dirname(BENCH), "..", "harness"))
+        import cout as _cout
+        n_aj, n_tot, ign = _cout.ingerer(wire, os.environ.get("FUMEE_CAMPAGNE") or "%s/%s" % (PROVIDER, MODELE))
+        usd = sum(float((c.get("usage") or {}).get("cost") or 0) for c in calls)
+        ci = sum(int(((c.get("usage") or {}).get("prompt_tokens_details") or {}).get("cached_tokens") or 0) for c in calls)
+        pi = sum(int((c.get("usage") or {}).get("prompt_tokens") or 0) for c in calls)
+        print("cout : %.4f USD ce run, cache %.0f%% (%d/%d tokens d'entree) ; grand livre +%d (%d appels)%s" % (
+            usd, (100.0 * ci / pi) if pi else 0.0, ci, pi, n_aj, n_tot, " ; %d doublon(s) ignore(s)" % len(ign) if ign else ""))
+        for x in ign:
+            print("   ", x)
+    except Exception as e:  # noqa: BLE001
+        print("cout : ingestion echouee (%s) -- le fil reste dans %s" % (e, wire))
+# Verdict de modele (Phase 1, red team 1-done HIGH) : chaque run dont TOUS les appels ont ete servis
+# par le modele demande note VERT (run OK) ou ROUGE (echec) dans harness/modeles.sqlite sous le preset
+# effectif (`minimal` = stock sans --patch, sinon le nom du patch) ; N_VERTS verts sous `minimal`
+# levent la probation d'un modele OPEN (voir modeles.py). FUMEE_SANS_VERDICT=1 pour ne rien noter.
+if calls and not os.environ.get("FUMEE_SANS_VERDICT"):
+    if all(c.get("servi") == MODELE for c in calls):
+        preset = "minimal" if not A.patch else "+".join(re.sub(r"\.patch\.ya?ml$", "", os.path.basename(p)) for p in A.patch)
+        tache = "fumee:" + (os.path.basename(A.tache_fichier) if A.tache_fichier else ("PONG" if A.tache is None else A.tache[:40]))
+        try:
+            r = subprocess.run([sys.executable, os.path.join(os.path.dirname(BENCH), "..", "harness", "modeles.py"),
+                                "--verdict", MODELE, "--tache", tache, "--preset", preset,
+                                "--vert" if not fautes else "--rouge", "--note", "%s ; %d appels ; %.1fs ; %s" % (PROVIDER, len(calls), dt, " ; ".join(fautes)[:200])],
+                               capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
+            print("verdict note :", ((r.stdout or r.stderr).strip().splitlines() or ["?"])[-1])
+        except Exception as e:  # noqa: BLE001
+            print("verdict non note (%s)" % e)
+    else:
+        print("verdict non note : au moins un appel servi par un autre modele que %s" % MODELE)
 raise SystemExit(0 if not fautes else 1)

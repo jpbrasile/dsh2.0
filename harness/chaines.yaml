@@ -1,0 +1,26 @@
+# GENERE par harness/modeles.py --emettre -- chaines de repli lues par les scripts du harnais
+# (fumee_route.py, les ouvriers de la phase 2), pas par dsh. Ordre = ordre d'essai.
+# Regle : une chaine PRIVATE ne contient que des PRIVATE+OPEN ; `open` et `probation` ne
+# contiennent que des OPEN. L'ouvrier et le red team epingles (Phase 0) restent en tete.
+
+ouvrier:   # PRIVATE+OPEN -- epingle d'abord, puis les moins chers du catalogue
+  - qwen/qwen3.8-27b   # epingle (Phase 0)
+  - inclusionai/ling-2.6-flash   # PRIVATE+OPEN, ctx 262144, prix pondere 0.43 $/M
+  - mistralai/mistral-nemo   # PRIVATE+OPEN, ctx 131072, prix pondere 0.79 $/M
+  - inclusionai/ling-3.0-flash   # PRIVATE+OPEN, ctx 262144, prix pondere 0.90 $/M
+  - nex-agi/nex-n2-mini   # PRIVATE+OPEN, ctx 262144, prix pondere 1.10 $/M
+
+redteam:   # PRIVATE+OPEN, autre famille que l'ouvrier qwen/qwen3.8-27b
+  - deepseek/deepseek-v4-pro   # epingle (Phase 0)
+  - inclusionai/ling-2.6-flash   # PRIVATE+OPEN, ctx 262144, prix pondere 0.43 $/M
+  - mistralai/mistral-nemo   # PRIVATE+OPEN, ctx 131072, prix pondere 0.79 $/M
+  - inclusionai/ling-3.0-flash   # PRIVATE+OPEN, ctx 262144, prix pondere 0.90 $/M
+
+open:      # OPEN only, hors probation
+  - stealth/ox-alpha   # OPEN, ctx 1048576, prix pondere 0.00 $/M
+
+probation: # OPEN only, faible enjeu (harnais) jusqu'a 3 verts sous minimal
+  - dots-studio/dots-3-note-preview:free   # OPEN probation, ctx 512000, prix pondere 0.00 $/M
+  - liquid/lfm-2.5-2.6b:free   # OPEN probation, ctx 65536, prix pondere 0.00 $/M
+  - nvidia/nemotron-3.5-lightning:free   # OPEN probation, ctx 1000000, prix pondere 0.00 $/M
+  - thinkingmachines/inkling-small:free   # OPEN probation, ctx 262144, prix pondere 0.00 $/M

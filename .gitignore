@@ -9,3 +9,5 @@ __pycache__/
 .opencode/websearch.jsonl
 _wall_probe/
 _rt_scratch/
+harness/modeles.sqlite
+harness/_cout/

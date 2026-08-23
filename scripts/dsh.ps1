@@ -43,6 +43,7 @@ param(
     [string] $QuarantineSession,                     # deplacer UN journal de session fautif
     [switch] $SkipSessionCheck,                      # sauter le preflight du magasin de sessions
     [switch] $SkipTreeCheck,                         # sauter le preflight de coherence de l'arbre
+    [switch] $SkipModelRefresh,                      # sauter la boucle modeles (harness/modeles.py --session)
     [string] $DshVersion = '0.1.1-rc.2',             # version de @deepseek-ai/dsh a lancer
     [switch] $InstallRuntime,                        # (re)construire l'arbre EPINGLE de cette version
     [switch] $InstallPlugins,                        # monter scripts/dsh-plugins/ dans les profils
@@ -99,6 +100,9 @@ PARAMETRES
                     ~/.dsh/runtime/dsh-<v>, puis sort. A faire UNE fois par
                     version ; ensuite le boot le prefere a npx tout seul.
   -SkipTreeCheck    Sauter le preflight de coherence de l'arbre (voir plus bas).
+  -SkipModelRefresh Sauter la boucle modeles du demarrage (harness/modeles.py --session :
+                    catalogue OpenRouter -> modeles.sqlite -> providers.emis.yaml ; installe le
+                    bloc `openrouter-auto` dans settings.yaml seulement s'il a change).
   -InstallVision    Cable la chaine image de bout en bout dans les profils : le
                     serveur MCP scripts/dsh-mcp/effitech-image (qui rend une
                     photo d'effitech.eu comme BLOC IMAGE), une instance de
@@ -630,17 +634,21 @@ $env:DSH_TELEMETRY_DISABLED = '1'          # en plus du defaut DISABLED du paque
 $env:DSH_LOCAL_API_KEY      = 'local-dummy' # llama.cpp ne verifie rien, mais la
                                             # reference doit resoudre vers QUELQUE chose
 
-$envFile = Join-Path $RepoRoot '.env'
-$orKey = $null
-if (Test-Path $envFile) {
-    $hit = Get-Content $envFile | Where-Object { $_ -like 'OPENROUTER_API_KEY=*' } | Select-Object -First 1
-    if ($hit) { $orKey = ($hit -replace '^OPENROUTER_API_KEY=', '').Trim().Trim('"').Trim("'") }
+# Phase 0 (23/08) : les cles vivent dans ~/.dsh/.credentials.yaml SEULEMENT (dsh-credentials-local
+# les resout depuis les references apiKeyEnv). Le .env du depot et les variables d'environnement
+# utilisateur ont ete vides ce jour-la ; ce bloc ne charge plus rien, il VERIFIE que la reference
+# de chaque route openrouter* a une valeur dans le fichier, et le dit sans jamais l'afficher.
+$credFile = Join-Path $env:USERPROFILE '.dsh\.credentials.yaml'
+$orDansCred = $false
+if (Test-Path $credFile) {
+    $orDansCred = [bool](Get-Content $credFile | Where-Object { $_ -match '^\s*OPENROUTER_API_KEY\s*:\s*\S' })
 }
-if ($orKey) {
-    $env:OPENROUTER_API_KEY = $orKey
-    Write-Host ("cle OpenRouter chargee depuis .env (longueur {0}, jamais affichee)" -f $orKey.Length)
+if ($orDansCred) {
+    Write-Host "cle OpenRouter : presente dans ~/.dsh/.credentials.yaml (jamais affichee)"
+} elseif ($env:OPENROUTER_API_KEY) {
+    Write-Warning "OPENROUTER_API_KEY vient de l'ENVIRONNEMENT, pas du fichier de credentials : contraire a la regle Phase 0 (un seul endroit)."
 } else {
-    Write-Warning "OPENROUTER_API_KEY absente du .env : les routes openrouter* refuseront (MISSING_CREDENTIAL). La route 'local' fonctionne quand meme."
+    Write-Warning "OPENROUTER_API_KEY absente de ~/.dsh/.credentials.yaml : les routes openrouter* refuseront (MISSING_CREDENTIAL). La route 'local' fonctionne quand meme."
 }
 
 # --- ingredient 3 : QUELLE route est active, et son serveur -----------------
@@ -736,6 +744,24 @@ if (-not $SkipTreeCheck) {
         }
     } else {
         Write-Warning "preflight absent ($treeChecker) : un arbre npx incoherent ne sera pas nomme."
+    }
+}
+
+# --- boucle modeles (README, Loops 1) : catalogue -> SQLite -> config emise --------
+# Phase 1. Decrit, n'interdit rien : sans reseau, la base et le bloc emis restent ceux
+# du dernier demarrage reussi et le lancement suit. Detail : harness/modeles.py.
+if (-not $SkipModelRefresh) {
+    $modeles = Join-Path (Split-Path $PSScriptRoot -Parent) 'harness\modeles.py'
+    if (Test-Path $modeles) {
+        $mr = & python $modeles --session 2>&1
+        if ($LASTEXITCODE -eq 0) {
+            $mr | Where-Object { $_ -match '^(rafraichi|emis|providers_install)' } | ForEach-Object { Write-Host ("modeles     : " + $_) }
+        } else {
+            Write-Warning ("boucle modeles : rc=" + $LASTEXITCODE + " -- config precedente conservee")
+            $mr | Select-Object -Last 3 | ForEach-Object { Write-Host ("  " + $_) }
+        }
+    } else {
+        Write-Warning "boucle modeles absente ($modeles) : pas de rafraichissement du catalogue."
     }
 }
 

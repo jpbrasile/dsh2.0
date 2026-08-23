@@ -1,0 +1,23 @@
+You are the red team for Phase 1 ("Model loop") of the dsh2.0 harness. The worker claims the phase's Done criterion is met: "new OpenRouter stealth model reaches the OPEN chain in one session start; one day's cost + cache-hit rate visible." Your job is to FALSIFY it with evidence, or say precisely why it holds. Write the running report FIRST (see the last paragraph).
+
+What the worker built (read-only, current directory = dsh2.0 repo):
+- `harness/modeles.py`: OpenRouter catalog -> SQLite `harness/modeles.sqlite` -> ranking -> emitted config `harness/providers.emis.yaml` (provider block `openrouter-auto`, claimed OPEN-only) and `harness/chaines.yaml` (fallback chains). `--session` = refresh + emit + `providers_install.py` (writes `~/.dsh/settings.yaml`) only when the emitted text changed. `scripts/dsh.ps1` calls `--session` before boot.
+- `harness/modeles_unit.py`: the worker's own free unit control (37/37 claimed). `harness/cout.py`: cost ledger `harness/_cout/grand_livre.jsonl` fed by `scripts/bench_julia_effort/fumee_route.py` from the recorder proxy's `wire.jsonl` (`usage.cost`, `cached_tokens`).
+- `docs/PHASE1.md`: the worker's measurements and stated limits. Read it first: a limit already stated there is NOT a finding; an overclaim is.
+You may run, free of charge: `python harness/modeles_unit.py`, `python harness/modeles.py --classer`, `python harness/modeles.py --emettre --base <a COPY of modeles.sqlite in _rt_scratch/>`, `python harness/modeles.py --rafraichir --catalogue <your own JSON> --base _rt_scratch/x.sqlite`, `python harness/cout.py`, `python harness/cout.py --csv`. Never run `--session` (it writes settings.yaml), never run `fumee_route.py` or `redteam_run.py` (paid agents), never modify a tracked file. Work in `_rt_scratch/` with `--base` and `--livre` copies.
+
+Attack surface -- TWO angles only, in this order:
+1. Can a probation or stealth (OPEN-only) model reach a PRIVATE route or a high-stakes task? Attack `modeles.py` with your own catalog JSON files via `--catalogue` and `--base _rt_scratch/x.sqlite`: crafted ids (unicode, case, `:free` in the middle, `stealth/` with spaces, very long ids, prefix tricks like `stealth-x/`), crafted prices (strings like "1e-9", "0.0", booleans, nested objects), crafted `supported_parameters`, and the `--verdict` path (can verdicts change the tier? can a rouge lift probation? preset spoofing?). Then check the emission: does `providers.emis.yaml` or `chaines.yaml` ever carry a non-OPEN id into `openrouter-auto` or an OPEN id into `ouvrier`/`redteam`? Is the invariant check in `--emettre` bypassable (e.g. a model that is OPEN in the DB at emit time but paid in the live catalog)? Does `providers_install.py` apply the emitted block to ANY provider other than `openrouter-auto` (block-name collision: what if the emitted file contained a block named `openrouter`)?
+2. Is the cost/cache figure honest? Read `harness/cout.py`: the dedupe key, what happens with `usage` missing, with `cost` = 0 on a paid model, with two runs in the same millisecond; what the ledger does NOT contain (read PHASE1.md §4 first -- the direct interactive route is a stated limit). Check `fumee_route.py`'s ingestion hook: can a failed ingestion hide a cost? Does `redteam_run.py` pass the campaign name? Reproduce with `python harness/cout.py --livre _rt_scratch/l.jsonl --ingerer <a JSONL you craft>`.
+
+Output format (this is the whole report; no preamble):
+## Findings
+For each: `### [HIGH|MEDIUM|LOW] <title>`, `Claim attacked:`, `Reproduction:` (exact commands/files), `Evidence:` (quoted output), `Why it matters:`.
+## What I checked and did not break
+One line per check with the command and the result.
+## Verdict
+`DONE-CLAIM HOLDS` / `DONE-CLAIM HOLDS WITH LOW/MEDIUM FINDINGS` / `DONE-CLAIM FALSIFIED` -- one sentence why.
+
+Rules: modify nothing tracked; everything you create goes under `_rt_scratch/`. Do not ask questions -- finish and stop.
+
+TIME AND REPORT DISCIPLINE (mandatory): you have about 12 minutes of wall-clock; the run is killed at 15. Create `_rt_scratch/rapport.md` in the current directory BEFORE your first check and APPEND each finding or "checked, not broken" line to it as soon as you have it (use the write/edit tools; keep the Output format above). The operator reads that file if you run out of time, so an unwritten finding is a lost finding. After roughly 10 minutes (or 25 tool calls, whichever comes first), stop exploring, write the `## Verdict` section into the file with what you have, then print the whole file content as your final answer and stop. Do not read large files whole: grep them for what you need.

@@ -187,14 +187,30 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
   as green — no redesign needed.
 
 ### 1 — Model loop
-- [ ] Refresh script → SQLite: models(id, provider, ctx, tool_calls, free, stealth,
+- [x] Refresh script → SQLite: models(id, provider, ctx, tool_calls, free, stealth,
       probation, tier, first_seen, last_seen, task_scores). Rank → emit config.
-- [ ] Stealth injection with probation + tier. Hook into session start.
+      2026-08-23: `harness/modeles.py` (`--rafraichir --classer --emettre`), 422 models,
+      267 candidates; emits `harness/providers.emis.yaml` (block `openrouter-auto`, OPEN
+      only) + `harness/chaines.yaml` (fallback chains). `docs/PHASE1.md`.
+- [x] Stealth injection with probation + tier. Hook into session start.
       **⚑ RT:** feed a malformed catalog and a fake model entry; try to get a
       probation model onto a PRIVATE route or a high-stakes task.
-- [ ] cost-meter + dsh-context installed, real prices, cache-hit visible.
+      2026-08-23: tier/probation computed from the catalog only; `dsh.ps1` runs
+      `modeles.py --session` before boot. RT angles replayed for free by
+      `python harness/modeles_unit.py` (37/37: 10 malformed catalogs refused with the DB
+      untouched, fake stealth entry never leaves OPEN/probation).
+- [x] cost-meter + dsh-context installed, real prices, cache-hit visible.
+      2026-08-23: `harness/cout.py` ledger fed by every recorded run (OpenRouter's billed
+      `usage.cost`, cached tokens); no `dsh-context` plugin exists in 0.1.1-rc.2 — the
+      cache-hit is read on the wire instead. Not metered: the direct interactive route.
 - **Done (⚑ RT):** new OpenRouter stealth model reaches the OPEN chain in one
   session start; one day's cost + cache-hit rate visible.
+  2026-08-23: `stealth/ox-alpha` → `openrouter-auto` + chain `probation` after one
+  `--session`; red team 1-done: FALSIFIED (the `open` chain itself was empty, 0 verdicts)
+  → `fumee_route.py` now records a verdict per run, 3 green `minimal` smokes (0 USD) lift
+  the probation, next `--session` → `open: [stealth/ox-alpha]`. `cout.py --jour 2026-08-23`:
+  67 calls, 80.9 % cache, 0.2157 USD (all of it the red team). Red team: `redteam/1-done.md`,
+  5 findings fixed, unit 43/43.
 
 ### 2 — Agent split (one worker at a time, each followed by a red-team gate)
 - [ ] `searcher`: verify orchestrator context stays flat during research turns.

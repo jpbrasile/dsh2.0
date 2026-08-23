@@ -49,7 +49,7 @@ if A.prep:
         io.open(os.path.join(scratch, "prep_%d.txt" % n), "w", encoding="utf-8").write(
             "$ %s\n(rc=%s)\n%s\n%s" % (cmd, pr.returncode, pr.stdout, pr.stderr))
         print("prep %d : rc=%s -> _rt_scratch/prep_%d.txt" % (n, pr.returncode, n))
-env = dict(os.environ, DSH_PERMISSION_MODE="workspace-write")
+env = dict(os.environ, DSH_PERMISSION_MODE="workspace-write", FUMEE_CAMPAGNE="redteam:" + A.etape)
 for k in ("OPENROUTER_API_KEY", "ZAI_API_KEY", "DEEPSEEK_API_KEY"):
     env.pop(k, None)
 t0 = time.time()
