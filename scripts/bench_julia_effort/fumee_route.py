@@ -44,8 +44,12 @@ ap.add_argument("--cwd", default=None, help="espace de travail de dsh (defaut : 
                 "un depot reel pour une tache reelle (critere Done de la phase 0)")
 ap.add_argument("--delai", type=int, default=300, help="secondes avant de tuer dsh (defaut 300)")
 ap.add_argument("--tache-fichier", default=None, help="lire la tache dans ce fichier (UTF-8)")
+ap.add_argument("--aussi", action="append", default=[], help="PROVIDER=MODELE : enregistrer aussi cette route "
+                "(baseURL -> enregistreur, meme amont) et accepter ce modele dans `servi` -- la route d'un sous-agent (Phase 2)")
 A = ap.parse_args()
 MODELE, PROVIDER = A.modele, A.provider
+AUSSI = dict(x.split("=", 1) for x in A.aussi)          # provider -> modele attendu
+ACCEPTES = {MODELE} | set(AUSSI.values())
 PORT = int(os.environ.get("FUMEE_PORT", "8050"))
 ABSENTS = [x for x in A.attend_absent.split(",") if x]
 PRESENTS = [x for x in A.attend_present.split(",") if x]
@@ -87,7 +91,11 @@ elif hote in ("127.0.0.1", "localhost"):
 else:
     UP_HOST, UP_TLS, UP_PORT = hote, ("1" if sch == "https" else "0"), (port_amont or ("443" if sch == "https" else "80"))
 cible = os.path.join(acc, "settings.yaml")
-bench.ecrire_texte(cible, bench._reecrire_baseurl(s, PROVIDER, "http://127.0.0.1:%d%s" % (PORT, chemin)))
+texte_s = bench._reecrire_baseurl(s, PROVIDER, "http://127.0.0.1:%d%s" % (PORT, chemin))
+for prov in AUSSI:
+    # meme enregistreur, meme amont : les deux routes pointent openrouter.ai ; `servi` dit qui a repondu
+    texte_s = bench._reecrire_baseurl(texte_s, prov, "http://127.0.0.1:%d%s" % (PORT, chemin))
+bench.ecrire_texte(cible, texte_s)
 bench.set_default(PROVIDER, MODELE, A.effort, cible)
 cred = os.path.join(home, ".dsh", ".credentials.yaml")
 if os.path.exists(cred):
@@ -177,9 +185,14 @@ fautes = []
 if not calls:
     fautes.append("aucun appel enregistre")
 for c in calls:
-    if c.get("servi") != MODELE:
-        fautes.append("appel servi par %s, pas %s" % (c.get("servi"), MODELE))
+    if c.get("servi") not in ACCEPTES:
+        fautes.append("appel servi par %s, pas %s" % (c.get("servi"), " ni ".join(sorted(ACCEPTES))))
         break
+if calls and AUSSI and not any(c.get("servi") == MODELE for c in calls):
+    fautes.append("aucun appel servi par le modele principal %s" % MODELE)
+for prov, mod in AUSSI.items():
+    n = sum(1 for c in calls if c.get("servi") == mod)
+    print("route aussi %s / %s : %d appel(s)" % (prov, mod, n))
 if attendu and not os.path.exists(attendu):
     fautes.append("%s absent" % A.fichier)
 for c in outilles:
@@ -225,7 +238,8 @@ if calls:
 # levent la probation d'un modele OPEN (voir modeles.py). FUMEE_SANS_VERDICT=1 pour ne rien noter.
 if calls and not os.environ.get("FUMEE_SANS_VERDICT"):
     if all(c.get("servi") == MODELE for c in calls):
-        preset = "minimal" if not A.patch else "+".join(re.sub(r"\.patch\.ya?ml$", "", os.path.basename(p)) for p in A.patch)
+        # `minimal` = stock, jamais un run patche (meme si le patch s'appelle minimal.patch.yml)
+        preset = "minimal" if not A.patch else "patch:" + "+".join(re.sub(r"\.patch\.ya?ml$", "", os.path.basename(p)) for p in A.patch)
         tache = "fumee:" + (os.path.basename(A.tache_fichier) if A.tache_fichier else ("PONG" if A.tache is None else A.tache[:40]))
         try:
             r = subprocess.run([sys.executable, os.path.join(os.path.dirname(BENCH), "..", "harness", "modeles.py"),

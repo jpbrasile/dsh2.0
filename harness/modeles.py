@@ -344,16 +344,18 @@ def main(argv):
             raise SystemExit("--vert ou --rouge, un seul")
         if not A.tache:
             raise SystemExit("--tache obligatoire")
+        # red team 1-done-v2 (LOW) : un verdict sur un id absent ou disparu est REFUSE, sinon trois
+        # verts pre-enregistres feraient naitre un futur stealth hors probation des son apparition.
+        m = lignes(c, "id=? AND disparu=0", (A.verdict,))
+        if not m:
+            print("%s : VERDICT REFUSE, modele inconnu de la base ou disparu (rafraichir d'abord) -- rien ecrit" % A.verdict)
+            return 2
         with c:
             c.execute("INSERT INTO verdicts VALUES (?,?,?,?,?,?)", (A.verdict, A.tache, A.preset, maintenant(), 1 if A.vert else 0, A.note))
-            m = lignes(c, "id=?", (A.verdict,))
-            if m:
-                p = probation_de(c, m[0])
-                c.execute("UPDATE modeles SET probation=? WHERE id=?", (p, A.verdict))
-                print("%s : %s sous %s ; verts minimal = %d ; probation = %d ; tier = %s" % (
-                    A.verdict, "VERT" if A.vert else "ROUGE", A.preset, verts_minimal(c, A.verdict), p, m[0]["tier"]))
-            else:
-                print("%s : verdict note, modele inconnu de la base (sera pris au prochain rafraichissement)" % A.verdict)
+            p = probation_de(c, m[0])
+            c.execute("UPDATE modeles SET probation=? WHERE id=?", (p, A.verdict))
+            print("%s : %s sous %s ; verts minimal = %d ; probation = %d ; tier = %s" % (
+                A.verdict, "VERT" if A.vert else "ROUGE", A.preset, verts_minimal(c, A.verdict), p, m[0]["tier"]))
         return 0
 
     if A.montrer:

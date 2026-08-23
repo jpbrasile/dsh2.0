@@ -154,6 +154,16 @@ try:
     c.close()
     cas("un rafraichissement ne remet pas la probation", run("--rafraichir", "--catalogue", fichier(FAUX, "faux.json")) == 0 and M.lignes(M.ouvrir(base), "id=?", ("stealth/faux-rt",))[0]["probation"] == 0)
 
+    # red team 1-done-v2 (LOW) : 3 verts pre-enregistres sur un id absent faisaient naitre le modele hors probation
+    rc_ph = [run("--verdict", "stealth/phantom", "--tache", "digest", "--preset", "minimal", "--vert") for _ in range(3)]
+    n_ph = M.ouvrir(base).execute("SELECT COUNT(*) FROM verdicts WHERE id='stealth/phantom'").fetchone()[0]
+    cas("verdict sur un id inconnu : rc=2, aucune ligne", rc_ph == [2, 2, 2] and n_ph == 0, (rc_ph, n_ph))
+    PH = {"data": FAUX["data"] + [entree("stealth/phantom", "0", "0", 200000, name="phantom", created=1800000100)]}
+    run("--rafraichir", "--catalogue", fichier(PH, "phantom.json"))
+    cas("le modele apparu ensuite nait EN probation", M.lignes(M.ouvrir(base), "id=?", ("stealth/phantom",))[0]["probation"] == 1)
+    run("--rafraichir", "--catalogue", fichier(FAUX, "faux.json"))   # phantom disparait
+    cas("verdict sur un id disparu : rc=2", run("--verdict", "stealth/phantom", "--tache", "digest", "--preset", "minimal", "--vert") == 2)
+
     print("== emission")
     cas("emettre rc=0", run("--emettre") == 0)
     t1 = io.open(M.EMIS, encoding="utf-8").read()
