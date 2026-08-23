@@ -1,0 +1,158 @@
+[
+ {
+  "requete": "Julia check: LoadError: AssertionError: float64 gros-boutiste | in expression starting at",
+  "ms_recherche": 609,
+  "bibliotheques": [
+   "/julialang/julia",
+   "/websites/julialang_en_v1_12",
+   "/dbrattli/expression"
+  ],
+  "retenue": "julialang/julia",
+  "ms_doc": 826,
+  "octets": 8718,
+  "note_critere": "net",
+  "termes_attendus": [
+   "bswap",
+   "ntoh",
+   "hton",
+   "endian"
+  ],
+  "termes_trouves": [],
+  "extrait": "### Unboxing a Julia Float64 in C  Source: https://github.com/julialang/julia/blob/master/doc/src/manual/embedding.md  Demonstrates evaluating a Julia expression and unboxing the resulting Float64 val",
+  "tache": "t24",
+  "tour_suivant_reel": "PASS",
+  "retenus_ancien_moteur": [
+   "https://github.com/JuliaLang/julia/issues",
+   "https://connectionssports.com/blog/nyt-connections-words-meaning-august-20-2026",
+   "https://translate.google.com/"
+  ]
+ },
+ {
+  "requete": "Julia LoadError: AssertionError: derivee d'une constante",
+  "ms_recherche": 440,
+  "bibliotheques": [
+   "/julialang/julia",
+   "/websites/julialang_en_v1_12",
+   "/jakiesumrain/pbasex-julia"
+  ],
+  "retenue": "julialang/julia",
+  "ms_doc": 637,
+  "octets": 9611,
+  "note_critere": "FAIBLE : termes generiques",
+  "termes_attendus": [
+   "partials",
+   "seed"
+  ],
+  "termes_trouves": [],
+  "extrait": "### Constant redefinition error  Source: https://github.com/julialang/julia/blob/master/doc/src/manual/variables-and-scoping.md  Shows that reassigning a constant without the keyword is disallowed.  `",
+  "tache": "t31",
+  "tour_suivant_reel": "PASS",
+  "retenus_ancien_moteur": [
+   "https://github.com/JuliaLang/julia/issues/27770",
+   "https://github.com/JuliaLang/PackageCompiler.jl/issues/277",
+   "https://github.com/JuliaParallel/PETSc.jl/issues/176"
+  ]
+ },
+ {
+  "requete": "Julia LoadError: AssertionError: confusion de perturbation (produit) : 0.0 au lieu de 1.0",
+  "ms_recherche": 998,
+  "bibliotheques": [
+   "/umicro/uview1.0-doc",
+   "/websites/yiiframework_doc_api_1_0",
+   "/open-gigaai/giga-world-0"
+  ],
+  "retenue": "umicro/uview1.0-doc",
+  "ms_doc": 961,
+  "octets": 7510,
+  "note_critere": "net : le tagging EST le correctif",
+  "termes_attendus": [
+   "tag",
+   "nested"
+  ],
+  "termes_trouves": [],
+  "extrait": "### Global CSS Styling for uView 1.0 Pages  Source: https://github.com/umicro/uview1.0-doc/blob/master/docs/README.md  This CSS snippet provides global styling adjustments for the page layout, includi",
+  "tache": "t31",
+  "tour_suivant_reel": "FAIL",
+  "retenus_ancien_moteur": [
+   "https://discourse.julialang.org/t/help-resolving-perturbation-confusion-in-forwarddiff-jl-with-manual-higher-order-derivatives/115297",
+   "https://github.com/JuliaLang/julia/issues/33471",
+   "https://github.com/JuliaLang/PackageCompiler.jl/issues/277"
+  ]
+ },
+ {
+  "requete": "Julia LoadError: FieldError: type Float64 has no field `partial`; Float64 has no fields at all.",
+  "ms_recherche": 579,
+  "bibliotheques": [
+   "/kunchenguid/no-mistakes",
+   "/analogdevicesinc/no-os",
+   "/flutterplaza/no_screenshot"
+  ],
+  "retenue": "kunchenguid/no-mistakes",
+  "ms_doc": 616,
+  "octets": 7361,
+  "note_critere": "net : le champ est au pluriel",
+  "termes_attendus": [
+   "partials"
+  ],
+  "termes_trouves": [],
+  "extrait": "### Example .no-mistakes.yaml Configuration  Source: https://github.com/kunchenguid/no-mistakes/blob/main/docs/src/content/docs/reference/repo-config.md  This snippet shows a comprehensive example of ",
+  "tache": "t31",
+  "tour_suivant_reel": "PASS",
+  "retenus_ancien_moteur": [
+   "https://discourse.julialang.org/t/why-this-code-shows-the-following-error-error-type-float64-has-no-field-layer-1-in-this-code-i-want-to-optimize-2-unknown-parameters-g-and-k-for-a-2d-pde-with-4-boundary-conditions-and-3-known-data-points/104289",
+   "https://discourse.julialang.org/t/type-float64-has-no-field-head/22897"
+  ]
+ },
+ {
+  "requete": "Julia LoadError: MethodError: ^(::Main.Sol.Dual, ::Int64) is ambiguous.",
+  "ms_recherche": 423,
+  "bibliotheques": [
+   "/julialang/julia",
+   "/matryer/is",
+   "/websites/julialang_en_v1_12"
+  ],
+  "retenue": "julialang/julia",
+  "ms_doc": 702,
+  "octets": 9069,
+  "note_critere": "net",
+  "termes_attendus": [
+   "ambigu"
+  ],
+  "termes_trouves": [
+   "ambigu"
+  ],
+  "extrait": "### Julia Method Ambiguity Handling  Source: https://github.com/julialang/julia/blob/master/HISTORY.md  Method ambiguities no longer generate warnings at load time or dispatch to an arbitrary method. ",
+  "tache": "t31",
+  "tour_suivant_reel": "FAIL",
+  "retenus_ancien_moteur": [
+   "https://juliatesting.github.io/Aqua.jl/stable/ambiguities/",
+   "https://discourse.julialang.org/t/forwarddiff-jl-error-loaderror-methoderror-convert-is-ambiguous/86132",
+   "https://github.com/JuliaDiff/ForwardDiff.jl/issues/674"
+  ]
+ },
+ {
+  "requete": "Julia LoadError: MethodError: no method matching partial(::Float64)",
+  "ms_recherche": 548,
+  "bibliotheques": [
+   "/julialang/julia",
+   "/websites/julialang_en_v1_12",
+   "/promplate/partial-json-parser-js"
+  ],
+  "retenue": "julialang/julia",
+  "ms_doc": 651,
+  "octets": 9014,
+  "note_critere": "net : le champ est au pluriel",
+  "termes_attendus": [
+   "partials"
+  ],
+  "termes_trouves": [],
+  "extrait": "### Handling Method Errors  Source: https://github.com/julialang/julia/blob/master/doc/src/manual/methods.md  Examples of MethodError when calling functions with argument types that do not match any d",
+  "tache": "t31",
+  "tour_suivant_reel": "PASS",
+  "retenus_ancien_moteur": [
+   "https://m3g.github.io/JuliaNotes.jl/stable/nomethod/",
+   "https://docs.julialang.org/en/v1/manual/methods/",
+   "https://docs.julialang.org/en/v1.9/manual/methods/"
+  ]
+ }
+]

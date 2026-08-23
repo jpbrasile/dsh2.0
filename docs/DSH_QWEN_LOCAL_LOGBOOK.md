@@ -1431,6 +1431,58 @@ seul run à trois coupures n'était jamais revenu. Mais il ne suffit pas — un
 changé entre les deux bras que par l'ajout de l'empreinte (`git diff
 f690a051..8dd928bb`).
 
+### §3.26 — Context7 : 1 requête sur 6, et la raison est structurelle, pas technique
+
+Le banc paie OpenRouter pour chercher (Z.AI est à sec) et attend **27 à 107 s**
+par requête. Context7 répond en **0,5 s**, gratuitement, sans clé, et ne peut
+pas servir une page de blocage — le mode d'échec le plus cher rencontré ici
+(§3.22). La question méritait d'être posée avec des chiffres.
+
+**Rejeu des six requêtes réellement parties** du banc, critère déclaré avant la
+mesure : le terme qui **nomme le correctif**, pas celui qui nomme le sujet.
+« Dual » apparaît dans toute la doc de ForwardDiff et ne discrimine rien ;
+« tag » nomme la réparation de la confusion de perturbation.
+
+```
+  1. float64 gros-boutiste            attendu bswap/ntoh/endian   -> RIEN
+  2. derivee d'une constante          attendu partials/seed       -> RIEN
+  3. confusion de perturbation        attendu tag/nested          -> RIEN
+  4. has no field `partial`           attendu partials            -> RIEN
+  5. ^(::Dual, ::Int64) is ambiguous  attendu ambigu              -> ambigu
+  6. no method matching partial       attendu partials            -> RIEN
+```
+
+**Une sur six.** Et deux requêtes ont résolu vers des bibliothèques absurdes —
+`umicro/uview1.0-doc`, `kunchenguid/no-mistakes` : comme le moteur de §3.22,
+l'API de résolution rend toujours quelque chose, même pour un message d'erreur
+qui ne nomme aucune bibliothèque.
+
+**L'instrument a été disculpé avant de conclure.** L'étape de résolution est
+une invention du rejeu ; le corpus interdit les paquets (« Use only Julia Base
+»), donc la bonne bibliothèque est connue d'avance. Variante B, bibliothèque
+**fixée** à `julialang/julia` : toujours **1 sur 6**. Puis lecture à l'œil des
+deux cas décisifs, pour vérifier que le comptage par termes n'était pas
+aveugle : sur la confusion de perturbation il rend des bizarreries de macros et
+une note de `HISTORY.md` ; sur `no method matching partial`, la section du
+manuel qui explique **ce qu'est** une `MethodError`. Le critère voyait juste.
+
+**La raison est structurelle.** Context7 indexe la *documentation de
+bibliothèques*. Nos requêtes sont des erreurs d'exécution dans du code que le
+modèle vient d'écrire, dans un corpus qui **interdit les bibliothèques**. Le
+seul succès (#5) est précisément le cas où l'erreur porte sur un mécanisme
+documenté du langage lui-même. Ce qui a réellement débloqué les runs, à
+l'inverse, ce sont un fil Discourse et un ticket GitHub (§3.25) — deux sources
+que Context7 n'indexe pas.
+
+> **Ce n'est pas un défaut de Context7, c'est un désaccord de vocation.** Sur
+> un corpus dont les tâches *utilisent* des paquets, il serait meilleur que ce
+> qu'on a sur les trois axes à la fois : gratuit, cinquante fois plus rapide,
+> et incapable de servir du charabia. Sur celui-ci, il n'a rien à dire.
+
+**Instrument :** `scripts/bench_julia_effort/rejeu_context7.py`,
+`_requetes_reelles.json` (les six requêtes extraites des campagnes),
+`_rejeu_context7.json`.
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |

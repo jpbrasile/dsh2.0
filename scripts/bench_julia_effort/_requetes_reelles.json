@@ -1,0 +1,93 @@
+[
+ {
+  "fichier": "resultats_bcl_local.jsonl",
+  "rep": 1,
+  "tache": "t24",
+  "tour": 2,
+  "requete": "Julia check: LoadError: AssertionError: float64 gros-boutiste | in expression starting at",
+  "retenus": [
+   "https://github.com/JuliaLang/julia/issues",
+   "https://connectionssports.com/blog/nyt-connections-words-meaning-august-20-2026",
+   "https://translate.google.com/"
+  ],
+  "ecartes": [],
+  "verdict_run": "PASS",
+  "tour_suivant": "PASS"
+ },
+ {
+  "fichier": "resultats_dur_boucle.jsonl",
+  "rep": 1,
+  "tache": "t31",
+  "tour": 1,
+  "requete": "Julia LoadError: AssertionError: derivee d'une constante",
+  "retenus": [
+   "https://github.com/JuliaLang/julia/issues/27770",
+   "https://github.com/JuliaLang/PackageCompiler.jl/issues/277",
+   "https://github.com/JuliaParallel/PETSc.jl/issues/176"
+  ],
+  "ecartes": [],
+  "verdict_run": "PASS",
+  "tour_suivant": "PASS"
+ },
+ {
+  "fichier": "resultats_t31_web.jsonl",
+  "rep": 2,
+  "tache": "t31",
+  "tour": 1,
+  "requete": "Julia LoadError: AssertionError: confusion de perturbation (produit) : 0.0 au lieu de 1.0",
+  "retenus": [
+   "https://discourse.julialang.org/t/help-resolving-perturbation-confusion-in-forwarddiff-jl-with-manual-higher-order-derivatives/115297",
+   "https://github.com/JuliaLang/julia/issues/33471",
+   "https://github.com/JuliaLang/PackageCompiler.jl/issues/277"
+  ],
+  "ecartes": [],
+  "verdict_run": "PASS",
+  "tour_suivant": "FAIL"
+ },
+ {
+  "fichier": "resultats_t31_web.jsonl",
+  "rep": 2,
+  "tache": "t31",
+  "tour": 2,
+  "requete": "Julia LoadError: FieldError: type Float64 has no field `partial`; Float64 has no fields at all.",
+  "retenus": [
+   "https://discourse.julialang.org/t/why-this-code-shows-the-following-error-error-type-float64-has-no-field-layer-1-in-this-code-i-want-to-optimize-2-unknown-parameters-g-and-k-for-a-2d-pde-with-4-boundary-conditions-and-3-known-data-points/104289",
+   "https://discourse.julialang.org/t/type-float64-has-no-field-head/22897"
+  ],
+  "ecartes": [
+   "https://github.com/TuringLang/Turing.jl/issues/700"
+  ],
+  "verdict_run": "PASS",
+  "tour_suivant": "PASS"
+ },
+ {
+  "fichier": "resultats_t31_web.jsonl",
+  "rep": 3,
+  "tache": "t31",
+  "tour": 2,
+  "requete": "Julia LoadError: MethodError: ^(::Main.Sol.Dual, ::Int64) is ambiguous.",
+  "retenus": [
+   "https://juliatesting.github.io/Aqua.jl/stable/ambiguities/",
+   "https://discourse.julialang.org/t/forwarddiff-jl-error-loaderror-methoderror-convert-is-ambiguous/86132",
+   "https://github.com/JuliaDiff/ForwardDiff.jl/issues/674"
+  ],
+  "ecartes": [],
+  "verdict_run": "FAIL",
+  "tour_suivant": "FAIL"
+ },
+ {
+  "fichier": "resultats_t31b_web.jsonl",
+  "rep": 2,
+  "tache": "t31",
+  "tour": 1,
+  "requete": "Julia LoadError: MethodError: no method matching partial(::Float64)",
+  "retenus": [
+   "https://m3g.github.io/JuliaNotes.jl/stable/nomethod/",
+   "https://docs.julialang.org/en/v1/manual/methods/",
+   "https://docs.julialang.org/en/v1.9/manual/methods/"
+  ],
+  "ecartes": [],
+  "verdict_run": "PASS",
+  "tour_suivant": "PASS"
+ }
+]
