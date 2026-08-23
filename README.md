@@ -149,12 +149,19 @@ starts. Phase done-criteria are always ⚑ RT.
   OPEN worker provably cannot read the framework repo.
 
 ### 0.5 — Fast Julia test gate (blocks Phase 2; executed first)
-- [ ] Targeted runner: changed files → affected test items (ReTestItems or equiv).
-- [ ] Persistent Julia session (Revise daemon) or sysimage; no TTFX in the loop.
-- [ ] Full suite pre-merge only.
-- **Done (⚑ RT):** one-file edit → verdict <30s. Red team plants a breaking change
-  in a file the runner's mapping is likely to miss and checks the verdict goes red.
-  If unreachable: STOP, redesign Phase 2.
+- [x] Targeted runner: changed files → affected test items — static map
+      (`scripts/julia_gate/carte.py`: includes, `using PlasmaDigitalTwin.X`, dynamic
+      `joinpath` dirs), not ReTestItems (the suite is plain `Test`/`include`).
+- [x] Persistent Julia session (Revise + package loaded once, 10 s warm) —
+      `serveur.jl`; `porte.py` gives VERT/ORANGE/ROUGE under a hard 30 s budget.
+- [x] Full suite pre-merge only — ORANGE lists what is still due.
+- **Done (⚑ RT) 2026-08-23:** one-file edit → verdict <30 s measured (test file:
+  VERT in 2.4 s; shared `Physics` source: ORANGE in 7.7 s with the 3 heavy suites
+  listed as due). Red-team arms in `essai_rt.py`: broken source → ROUGE in 12.9 s;
+  broken file the map cannot reach → ORANGE "non couvert", never VERT. Measurements
+  and limits (22 uncovered sources, module-grain map): `docs/JULIA_GATE.md`.
+  Phase 2 consequence: the coder must treat ORANGE as "heavy suites pending", not
+  as green — no redesign needed.
 
 ### 1 — Model loop
 - [ ] Refresh script → SQLite: models(id, provider, ctx, tool_calls, free, stealth,
