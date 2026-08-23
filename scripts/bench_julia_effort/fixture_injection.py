@@ -419,6 +419,77 @@ exiger(_g["_marques"](_faux, {(2, "medium", "t31", 1): "RATE_LIMIT"}) == "XP",
        "avec le garde, il se lit X -- ni echec ni reussite")
 
 
+print("=== 9nonies. bras entrelaces : les refus tirent, les noms coincident ===")
+# Tant que les bras tournaient en processus successifs, une derive de la
+# dorsale tombait ENTIEREMENT sur celui qui tournait alors (23/08 : 12
+# RATE_LIMIT, tous sur promesse). --bras fait du bras une dimension de
+# l unite de travail. Trois choses doivent tenir, et aucune ne se suppose.
+import sys as _sys
+
+class _Stop(Exception):
+    pass
+
+def _essai(args):
+    """Lance main() sans effet de bord et rend le refus, ou None."""
+    _vrais = (bench.preparer_shim, bench.preparer_voies,
+              bench.lancer_enregistreurs, bench.tuer_arbre, bench.boucle)
+    bench.preparer_shim = lambda: "(neutralise)"
+    bench.preparer_voies = lambda par, eff: [("acc", 0, "w.jsonl", "base")]
+    bench.lancer_enregistreurs = lambda voies: []
+    bench.tuer_arbre = lambda q: None
+    def _stop(*a, **k):
+        raise _Stop()
+    bench.boucle = _stop
+    argv, out = _sys.argv, _sys.stdout
+    _sys.argv = ["bench.py"] + args
+    _sys.stdout = io.StringIO()
+    bench.BRAS_MULTI = False
+    try:
+        bench.main()
+        return "(campagne lancee sans refus)"
+    except _Stop:
+        return None                      # arrive jusqu a la boucle : accepte
+    except SystemExit as e:
+        return str(e)
+    finally:
+        _sys.argv, _sys.stdout = argv, out
+        (bench.preparer_shim, bench.preparer_voies, bench.lancer_enregistreurs,
+         bench.tuer_arbre, bench.boucle) = _vrais
+        bench.BRAS_MULTI = False
+
+# known-BAD : un refus JAMAIS PARCOURU echoue en position permissive.
+_cas = [(["medium", "t31", "--boucle", "2", "--bras", "web,zzz"],
+         "inconnu", "un bras inconnu ne passe pas en silence"),
+        (["medium", "t31", "--boucle", "2", "--bras", "web,web"],
+         "repete", "deux bras de meme nom s effaceraient l un l autre"),
+        (["medium", "t31", "--boucle", "2", "--bras", "web", "--web"],
+         "porte DEJA", "--bras avec --web : deux definitions du bras"),
+        (["medium", "t31", "--boucle", "2", "--bras", "sans", "--promesse"],
+         "porte DEJA", "--bras avec --promesse : idem"),
+        (["medium", "t31", "--bras", "sans,promesse"],
+         "mode boucle", "promesse hors boucle n a pas de tour suivant")]
+for _a, _att, _quoi in _cas:
+    _got = _essai(_a)
+    exiger(_got is not None and _att in _got, "refus PARCOURU : " + _quoi)
+
+# known-GOOD : la campagne entrelacee, elle, doit arriver jusqu a la boucle.
+exiger(_essai(["medium", "t31", "--boucle", "2", "--bras", "sans,promesse,web",
+               "--par", "3"]) is None,
+       "known-GOOD : sans,promesse,web est accepte")
+
+# LE BRAS DOIT ENTRER DANS L ETIQUETTE, sinon deux bras partagent
+# runs/<etiq>/r<N>/<effort>/<tache> -- et un run commence par rmtree(ws).
+bench.BRAS_MULTI = True
+_e = {n: bench.etiq_bras(*wp) for n, wp in bench.BRAS_CONNUS.items()}
+exiger(len(set(_e.values())) == len(_e),
+       "chaque bras a SON espace de travail (sinon rmtree en efface un autre)")
+exiger(all(n in _e[n] for n in _e),
+       "et le nom du bras est dans l etiquette, pas un numero")
+bench.BRAS_MULTI = False
+exiger(len({bench.etiq_bras(*wp) for wp in bench.BRAS_CONNUS.values()}) == 1,
+       "hors campagne entrelacee, l etiquette est INCHANGEE (rien ne bouge)")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2

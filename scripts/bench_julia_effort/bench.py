@@ -71,6 +71,35 @@ MODELE = os.environ.get("BENCH_MODEL", "specdec-q38-plain-vision")
 # n existait. On isole donc les SORTIES, jamais le code.
 ETIQUETTE = os.environ.get("BENCH_ETIQUETTE", "")
 
+# BRAS ENTRELACES. Tant que les bras tournaient en processus successifs, toute
+# derive de la dorsale tombait ENTIEREMENT sur celui qui tournait a ce
+# moment-la : le 23/08, les 12 RATE_LIMIT ont vise le bras promesse et lui
+# seul. "Le bras" et "l heure" etaient indiscernables, et aucune quantite de
+# repetitions ne les separe. Avec --bras, l unite de travail devient
+# (tache, bras) : les bras d une meme repetition partagent la fenetre.
+#
+# L ETIQUETTE porte le bras, et c est OBLIGATOIRE, pas cosmetique : l espace
+# de travail est runs/<etiquette>/r<N>/<effort>/<tache>, et un run commence par
+# rmtree(ws). Deux bras sur la meme case s effaceraient MUTUELLEMENT en cours
+# de route. Le bras dans l etiquette fait aussi coincider, par construction, le
+# nom du fichier de resultats et celui du repertoire de runs -- ce dont
+# analyse.py depend pour retrouver les morts de la dorsale.
+BRAS_CONNUS = {"sans": (False, False), "promesse": (False, True),
+               "web": (True, False)}
+BRAS_MULTI = False
+
+
+def nom_bras(web, promesse):
+    return "web" if web else ("promesse" if promesse else "sans")
+
+
+def etiq_bras(web, promesse=False):
+    """L etiquette effective d un run. Inchangee hors campagne entrelacee."""
+    if not BRAS_MULTI:
+        return ETIQUETTE
+    b = nom_bras(web, promesse)
+    return (ETIQUETTE + "_" + b) if ETIQUETTE else b
+
 # --- campagne PARALLELE ---------------------------------------------------
 # Pourquoi le parallelisme n'a de sens que sur la dorsale EXTERNE : le Qwen
 # local est UN serveur sur UNE carte -- douze agents simultanes s'y mettraient
@@ -1243,7 +1272,8 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
     Ce que ce mode mesure et que `--web` ne mesurait pas : l'apport de la
     documentation QUAND ON EST BLOQUE. Le bras V3 avait montre qu'un modele ne
     se declare jamais bloque ; ici la question ne lui est pas posee."""
-    ws = os.path.join(BASE, "runs", ETIQUETTE, "r%02d" % rep, effort, tache)
+    ws = os.path.join(BASE, "runs", etiq_bras(web, promesse),
+                      "r%02d" % rep, effort, tache)
     if os.path.isdir(ws):
         shutil.rmtree(ws)
     os.makedirs(ws)
@@ -1405,7 +1435,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
 
 def un_run(effort, tache, rep=1, iteratif=False, web=False,
            slot=None, accueil=None, wire=None, proxy_base=None):
-    ws = os.path.join(BASE, "runs", ETIQUETTE, "r%02d" % rep, effort, tache)
+    ws = os.path.join(BASE, "runs", etiq_bras(web), "r%02d" % rep, effort, tache)
     if os.path.isdir(ws):
         shutil.rmtree(ws)
     os.makedirs(ws)
@@ -1583,11 +1613,52 @@ def main():
             defaut = liste
             print("corpus %s : %s" % (nom, ",".join(defaut)))
 
-    global PROMESSE
+    global PROMESSE, BRAS_MULTI
+    bras_liste = None
+    if "--bras" in argv:
+        i = argv.index("--bras")
+        noms = [n.strip() for n in argv[i + 1].split(",") if n.strip()]
+        del argv[i:i + 2]
+        inconnus = [n for n in noms if n not in BRAS_CONNUS]
+        if inconnus:
+            raise SystemExit(
+                "--bras : %s inconnu(s). Bras connus : %s. Campagne refusee."
+                % (",".join(inconnus), ",".join(sorted(BRAS_CONNUS))))
+        if len(set(noms)) != len(noms):
+            raise SystemExit(
+                "--bras : un bras est repete. Deux bras de meme nom "
+                "partageraient etiquette, repertoire de runs et fichier de "
+                "resultats -- et s effaceraient l un l autre. Campagne refusee.")
+        bras_liste = [BRAS_CONNUS[n] for n in noms]
+        BRAS_MULTI = True
+
     PROMESSE = "--promesse" in argv
     if PROMESSE:
         argv.remove("--promesse")
     web = "--web" in argv
+    if bras_liste is not None and (web or PROMESSE):
+        raise SystemExit(
+            "--bras porte DEJA les bras. Le combiner avec --web ou --promesse "
+            "donnerait deux definitions du bras pour un meme run, dont une "
+            "silencieuse. Campagne refusee.")
+    if bras_liste is not None and any(p for _w, p in bras_liste) and not TOURS:
+        raise SystemExit(
+            "--bras contient `promesse`, qui n a de sens qu en mode boucle "
+            "(--boucle N) : la promesse porte sur le tour SUIVANT. "
+            "Campagne refusee.")
+    if bras_liste is not None:
+        print("BRAS ENTRELACES : %s -- l unite de travail est (tache, bras),"
+              % ",".join(nom_bras(w, p) for w, p in bras_liste))
+        print("  donc les bras d une meme repetition partagent la fenetre de")
+        print("  temps. En sequence, une derive de la dorsale tombait sur UN")
+        print("  seul bras (23/08 : 12 RATE_LIMIT, tous sur promesse).")
+        if par >= len(bras_liste):
+            print("  %d ouvriers pour %d bras : ils tournent SIMULTANEMENT --"
+                  % (par, len(bras_liste)))
+            print("  meme fenetre a la seconde pres, le controle le plus fort.")
+        else:
+            print("  %d ouvrier(s) pour %d bras : entrelacement SEQUENTIEL."
+                  % (par, len(bras_liste)))
     if web and PROMESSE:
         raise SystemExit(
             "--web et --promesse s excluent : le bras PROMESSE annonce le "
@@ -1617,13 +1688,23 @@ def main():
 
     efforts = argv[0].split(",") if argv else ["off", "low", "medium", "high", "xhigh"]
     taches = argv[1].split(",") if len(argv) > 1 else defaut
-    out = os.path.join(BASE, "resultats%s.jsonl"
-                       % (("_" + ETIQUETTE) if ETIQUETTE else ""))
-    print("sorties : %s" % out)
+    def sortie_de(rec=None):
+        etiq = ETIQUETTE
+        if BRAS_MULTI and rec is not None:
+            etiq = etiq_bras(*BRAS_CONNUS[rec.get("bras") or "sans"])
+        return os.path.join(BASE, "resultats%s.jsonl"
+                            % (("_" + etiq) if etiq else ""))
+
+    if bras_liste is not None:
+        print("sorties : un fichier PAR BRAS --")
+        for w, p in bras_liste:
+            print("   %s" % sortie_de({"bras": nom_bras(w, p)}))
+    else:
+        print("sorties : %s" % sortie_de())
 
     def ecrire(rec):
         with VERROU:
-            with io.open(out, "a", encoding="utf-8", newline="\n") as f:
+            with io.open(sortie_de(rec), "a", encoding="utf-8", newline="\n") as f:
                 f.write(json.dumps(rec) + "\n")
 
     voies, procs = None, []
@@ -1644,13 +1725,15 @@ def main():
     sys.stdout.flush()
 
     try:
-        boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies)
+        boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies,
+               bras_liste)
     finally:
         for q in procs:
             tuer_arbre(q)
 
 
-def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None):
+def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None,
+           bras_liste=None):
     for rep in range(1, reps + 1):
         # La REPETITION est la boucle EXTERIEURE, et le sens alterne.
         # Repeter une tache 3 fois d'affilee mesurerait 3 fois le meme instant
@@ -1681,26 +1764,37 @@ def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None):
                 for v in voies:
                     libres.put(v)
 
-                def travail(tache, _e=effort, _r=rep):
+                def travail(unite, _e=effort, _r=rep):
+                    _t, _w, _p = unite
                     if TOURS:
                         acc, slot, wire, base = libres.get()
                         try:
-                            return un_run_boucle(_e, tache, _r, web, TOURS,
+                            return un_run_boucle(_e, _t, _r, _w, TOURS,
                                                  WEB_APRES_JULIA, MAX_RECH,
                                                  slot, acc, wire, base,
-                                                 PROMESSE)
+                                                 _p)
                         finally:
                             libres.put((acc, slot, wire, base))
                     acc, slot, wire, base = libres.get()
                     try:
-                        return un_run(_e, tache, _r, iteratif, web,
+                        return un_run(_e, _t, _r, iteratif, _w,
                                       slot, acc, wire, base)
                     finally:
                         libres.put((acc, slot, wire, base))
 
+                # L ordre des bras ALTERNE lui aussi d une repetition a
+                # l autre : a --par 1 l entrelacement est sequentiel, et un
+                # bras toujours soumis en dernier heriterait de la derive que
+                # l entrelacement existe justement pour supprimer.
+                bl = bras_liste or [(web, PROMESSE)]
+                if rep % 2 == 0:
+                    bl = list(reversed(bl))
+                unites = [(t, w, p) for t in taches for (w, p) in bl]
+
                 with ThreadPoolExecutor(max_workers=par) as ex:
-                    futurs = {ex.submit(travail, t): t for t in taches}
-                    for f, t in futurs.items():
+                    futurs = {ex.submit(travail, u): u for u in unites}
+                    for f, u in futurs.items():
+                        t = u[0]
                         try:
                             ecrire(f.result())
                         except Exception as e:
@@ -1717,10 +1811,12 @@ def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None):
                             # dessus ou l ignorent. Les executions, elles,
                             # avaient bien ete comptees : le journal du shim
                             # survit a l exception.
-                            jl = os.path.join(BASE, "runs", ETIQUETTE,
+                            jl = os.path.join(BASE, "runs",
+                                              etiq_bras(u[1], u[2]),
                                               "r%02d" % rep, effort, t,
                                               "julia_calls.log")
                             ecrire({"effort": effort, "tache": t, "rep": rep,
+                                    "bras": nom_bras(u[1], u[2]),
                                     "verdict": "FAIL", "why": "ouvrier: %s" % e,
                                     "julia_runs": compter_julia(jl),
                                     "tours": None, "mode": "boucle" if TOURS else "oneshot",
