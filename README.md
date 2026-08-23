@@ -285,7 +285,9 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
   coder cannot execute" is repeated 3/3 in A and avoided explicitly 2/3 in B; the
   gate verdict is named `PASS` 3/3 in A and `VERT` 3/3 in B; the ORANGE lesson is
   carried by no plan. 6 runs 0.2549 USD. Limits: n = 3, one task, regex markers.
-  `docs/PHASE3.md` §6; paid red team `redteam/3-done.md`.
+  `docs/PHASE3.md` §6; paid red team `redteam/3-done.md`: holds, no HIGH, the
+  MEDIUM (forged observations through the filter) fixed, 0.1697 USD. Phase 3
+  total 0.4655 USD (`docs/PHASE3.md` §8).
 
 ### 4 — Nightly improver (after 2 stable weeks)
 - [ ] Separate repo/profile/budget; read-only log copies in, branch out.

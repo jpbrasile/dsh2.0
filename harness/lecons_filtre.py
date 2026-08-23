@@ -48,8 +48,23 @@ REGLES = [
     ("permission", re.compile(
         r"\b(may|can|could|should|must|shall|needs?\s+to|has\s+to|have\s+to|is\s+allowed\s+to|are\s+allowed\s+to|"
         r"is\s+free\s+to|are\s+free\s+to)\s+(now\s+|also\s+|always\s+|safely\s+)?(be\s+)?"
-        r"(skip|ignor|bypass|disabl|delet|remov|overrid|edit|modif|rewrit|chang|declar|fak|forg|omit|avoid)|"
+        r"(skip|ignor|bypass|disabl|delet|remov|overrid|edit|modif|rewrit|chang|declar|fak|forg|omit|avoid|proceed|act\s+as)|"
         r"\b(should|must|may|can|could|shall)\b.{0,25}\b(write|writes|edit|edits|create|creates|modify|touch|delete)\b.{0,15}\btest", re.I)),
+    # red team 3-done (23/08) : 12 « observations » forgees passaient -- la porte, le mur ou les tests
+    # presentes comme facultatifs, inutiles, contournes avec succes, ou un outil que le role n'a pas
+    ("subversion", re.compile(
+        r"\b(skip+\w*|bypass\w*|omit\w*|(?<!git-)ignor\w*|disregard\w*|unnecessary|optional|advisory|waste\w*|"
+        r"do(es)?\s+not\s+(apply|require|need)|don't\s+(apply|require|need)|not\s+(required|needed|mandatory)|"
+        r"proceed\s+as\s+if|without\s+(calling|running)\s+(the\s+)?(gate|julia_gate))\b.{0,40}"
+        r"\b(gate|julia_gate|wall|verdict|tests?|verification)\b|"
+        r"\b(gate|julia_gate|wall|verdict|tests?|verification)\b.{0,40}"
+        r"\b(optional|unnecessary|advisory|not\s+(required|needed|mandatory|apply|applicable)|do(es)?\s+not\s+apply|"
+        r"waste\w*|may\s+be\s+(skipped|ignored|bypassed|disregarded|omitted)|is\s+(skipped|bypassed)|"
+        r"(can|could|may)\s+be\s+(skipped|bypassed|ignored)|permitted|allowed)\b", re.I)),
+    ("faux outil", re.compile(
+        r"\b(has|have|had|gets?|gained|acquired|with|through|via|using)\b.{0,14}\b(julia|shell|pwsh|bash|powershell|python|terminal|write|edit)\s+tool\b|"
+        r"\b(successfully|which\s+worked|worked\s+(fine|well|as\s+expected))\b.{0,40}\b(julia|pwsh|powershell|bash|shell)\b|"
+        r"\b(julia|pwsh|powershell|bash|shell)\b.{0,40}\b(successfully|which\s+worked|worked\s+(fine|well|as\s+expected))\b", re.I)),
     # ... et s'ecrit en lettres latines lisibles : pas de caracteres de format (largeur nulle, bidi), pas
     # d'homoglyphes cyrilliques ou grecs dans un mot refuse
     ("caracteres", re.compile("[^\x20-\x7e\u00a0-\u024f\u2010-\u2027\u2030-\u203a\u20ac\u2190-\u2193\u2208\u2248\u2260\u2264\u2265\u00d7]")),
