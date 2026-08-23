@@ -217,6 +217,35 @@ $RuntimeBin  = Join-Path (Join-Path (Join-Path $RuntimeDir 'node_modules') '.bin
 $Self        = Join-Path (Join-Path '.' 'scripts') 'dsh.ps1'
 
 if ($InstallRuntime) {
+    # L'EPINGLE est dans le depot : harness/runtime/{package.json,package-lock.json}
+    # (511 paquets resolus, chacun avec son sha512). Quand le lock existe pour
+    # CETTE version, `npm ci` rebatit l'arbre exact -- rien n'est re-resolu.
+    # Sinon seulement, on retombe sur la construction par overrides ci-dessous,
+    # en le disant. `python harness/pin_check.py` verifie ensuite que l'arbre
+    # qui tourne est celui du depot.
+    $pinDir  = Join-Path (Join-Path $RepoRoot 'harness') 'runtime'
+    $pinPkg  = Join-Path $pinDir 'package.json'
+    $pinLock = Join-Path $pinDir 'package-lock.json'
+    $pinVer  = $null
+    if ((Test-Path $pinPkg) -and (Test-Path $pinLock)) {
+        $pinVer = (Get-Content -Raw $pinPkg | ConvertFrom-Json).dependencies.'@deepseek-ai/dsh'
+    }
+    if ($pinVer -eq $DshVersion) {
+        New-Item -ItemType Directory -Force -Path $RuntimeDir | Out-Null
+        Copy-Item -Path $pinPkg  -Destination (Join-Path $RuntimeDir 'package.json')      -Force
+        Copy-Item -Path $pinLock -Destination (Join-Path $RuntimeDir 'package-lock.json') -Force
+        Write-Host ("arbre epingle : {0}" -f $RuntimeDir)
+        Write-Host ("  depuis le lock du depot (harness/runtime, dsh {0}) : npm ci, rien n'est re-resolu" -f $pinVer)
+        Push-Location $RuntimeDir
+        try { & npm ci --no-audit --no-fund }
+        finally { Pop-Location }
+        if (Test-Path $RuntimeBin) { Write-Host ("pret : {0}" -f $RuntimeBin) }
+        else { Write-Warning ("npm a rendu la main mais {0} n'existe pas." -f $RuntimeBin) }
+        Write-Host "controle : python harness\pin_check.py"
+        return
+    }
+    if ($pinVer) { Write-Warning ("le lock du depot epingle dsh {0}, pas {1} : construction par overrides (arbre NON epingle par le depot)" -f $pinVer, $DshVersion) }
+    else         { Write-Warning "aucun lock sous harness/runtime : construction par overrides (arbre NON epingle par le depot)" }
     # Les NOMS du scope viennent d'un arbre deja installe (npx ou runtime) : c'est
     # la seule source qui connaisse les dependances TRANSITIVES. Sans aucun arbre
     # sous la main on installe sans overrides -- correct, mais npm peut thrasher

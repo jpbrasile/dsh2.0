@@ -1,0 +1,113 @@
+# Lean preset -- Phase 0 of the README, authored 2026-08-23.
+#
+# A THIN PATCH LAYER over the shipped `headless` profile (dsh-base + dsh-headless
+# bundles, then the user's ~/.dsh/profiles/headless/cordis.patch.yml), applied
+# with the CLI's own overlay mechanism:
+#
+#     dsh --profile headless --patch <repo>/harness/lean.patch.yml "<task>"
+#
+# No composition is copied, no plugin code is forked: every row below either
+# DISABLES a shipped row by id or INSERTS a shipped package under a new id.
+# `python harness/lean_check.py` proves two things after every dsh bump:
+#   - the composed tree (`--dump-config`) differs from the default tree
+#     (`--dump-default-config` + the user layer) by exactly these rows;
+#   - the model-facing tool catalog, read on the wire by fumee_route.py, is the
+#     one this file claims (see `# tools:` at the end).
+#
+# What the README asks: "duplicate Standard, strip skills injection, web-search
+# tool, workflow extras. Keep: persistent bash, str_replace_editor, subagent
+# scheduler, compaction."
+
+# ── stripped: skills injection ──────────────────────────────────────────────
+# Three rows: the registry, the filesystem discovery (which also WATCHES its
+# roots), and the model-facing `skill` tool. AGENTS.md injection
+# (`agent-instructions`) is NOT a skill and stays: the harness's own prompts
+# are harness-agnostic markdown, and that row is how they reach the model.
+- id: skill
+  disabled: true
+- id: skill-filesystem
+  disabled: true
+- id: tool-skill
+  disabled: true
+
+# ── stripped: web search ────────────────────────────────────────────────────
+# The shipped provider is DeepSeek's search API behind DEEPSEEK_API_KEY. The
+# spec gives search to the `searcher` agent (Phase 2) on OPEN chains, not to
+# every worker. Three rows: service, provider, tool.
+- id: web
+  disabled: true
+- id: web-search-deepseek
+  disabled: true
+- id: tool-web
+  disabled: true
+
+# ── stripped: workflow extras ───────────────────────────────────────────────
+# Workflows, the Ralph autonomous loop, and goal rounds are multi-step drivers
+# the harness does not use: the README's single thread IS the driver, and a
+# worker that can start its own rounds is a worker whose cost and red-team gate
+# are not in the loop. `command-goal` is a chat command; the goal SERVICE and
+# its round driver go with it.
+- id: workflow-worker-thread
+  disabled: true
+- id: tool-workflow
+  disabled: true
+- id: tool-ralph
+  disabled: true
+- id: tool-goal
+  disabled: true
+- id: goal
+  disabled: true
+- id: goal-round-driver
+  disabled: true
+- id: command-goal
+  disabled: true
+
+# ── stripped: one LLM call per session for a title ──────────────────────────
+# `session-title-first-prompt-llm` spends a paid request to name the session;
+# the fallback (`session-title`, kept) takes the first words of the prompt.
+- id: session-title-llm
+  disabled: true
+
+# ── stripped: the vision chain of the old host ──────────────────────────────
+# `mcp-effitech` + `subagent_vision` were wired into this machine's profiles by
+# agentic-flow's `-InstallVision` for the 4090 vision experiments. They are not
+# part of the harness (Phase 5 at the earliest) and the MCP row names a server
+# path that no longer exists on this machine.
+- id: mcp-effitech
+  disabled: true
+- id: tool-subagent-vision
+  disabled: true
+
+# ── kept, unchanged ─────────────────────────────────────────────────────────
+# str_replace_editor, read/write/edit/glob/grep (tool-fs, tool-fs-search),
+# subagent / subagent_fork / list_agents / interrupt_agent / send_message (the
+# scheduler, bounded by the local dsh-subagent-timeout plugin), jobs,
+# todo_write, ask-user, plan mode, compaction + tool-result pruner, token
+# meter, the sandbox/approval stack, agent-instructions.
+
+# ── swapped: one-shot pwsh -> persistent pwsh ───────────────────────────────
+# "Keep persistent bash": on Windows that is a persistent PowerShell. The
+# shipped headless row is the ONE-SHOT sandboxed `pwsh`; the persistent tool
+# registers the same tool name, so the one-shot row must go. The persistent
+# terminal is spawned THROUGH the sandbox too (`dsh-terminal-bash`: "confined
+# modes require a same-world ctx.sandbox and wrap the exact shell argv through
+# it, failing before spawn when none is mounted"), so the write wall does not
+# weaken. `pty` + `terminal-pwsh` are the backend the tool needs; the shipped
+# `minimal` preset wires the same three rows.
+- id: tool-pwsh
+  disabled: true
+- insert:
+    - id: lean-pty
+      name: '@deepseek-ai/dsh-terminal'
+    - id: lean-terminal-pwsh
+      name: '@deepseek-ai/dsh-terminal-bash'
+      config:
+        shellDialect: pwsh
+        timeoutMs: 300000
+    - id: lean-persistent-pwsh
+      name: '@deepseek-ai/dsh-tool-pwsh-persistent'
+      config:
+        timeoutMs: 300000
+
+# tools: edit exit_plan_mode glob grep interrupt_agent job_kill job_list job_output list_agents pwsh read read_image send_message str_replace_editor subagent subagent_fork todo_write write
+# tools-absent: skill web_search workflow ralph create_goal get_goal update_goal subagent_vision

@@ -1,0 +1,133 @@
+# Provider blocks of the harness -- Phase 0 of the README, 2026-08-23.
+#
+# Installed into `~/.dsh/settings.yaml` under `llm-pi-ai.providers` by
+#     python harness/providers_install.py          (backup first, then a smoke per route)
+# Each block below REPLACES the block of the same name in the live file (text-anchored,
+# every other line of the live file kept). Keys never appear here: every route names an
+# `apiKeyEnv` reference that dsh resolves from `~/.dsh/.credentials.yaml` (the file layer of
+# dsh-credentials-local), or from the launching environment when a variable of that name is
+# set there -- the environment layer wins, by dsh's own precedence.
+#
+# `contextWindow: 65536` on the harness models: the compaction threshold (decision 23/08,
+# OPENROUTER_SETUP.md). `reasoningEfforts` with a quoted "off": without the block dsh refuses
+# effort `off` (UNSUPPORTED_REASONING_EFFORT); unquoted `off:` is YAML's boolean false.
+
+providers:
+
+  # ── OpenRouter, DIRECT route (interactive use; also the paid PRIVATE+OPEN default) ──
+  openrouter:
+    name: OpenRouter
+    apiKeyEnv: OPENROUTER_API_KEY
+    api: openai-completions
+    baseURL: https://openrouter.ai/api/v1
+    defaultContextWindow: 65536
+    models:
+      # paid -- sprint default for all workers
+      - id: qwen/qwen3.8-27b
+        name: Qwen3.8-27B (worker)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+      - id: deepseek/deepseek-v4-pro
+        name: DeepSeek V4 Pro (red team, other family)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+      - id: deepseek/deepseek-v4-pro:floor
+        name: DeepSeek V4 Pro - cheapest upstream
+        contextWindow: 65536
+      - id: qwen/qwen3.8-27b:floor
+        name: Qwen3.8-27B - cheapest upstream
+        contextWindow: 65536
+      - id: google/gemini-2.5-flash
+        name: Gemini 2.5 Flash (vision)
+        contextWindow: 65536
+      # free / stealth -- OPEN tier only (harness dev, probation, red team on OPEN steps).
+      # Read from /api/v1/models on 2026-08-23: 19 free models accept tools; these four are
+      # the largest by context that did. Phase 1's refresh script takes this list over.
+      - id: stealth/ox-alpha
+        name: Ox Alpha (stealth, free, OPEN only)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+      - id: z-ai/glm-5.2:free
+        name: GLM-5.2 free (OPEN only)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+      - id: nvidia/nemotron-3-ultra-550b-a55b:free
+        name: Nemotron 3 Ultra free (OPEN only)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+      - id: openrouter/free
+        name: OpenRouter free router (OPEN only, picks a free model -- never for a measurement)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+
+  # ── OpenRouter, RECORDED route (bench + smoke: baseURL -> proxy.mjs -> openrouter.ai) ──
+  openrouter-banc:
+    name: OpenRouter (banc, via enregistreur)
+    apiKeyEnv: OPENROUTER_API_KEY
+    api: openai-completions
+    baseURL: http://127.0.0.1:8050/api/v1
+    defaultContextWindow: 65536
+    models:
+      - id: qwen/qwen3.8-27b
+        name: Qwen3.8-27B (ouvrier du harnais)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+      - id: deepseek/deepseek-v4-pro
+        name: DeepSeek V4 Pro (red team du harnais)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+      - id: stealth/ox-alpha
+        name: Ox Alpha (gratuit, stealth, OPEN)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+      - id: z-ai/glm-5.2:free
+        name: GLM-5.2 free (OPEN)
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+
+  # ── z.ai, DIRECT provider (GLM; red team when the worker was DeepSeek) ──
+  # Catalog read with the key on 2026-08-23: glm-4.5 … glm-5.3, same ids on both endpoints.
+  # CODING endpoint, not the general `/api/paas/v4`: the key is the GLM Coding Plan one, and the
+  # general endpoint answers 429 code 1113 "Insufficient balance or no resource package"
+  # (measured 23/08). NO `off` in reasoningEfforts: glm-5.3 answers 400 code 1210 "This model
+  # always engages in thinking and cannot be disabled; please use low, high, or max" (23/08).
+  zai:
+    name: z.ai GLM (coding plan)
+    apiKeyEnv: ZAI_API_KEY
+    api: openai-completions
+    baseURL: https://api.z.ai/api/coding/paas/v4
+    defaultContextWindow: 65536
+    models:
+      - id: glm-5.3
+        name: GLM-5.3
+        contextWindow: 65536
+        reasoningEfforts: { low: low, medium: medium, high: high, max: max }
+      - id: glm-5.2
+        name: GLM-5.2
+        contextWindow: 65536
+        reasoningEfforts: { low: low, medium: medium, high: high, max: max }
+      - id: glm-4.7
+        name: GLM-4.7
+        contextWindow: 65536
+        reasoningEfforts: { low: low, medium: medium, high: high, max: max }
+
+  # ── DeepSeek, DIRECT provider (coder, off-peak batch; red team when the worker was GLM) ──
+  # Catalog read with the key on 2026-08-23: deepseek-v4-flash, deepseek-v4-pro,
+  # deepseek-v4-flash-vision-exp. dsh also ships `dsh-llm-deepseek` (provider
+  # `deepseek-official`, its own client); this block is the pi-ai route so every provider
+  # of the harness is driven and recorded the same way.
+  deepseek:
+    name: DeepSeek API
+    apiKeyEnv: DEEPSEEK_API_KEY
+    api: openai-completions
+    baseURL: https://api.deepseek.com/v1
+    defaultContextWindow: 65536
+    models:
+      - id: deepseek-v4-pro
+        name: DeepSeek V4 Pro
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+      - id: deepseek-v4-flash
+        name: DeepSeek V4 Flash
+        contextWindow: 65536
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }

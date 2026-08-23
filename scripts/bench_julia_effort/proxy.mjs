@@ -72,6 +72,17 @@ const server = http.createServer((req, res) => {
           enable_thinking: p.enable_thinking,
           chat_template_kwargs: p.chat_template_kwargs,
           thinking: p.thinking,
+          // 23/08, phase 0 : les NOMS des outils offerts et la taille du prompt
+          // systeme -- c'est ce que le preset Lean doit faire bouger, et seul le
+          // fil peut le dire (un --dump-config prouve la composition, pas ce que
+          // le modele recoit).
+          tools: Array.isArray(p.tools) ? p.tools.map((t) => (t && t.function && t.function.name) || (t && t.name) || '?') : [],
+          sys_chars: Array.isArray(p.messages)
+            ? p.messages.filter((m) => m && (m.role === 'system' || m.role === 'developer'))
+                .reduce((n, m) => n + (typeof m.content === 'string' ? m.content.length
+                  : Array.isArray(m.content) ? m.content.reduce((k, b) => k + ((b && b.text) ? b.text.length : 0), 0) : 0), 0)
+            : null,
+          roles: Array.isArray(p.messages) ? p.messages.slice(0, 3).map((m) => (m && m.role) || '?') : null,
         };
       } catch (e) { sent = { parse_error: String(e) }; }
     }
