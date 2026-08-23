@@ -940,6 +940,7 @@ TIMEOUT_TOUR = int(os.environ.get("BENCH_TIMEOUT_TOUR", "600"))
 MAX_RECH = int(os.environ.get("BENCH_MAX_RECH", "2"))
 TOURS = 0
 WEB_APRES_JULIA = 2
+PROMESSE = False
 
 
 # Les etages de recherche du depot, reutilises tels quels. Ils vivent dans
@@ -1232,7 +1233,8 @@ def _bloc_retour(tour, historique, trouvailles, cherche, journal=None, tours=Non
 
 def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
                   max_rech=2,
-                  slot=None, accueil=None, wire=None, proxy_base=None):
+                  slot=None, accueil=None, wire=None, proxy_base=None,
+                  promesse=False):
     """Boucle PILOTEE PAR LE BANC. L'agent est relance dans le MEME espace de
     travail, avec le message d'echec du juge, et -- des qu'il a lance Julia
     `web_apres_julia` fois sans passer -- avec les resultats d'une recherche
@@ -1247,7 +1249,13 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
     os.makedirs(ws)
     base_consigne = io.open(os.path.join(BASE, "prompts", "%s.txt" % tache),
                             encoding="utf-8").read()
-    base_consigne = preambule_boucle(tours, TIMEOUT_TOUR, web) + base_consigne
+    # BRAS PROMESSE : l enonce annonce le secours EXACTEMENT comme le bras
+    # web, et le secours ne vient JAMAIS. C est la seule facon de separer
+    # 'etre aide' de 'savoir qu on peut l etre' -- mesure du 23/08 : le
+    # bras web a gagne 3-1 en ne cherchant qu une seule fois sur trois
+    # runs, donc l ecart ne venait pas de l information injectee.
+    base_consigne = (preambule_boucle(tours, TIMEOUT_TOUR, web or promesse)
+                     + base_consigne)
 
     env = dict(os.environ)
     env.setdefault("DSH_LOCAL_API_KEY", "local-loopback-noauth")
@@ -1310,7 +1318,16 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
         # et l'enonce grossit d'extraits que personne n'a demandes.
         sous_plafond = sum(1 for r in recherches if r.get("requete")) < max_rech
         cherche = web and assez and cherchable and sous_plafond
-        if web and not cherche:
+        if promesse:
+            # Le refus est ENREGISTRE : sans lui, ce bras serait
+            # indistinguable d un bras ou la recherche a echoue en
+            # silence. rech=0/N dit que la branche a ete atteinte et
+            # volontairement non executee.
+            recherches.append({
+                "tour": tour, "requete": None, "julia_a_ce_stade": faits,
+                "raison": "bras PROMESSE : recherche annoncee dans l enonce, "
+                          "volontairement JAMAIS faite -- c est l axe teste"})
+        elif web and not cherche:
             if not sous_plafond:
                 raison = "plafond de %d recherche(s) atteint" % max_rech
             elif faits < 0:
@@ -1351,6 +1368,7 @@ def un_run_boucle(effort, tache, rep=1, web=False, tours=4, web_apres_julia=2,
            # 23/08 le budget EST un axe compare (600x3 contre 900x2) : un
            # axe qu on ne peut lire que sur les runs rates n en est pas un.
            "timeout_tour": TIMEOUT_TOUR, "tours_max": tours,
+           "bras": "web" if web else ("promesse" if promesse else "sans"),
            "verdict": v, "why": why, "wall_s": round(dt, 1),
            "julia_runs": julia_runs, "rc": rc,
            "a_teste": os.path.exists(os.path.join(ws, "mytest.jl")),
@@ -1565,7 +1583,27 @@ def main():
             defaut = liste
             print("corpus %s : %s" % (nom, ",".join(defaut)))
 
+    global PROMESSE
+    PROMESSE = "--promesse" in argv
+    if PROMESSE:
+        argv.remove("--promesse")
     web = "--web" in argv
+    if web and PROMESSE:
+        raise SystemExit(
+            "--web et --promesse s excluent : le bras PROMESSE annonce le "
+            "secours et ne le fournit jamais. Les deux ensemble mesureraient "
+            "le bras web sous un autre nom. Campagne refusee.")
+    if PROMESSE and not TOURS:
+        raise SystemExit(
+            "--promesse n a de sens qu en mode boucle (--boucle N) : la "
+            "promesse porte sur le tour SUIVANT. Campagne refusee.")
+    if PROMESSE:
+        print("bras PROMESSE : l enonce annonce qu une recherche sera faite "
+              "en cas de blocage,")
+        print("  et AUCUNE ne sera faite. Le refus est enregistre a chaque "
+              "tour (rech=0/N),")
+        print("  pour qu il ne se confonde pas avec une recherche ratee en "
+              "silence.")
     if web:
         argv.remove("--web")
         _v = ("V3 -- recherche DIFFEREE : ne cherche qu apres deux echecs"
@@ -1649,7 +1687,8 @@ def boucle(reps, efforts, taches, par, iteratif, web, ecrire, voies=None):
                         try:
                             return un_run_boucle(_e, tache, _r, web, TOURS,
                                                  WEB_APRES_JULIA, MAX_RECH,
-                                                 slot, acc, wire, base)
+                                                 slot, acc, wire, base,
+                                                 PROMESSE)
                         finally:
                             libres.put((acc, slot, wire, base))
                     acc, slot, wire, base = libres.get()

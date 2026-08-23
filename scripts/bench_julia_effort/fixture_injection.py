@@ -326,6 +326,51 @@ else:
            "les DEUX enregistreurs ecrivent le champ (claim sur la SOURCE)")
 
 
+print("=== 9septies. bras PROMESSE : meme enonce, secours jamais livre ===")
+# Tout l experiment tient a une egalite : le bras qui RECOIT le secours et le
+# bras qui l ATTEND EN VAIN doivent lire le meme enonce. S ils different par
+# autre chose, l ecart mesure n est plus la livraison du secours.
+exiger(bench.preambule_boucle(2, 900, True)
+       != bench.preambule_boucle(2, 900, False),
+       "la promesse EST une difference d enonce -- sinon rien a mesurer")
+# Espaces NORMALISES : le preambule est enveloppe sur plusieurs lignes, et
+# un test qui cherche la phrase d un seul tenant echoue sur le retour a la
+# ligne -- il mesurerait la mise en page, pas le contenu.
+exiger("the harness runs one for you"
+       in " ".join(bench.preambule_boucle(2, 900, True).split()),
+       "la phrase annoncee est bien celle du secours")
+exiger(bench.empreinte_enonce(bench.preambule_boucle(2, 900, True))
+       != bench.empreinte_enonce(bench.preambule_boucle(2, 900, False)),
+       "et l empreinte la rend visible dans les enregistrements")
+
+# Preuve d EXECUTION des que les deux campagnes existent : les empreintes
+# ENREGISTREES doivent etre EGALES. Une claim sur le code ne suffirait pas --
+# le banc pourrait composer l enonce autrement pour chaque bras sans que la
+# lecture de la source le montre.
+import json as _js
+
+
+def _shas(nom):
+    f = os.path.join(bench.BASE, nom)
+    if not os.path.exists(f):
+        return None
+    v = {_js.loads(l).get("enonce_sha") for l in io.open(f, encoding="utf-8")
+         if l.strip()}
+    return sorted(x for x in v if x) or None
+
+
+_w, _p = _shas("resultats_t31d_web.jsonl"), _shas("resultats_t31d_promesse.jsonl")
+_s = _shas("resultats_t31d_sans.jsonl")
+if _w and _p:
+    exiger(_w == _p,
+           "MESURE : web et promesse ont lu le MEME enonce (%s)" % _w[0])
+    if _s:
+        exiger(_s != _w,
+               "MESURE : le bras temoin, lui, a lu un enonce DIFFERENT")
+else:
+    print("  (pas encore mesurable : la campagne trois bras n a pas tourne)")
+
+
 print("=== 10. le prefixe stable n est pas touche (le cache vaut 85 %) ===")
 base = "ENONCE STABLE DE LA TACHE" + chr(10)
 t1 = base + b2
