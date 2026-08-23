@@ -1483,6 +1483,68 @@ que Context7 n'indexe pas.
 `_requetes_reelles.json` (les six requêtes extraites des campagnes),
 `_rejeu_context7.json`.
 
+### §3.27 — Vingt-quatre tours n'ont jamais atteint le modèle, et le banc les comptait comme des échecs
+
+Sixième fois que la même forme passe : **une absence rendue comme un résultat.**
+Quand la dorsale coupe, `dsh` meurt en deux lignes. Le banc, lui, regarde ce
+qui reste au sol et écrit un verdict parfaitement crédible.
+
+Deux façons de mentir, les deux mesurées le 23/08 :
+
+| ce que le banc a écrit | ce qui s'est passé |
+|---|---|
+| `FAIL — aucun solution.jl ecrit` | le modèle n'a jamais reçu la question (`t31d_promesse` r2 : **12 appels modèle**, contre 36 à 66 dans le témoin) |
+| `FAIL — MethodError: ^(::Dual, ::Int64) is ambiguous` | le juge a tourné sur le **brouillon que le modèle était en train de remplacer** (`t31_web` r3 tour 2, coupé net sur la phrase *« Fixing both files: »*) |
+
+La seconde est la dangereuse : le verdict porte une vraie erreur Julia, d'un
+vrai fichier, produite par un vrai juge. Rien ne dépasse.
+
+**La liste nominative**, sur toutes les campagnes du dépôt — 24 tours, 5 causes :
+
+```
+  RATE_LIMIT 12 · MISSING_CREDENTIAL 7 · QUOTA 3 · PI_AI_ERROR 1 · INVALID_REQUEST 1
+```
+
+Deux campagnes entières n'étaient donc pas des mesures : **`oxviafree`**
+(10 tâches, 10 tours morts — 100 %) et **`runs/r01`** (7 tâches lancées sans
+identifiant valide).
+
+**Ce que le garde a lavé, et ce qu'il n'a pas eu à laver.** Passé sur les
+comparaisons déjà publiées : le 3–1 de §3.25 (`t31b`) est **propre**, dans les
+deux bras ; `t31c` aussi. Le seul tour mort tombe dans `t31_web` — la première
+comparaison, déjà retirée pour une autre raison (le préambule n'était donné
+qu'au bras web). Aucune conclusion publiée ne bouge ; c'est le garde qui le
+dit, plus la mémoire.
+
+**Trois valeurs, pas deux.** Un tour tué reçoit sa propre lettre, **X** — ni
+`P` ni `F` — et son run sort de la mesure, le nombre de mis-de-côté écrit à
+côté plutôt que retiré en silence. Et l'absence de trace au sol reçoit encore
+une autre valeur, `SANS TRACE` : *pas regardé* n'est pas *aucun*.
+
+**Le garde est né câblé** : `_morts_fournisseur` est appelé par `--comparer`.
+Aucune comparaison ne se publie sans que ses morts remontent, en tête, avant
+le score. Effet immédiat sur la campagne en cours : le bras promesse passe de
+trois runs à **un seul utilisable**. `n=1`, donc rien n'y est séparable — ce
+qui est vrai, alors que « 2 sur 3 » ne l'était pas.
+
+**Le bras known-BAD a trouvé un défaut dans le garde lui-même.** Avec une clé
+`(run, tour)`, les dix morts d'`oxviafree` s'écrasaient en une seule : dix
+tâches sous le même `r01`, un `_dsh.out` chacune. Clé corrigée en
+`(run, effort, tâche, tour)`. La paire décisive du contrôle : le même run se
+lit `FP` sans le garde, `XP` avec.
+
+**Et un défaut de plan que l'incident révèle.** Les trois bras tournent l'un
+après l'autre. Les douze `RATE_LIMIT` ont visé le bras promesse **et lui
+seul** — pas parce que c'est le bras promesse, mais parce que c'est celui qui
+tournait à ce moment-là. Tant que les bras se suivent au lieu de s'entrelacer,
+« le bras » et « le moment » sont indiscernables, et aucune quantité de
+répétitions ne les sépare.
+
+**Instrument :** `scripts/bench_julia_effort/analyse.py`
+(`_morts_fournisseur`, `_type_fatal`, lettre `X` dans `_marques`), câblé dans
+`--comparer` ; bras known-BAD dans `fixture_injection.py` §9octies
+(8 assertions : 3 known-BAD, 1 known-GOOD, 2 known-ABSENT, 2 sur la lecture).
+
 ## Partie 4 — Trois grandeurs qui ne se remplacent pas
 
 | grandeur | instrument | ce qu'elle inclut |
