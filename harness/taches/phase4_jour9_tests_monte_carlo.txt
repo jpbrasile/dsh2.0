@@ -1,0 +1,36 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change and report its verdict verbatim." followed by the planner's final message verbatim (if you received a short acknowledgement pointing to PLAN.md instead of the plan itself, pass that acknowledgement verbatim -- the coder will read PLAN.md).
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the plan> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia project): `src/liquid/monte_carlo_physics.jl` (960 lines, physics UQ Monte Carlo, included at `src/liquid/Liquid.jl:89` directly into `module Liquid`) has NO dedicated test file. Plan the writing of ONE new test file, `test/liquid/test_monte_carlo_physics.jl`, plus ONE include line (with a one-line comment above it) added to `test/liquid/runtests.jl` immediately after the existing `include("test_waveform_library.jl")` at line 120. Nothing else may be created or modified -- in particular `src/` is untouchable.
+
+HARD READING BOUND -- read EXACTLY these three files, each ONCE, top to bottom, nothing else:
+1. `src/liquid/monte_carlo_physics.jl` (960 lines) -- the module under test.
+2. `test/liquid/test_waveform_library.jl` (116 lines) -- the PATTERN: reuse its standalone-capable header, its @testset structure, its symbol-qualification style exactly.
+3. `test/liquid/runtests.jl` (184 lines) -- where the include goes (after line 120); note the dual-load guard at lines 23-27 and the CUDA_AVAILABLE flag: the new tests must NOT depend on CUDA.
+
+Facts verified against the source ON 2026-08-24 (trust them, and re-verify while reading):
+- Exports (lines 45-50): PhysicsUQParam, PhysicsUQParams, default_physics_uq_params, plateau_physics_uq_params, PhysicsUQSample, PhysicsUQResults, run_physics_monte_carlo, run_physics_monte_carlo_proxy, print_physics_uq_report, physics_uq_to_dict, physics_uq_convergence_check.
+- `run_physics_monte_carlo` is the GPU path ("full GPU run_ep_pretreatment per sample") -- NEVER call it in tests. The CPU path is `run_physics_monte_carlo_proxy` (line 561; keywords n_samples [default 10000], seed [42], verbose, BMP_control [250.0]; it calls Random.seed!(seed) so it is deterministic).
+- `default_physics_uq_params()` (line 228) returns 13 params: 4 pulse params all `:fixed` (:V_peak_kV 6.0 in [4,12], :V_plateau_V 1000.0, :n_pulses 4.0, :t_peak_us 15.0 in [5,50]) + 9 material params, among which the anchors: :f_irrev_max (0.65, [0.35, 0.95], :normal, std 0.15), :E_threshold_kJ_m3 (95.0, [65, 155], :normal, std 20.0), :w_TS (0.04, [0.02, 0.08], :triangular), :tau2 (150.0, [50, 400], :lognormal, std 0.3). Non-uncertain config defaults: geometry_type :parallel, gap_m 0.025, L_m 0.050, nr 48, nz 24, T_initial 293.15, use_pavlin true, use_ion_transport true, C_ion_initial 150.0.
+- `plateau_physics_uq_params()` (line 294) overrides EXACTLY three params to lo == hi == value (:V_peak_kV 6.0, :V_plateau_V 1000.0, :n_pulses 4.0); :t_peak_us keeps [5, 50].
+- Sampling (`_sample_physics_param`, line 319, private): `:fixed` returns `value` exactly; `:normal` and `:lognormal` are clamp()ed into [lo, hi]; `:triangular` (inverse CDF) stays in [lo, hi] by construction; `_sample_all_params` (line 355) returns a Dict{Symbol,Float64} with one entry per param.
+- EROEI (`_calculate_eroei`, line 373, private) with constants `_UQ_RHO_SLUDGE = 1020.0`, `_UQ_VS_TS_RATIO = 0.75`, `_UQ_CH4_ENERGY_KJ_ML = 0.0358` (lines 369-371). Hand-computed anchor, exact in Float64: `_calculate_eroei(10.0, 1.0, 0.05, 250.0)` = 9.509375 (VS = 1020*0.05*0.75 = 38.25 kg/m3; CH4 = 0.1*250*38.25*1000 = 956250 mL; gain = 956250*0.0358 = 34233.75 kJ; input = 3600 kJ). And `E_kWh_m3 = 0.0` returns 0.0. Private helpers are reached as `Liquid._calculate_eroei` (the file is included directly into module Liquid).
+- `PhysicsUQResults` (line 140): fields include samples, n_total, n_feasible, six distribution vectors (f_irrev/E_kWh_m3/dT_max_K/CH4_yield/CH4_increase/EROEI) sized by the FEASIBLE count, and mean/std/p5/p50/p95 blocks.
+- `physics_uq_convergence_check` (line 795) returns a NamedTuple (converged, n, eroei_rse, dbmp_rse, f_irrev_rse); with n_feasible < 10 it returns (false, n, 1.0, 1.0, 1.0).
+- `physics_uq_to_dict` (line 906) returns a Dict with keys "metadata" (containing "seed", "n_total", "n_feasible", ...), "f_irrev", "E_kWh_m3", "dT_max_K", "CH4_yield", "CH4_increase_pct", each stats sub-dict with "mean"/"std"/"p5"/"p50"/"p95".
+
+Required tests -- at least 15 @test assertions, ALL CPU-only, ALL deterministic (seed every random block), fast (proxy at n_samples <= 300, verbose=false):
+1. Construction: PhysicsUQParam convenience constructor fills std=0.0, unit="", desc="".
+2. Defaults: default_physics_uq_params() has 13 params; the four anchors above have the exact value/lo/hi/distribution stated; config defaults as stated.
+3. Plateau: exactly the three overridden params have lo == hi; :t_peak_us still spans [5, 50].
+4. Sampling: :fixed returns value exactly; after Random.seed!, 200 draws of :normal, :lognormal and :triangular params all fall inside [lo, hi]; _sample_all_params returns one entry per param; reseeding reproduces the identical Dict.
+5. EROEI: the 9.509375 anchor exactly (atol 1e-12 or ==); zero-energy returns 0.0.
+6. Proxy run: r = run_physics_monte_carlo_proxy(; n_samples=300, verbose=false) -- r isa PhysicsUQResults; r.n_total == 300; 0 <= r.n_feasible <= 300; length(r.EROEI_distribution) == r.n_feasible; r.f_irrev_p5 <= r.f_irrev_p50 <= r.f_irrev_p95; a second run with the same seed reproduces r.f_irrev_mean exactly.
+7. Convergence check on r: NamedTuple with the five keys, rse values >= 0.
+8. Round-trip: physics_uq_to_dict(r) has the six top-level keys and metadata "n_total" == 300.
+HONESTY RULE: if any assertion above FAILS against the real source, do NOT weaken it, do NOT delete it, do NOT tune numbers until it passes -- keep the assertion, mark it with a comment "# FAILS against src as of 2026-08-24:" plus the measured value, and report the failure explicitly in your final message. A failing test honestly reported is an acceptable deliverable; a weakened assertion is not.
+
+Acceptance: both files changed exactly as specified and nothing else; julia_gate invoked on the workspace after the change and its verdict reported VERBATIM in the final message (quote the gate's own printed line, do not summarize it); any ROUGE or failed replay is reported as such, never smoothed into a pass; and a self-check that no file other than DONE.md, the new test file and the one include line in runtests.jl was created or modified.
