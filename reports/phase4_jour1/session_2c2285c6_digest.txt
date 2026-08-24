@@ -1,0 +1,33 @@
+t+    0s seq=    3 agent/inbox/spliced  {"target":"next-turn","start":0,"inserted":[{"content":[{"type":"text","text":"Two delegations, in order, then stop. Do not read any source file and do not impl
+t+    0s seq=    4 turn/start           {"turn":1}
+t+    0s seq=    5 agent/inbox/spliced  {"target":"next-turn","start":0,"removedCount":1,"inserted":[]}
+t+    0s seq=    6 step/start           {"turn":1,"step":1}
+t+    0s seq=    7 user/message         long=2412 car.
+t+    0s seq=    8 user/message         long=37270 car.
+t+    0s seq=    9 user/message         long=572 car.
+t+  108s seq= 5568 assistant/message    long=2 car. :: ""
+t+  108s seq= 5569 tool/call            planner args=1816 car. :: "{\"description\":\"Plan biorefinery test suite\",\"prompt\":\"Task for the planner (Julia, module under `src/industrial/`, tests under `test/industrial/`): `src/industrial/biorefinery_symbiosis.jl` i...
+t+  225s seq= 5570 tool/result           resultat=2 car. :: ""
+t+  225s seq= 5571 step/end             {"turn":1,"step":1}
+t+  225s seq= 5572 step/start           {"turn":1,"step":2}
+t+ 1271s seq=29101 assistant/message    long=2 car. :: ""
+t+ 1271s seq=29102 tool/call            write args=11209 car. :: "{\"file_path\":\"C:\\\\Users\\\\test\\\\Documents\\\\dsh2.0\\\\scripts\\\\bench_julia_effort\\\\_fumee\\\\framework\\\\.plan_tmp.txt\",\"content\":\"Now I have all the information I need. Let me care...
+t+ 1271s seq=29103 tool/result           resultat=2 car. :: ""
+t+ 1271s seq=29104 tool/call            coder args=11254 car. :: "{\"description\":\"Implement biorefinery test plan\",\"prompt\":\"Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change; VERT is the only green.\\nNow I...
+t+ 1439s seq=29105 tool/result           resultat=2 car. :: ""
+t+ 1439s seq=29106 step/end             {"turn":1,"step":2}
+t+ 1439s seq=29107 compaction/prune     {"shadowedRange":{"start":5570,"end":5570},"shadowedSeqs":[5570],"shadowedTokenCount":2670}
+t+ 1439s seq=29108 tool/result           resultat=2 car. :: ""
+t+ 1439s seq=29109 step/start           {"turn":1,"step":3}
+t+ 1509s seq=30609 assistant/message    long=2 car. :: ""
+t+ 1509s seq=30610 tool/call            pwsh args=280 car. :: "{\"command\":\"$p = 'C:\\\\Users\\\\test\\\\Documents\\\\dsh2.0\\\\scripts\\\\bench_julia_effort\\\\_fumee\\\\framework\\\\.plan_tmp.txt'\\n$s = [System.IO.File]::ReadAllText($p)\\n$cp = ([regex]::Ma...
+t+ 1516s seq=30611 tool/result           resultat=2 car. :: ""
+t+ 1516s seq=30612 step/end             {"turn":1,"step":3}
+t+ 1516s seq=30613 compaction/start     {"compactionId":"93664807-d422-4252-88f3-0b554f3e2e13","turn":1}
+t+ 1764s seq=30614 compaction/end       {"compactionId":"93664807-d422-4252-88f3-0b554f3e2e13","turn":1,"error":"summarization truncated at the token cap (incomplete checkpoint)"}
+t+ 1764s seq=30615 step/start           {"turn":1,"step":4}
+t+ 1790s seq=30711 assistant/message    long=2 car. :: ""
+t+ 1790s seq=30712 tool/call            pwsh args=290 car. :: "{\"command\":\"$p = 'C:\\\\Users\\\\test\\\\Documents\\\\dsh2.0\\\\scripts\\\\bench_julia_effort\\\\_fumee\\\\framework\\\\.plan_tmp.txt'; $s = [System.IO.File]::ReadAllText($p); $cp = ([regex]::Matc...
+t+ 1794s seq=30713 tool/result           resultat=2 car. :: ""
+t+ 1794s seq=30714 step/end             {"turn":1,"step":4}
+t+ 1794s seq=30715 compaction/start     {"compactionId":"87b8349a-5ad4-4496-9e36-8820686e2ca5","turn":1}

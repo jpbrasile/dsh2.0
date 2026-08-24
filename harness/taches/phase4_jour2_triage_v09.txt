@@ -1,0 +1,18 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change; VERT is the only green." followed by the planner's final message verbatim.
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the planner's final message> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia project; validation campaign under `validation/09_ozone_saturation/`, PIRT at `docs/vv/PIRT.md` row PD-9): V09 is the highest-risk open FAIL of the PIRT (4/7 FAIL, target <1.1 percent error, refs Shimizu 2012 and Kossyi 1992). Plan the writing of ONE new file, `docs/vv/TRIAGE_V09_2026-08-24.md`, a triage note. Nothing else may be created or modified -- no source file, no test file, no validation script, no result file.
+
+The note must be built from the repository record, not from guesses. The planner must locate and read, at minimum: the PIRT row PD-9; the newest VERDICT_V09_* files; the STOPPED_C3GRID_FAIL5of7_2026-08-16 marker directory name and what it implies; the newest PREREG_V09_* files. The plan must list the exact files the coder will read, by path.
+
+Required sections of the note, each with every claim cited as (file path, line or section):
+1. STATE -- which checks of V09 pass and which fail today, with the score (e.g. 4/7), from the newest verdict, and the date of that evidence.
+2. HISTORY -- the sequence of preregistered attempts (C2 redress, C3 grid extension, C4 decomposition probe, NOx channel, RNG rerun) and each verdict in one line.
+3. LAST CONCLUSION -- what the newest verdict actually concluded, quoted or tightly paraphrased, including the STOPPED marker if it is the latest word.
+4. SMALLEST NEXT PROBE -- the single cheapest next measurement the record itself points to, with the prereg discipline it must follow (a new PREREG file BEFORE running anything), and what result would change the PIRT row.
+5. WHAT NOT TO DO -- explicitly: no parameter tuned to force a PASS, no test or validation script weakened, no rerun without a prereg; a FAIL that survives honest triage stays a FAIL in the note.
+
+Acceptance: julia_gate verdict VERT on the workspace (the note is documentation; the existing test suite must still replay green), the note exists at the exact path with all five sections, and a self-check that no file other than DONE.md and the note was created or modified. VERT is the only green.

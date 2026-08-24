@@ -1,0 +1,202 @@
+Now I have all the information I need. Let me carefully derive the expected numeric values by hand from the source constants.
+
+**Hand-computed derivations:**
+
+For `V = 100.0` L (a small volume):
+
+1. `daily_biomass_kg = V * _SYM_GROWTH_RATE_G_L_DAY / 1000.0` = `100.0 * 0.8 / 1000.0` = **0.08** kg/day
+
+2. `daily_protein_kg = daily_biomass_kg * _SYM_PROTEIN_YIELD * _SYM_HARVEST_EFF` = `0.08 * 0.45 * 0.90` = **0.0324** kg/day
+
+3. `co2_needed_kg = daily_biomass_kg * _SYM_CO2_PER_KG_BIOMASS` = `0.08 * 1.8` = **0.144** kg/day
+
+4. `co2_needed_tons = 0.144 / 1000.0` = **0.000144** t
+
+5. `heat_needed_kwh = V / 1000.0 * _SYM_HEAT_KWH_M3_DAY` = `100.0 / 1000.0 * 2.0` = **0.2** kWh/day
+
+6. `pef_energy_kwh = daily_biomass_kg * _SYM_PEF_ENERGY_KJ_KG / 3600.0` = `0.08 * 80.0 / 3600.0` = `6.4 / 3600.0` = **0.0017777...** kWh/day
+
+7. `digestate_L = daily_biomass_kg * _SYM_DIGESTATE_L_KG` = `0.08 * 5.0` = **0.4** L
+
+8. `plasma_hours = digestate_L / 50.0 * (5.0 / 60.0)` = `0.4 / 50.0 * (1/12)` = `0.008 * 0.08333...` = **0.0006666...** h
+
+9. `plasma_energy_kwh = (_SYM_PLASMA_POWER_W / 1000.0) * plasma_hours` = `0.3 * 0.0006666...` = **0.0002** kWh/day
+
+10. `total_elec_kwh = pef_energy_kwh + plasma_energy_kwh` = `0.0017777... + 0.0002` = **0.0019777...** kWh/day
+
+11. `no3_kg_n = digestate_L * _SYM_NO3_PROD_MG_L / 1e6` = `0.4 * 40.0 / 1_000_000` = **0.000016** kg/day
+
+12. `protein_revenue = daily_protein_kg * _SYM_PROTEIN_EUR_KG` = `0.0324 * 25.0` = **0.81** €/day
+
+13. `fertilizer_revenue = no3_kg_n * _SYM_FERT_N_EUR_KG` = `0.000016 * 2.0` = **0.000032** €/day
+
+14. `total_revenue = protein_revenue + fertilizer_revenue` = `0.81 + 0.000032` = **0.810032** €/day
+
+15. With deal: `co2_cost = 0.0`, `heat_cost = 0.0`, `electricity_cost = total_elec_kwh * _SYM_ELEC_EUR_KWH` = `0.0019777... * 0.12` = **0.00023733...**
+
+16. With deal: `total_cost = electricity_cost + 0.0 + 0.0` = **0.00023733...**
+
+17. With deal: `daily_profit = total_revenue - total_cost` = `0.810032 - 0.00023733...` = **0.80979466...**
+
+18. `co2_savings = co2_needed_tons * _SYM_CO2_EUR_T` = `0.000144 * 200.0` = **0.0288** €/day
+
+19. `heat_savings = heat_needed_kwh * _SYM_HEAT_EUR_KWH` = `0.2 * 0.05` = **0.01** €/day
+
+20. `methanizer_savings = co2_needed_tons * 50.0` = `0.000144 * 50.0` = **0.0072** €/day
+
+21. `annual_profit = daily_profit * 300.0`
+
+For CAPEX at `V=100.0` L:
+
+22. `ref = 10_000.0`
+23. `Culture tanks`: `15.0 * (100.0/10000.0)^0.70` = `15.0 * (0.01)^0.70` = let me compute: `0.01^0.70 = 10^(-2*0.70) = 10^(-1.4)` ≈ 0.0398107... So `15.0 * 0.03981` ≈ **0.59716** k€
+24. `PEF system`: `50.0 + 10.0 * (0.01)^0.50` = `50.0 + 10.0 * 0.1` = **51.0** k€
+25. `HV generator`: `30.0 + 5.0 * (0.01)^0.30` = `30.0 + 5.0 * 10^(-0.6)` = `30.0 + 5.0 * 0.2511886` ≈ `30.0 + 1.25594` = **31.25594** k€
+26. `Plasma unit`: **10.0** k€ (constant)
+27. `Control`: `20.0 + 5.0 * (0.01)^0.30` = `20.0 + 5.0 * 0.2511886` ≈ `20.0 + 1.25594` = **21.25594** k€
+28. `Installation`: `25.0 * (0.01)^0.60` = `25.0 * 10^(-1.2)` = `25.0 * 0.0630957` ≈ **1.57739** k€
+29. Sum k€: `0.59716 + 51.0 + 31.25594 + 10.0 + 21.25594 + 1.57739` ≈ **115.68643** k€
+30. `* 1000.0` = **115686.43** € — roughly 115,686 €
+
+For `V=10_000.0` L (reference):
+
+31. `daily_biomass_kg = 10000.0 * 0.8 / 1000.0` = **8.0** kg/day
+32. `daily_protein_kg = 8.0 * 0.45 * 0.90` = **3.24** kg/day
+33. `co2_needed_kg = 8.0 * 1.8` = **14.4** kg/day
+
+For zero volume (`V=0.0`):
+
+34. `daily_biomass_kg = 0.0`
+35. `daily_protein_kg = 0.0`
+36. `total_revenue = 0.0`
+37. `total_cost = 0.0` (all electricity terms zero)
+38. `daily_profit = 0.0`
+39. CAPEX at `V=0.0`: The power-law scaling `(V/ref)^α` with `α > 0` gives `0^α = 0` for the terms that scale, but `50.0 + 10.0*(0)^0.5 = 50.0`, `30.0 + 5.0*(0)^0.3 = 30.0`, `20.0 + 5.0*(0)^0.3 = 20.0`, `Plasma unit = 10.0`. So CAPEX at V=0: `(0 + 50.0 + 30.0 + 10.0 + 20.0 + 0) * 1000.0` = **110_000.0** €
+
+Now let me plan the test file. I need ≥12 `@test` assertions checking numeric properties, with at least one hand-computed value, one monotonicity, one bounds check, one degenerate input.
+
+Here's my plan:
+
+---
+
+## Plan
+
+### Goal
+Create `test/industrial/test_biorefinery_symbiosis.jl` with ≥12 numeric `@test` assertions covering both `symbiosis_economics` and `estimate_biorefinery_capex`, and register it in `test/industrial/runtests.jl`.
+
+### Files to touch
+
+**1. `test/industrial/test_biorefinery_symbiosis.jl`** — CREATE (new file)
+
+**2. `test/industrial/runtests.jl`** — EDIT: add `include("test_biorefinery_symbiosis.jl")` after line 57 (the existing `include("test_algae_pef_chain.jl")`)
+
+### Assertions plan (16 numeric `@test` assertions, all derivations below)
+
+#### Testset 1: `symbiosis_economics` hand-computed values at V=100 L (with deal)
+
+| # | Assertion | Derivation |
+|---|-----------|------------|
+| A1 | `r.biomass_kg ≈ 0.08` | `100.0 × 0.8 / 1000.0 = 0.08` |
+| A2 | `r.protein_kg ≈ 0.0324` | `0.08 × 0.45 × 0.90 = 0.0324` |
+| A3 | `r.co2_needed_kg ≈ 0.144` | `0.08 × 1.8 = 0.144` |
+| A4 | `r.heat_needed_kwh ≈ 0.2` | `100.0 / 1000.0 × 2.0 = 0.2` |
+| A5 | `r.protein_revenue ≈ 0.81` | `0.0324 × 25.0 = 0.81` |
+| A6 | `r.co2_savings ≈ 0.0288` | `0.000144 × 200.0 = 0.0288` |
+| A7 | `r.heat_savings ≈ 0.01` | `0.2 × 0.05 = 0.01` |
+| A8 | `r.daily_profit ≈ 0.0324*25.0 + (0.4*40.0/1e6)*2.0 - (0.08*80.0/3600.0 + (0.4/50.0*(5.0/60.0))*0.3)*0.12` (full hand chain, or the derived `≈ 0.80979466...` — use `atol=1e-4`)
+
+#### Testset 2: Monotonicity checks
+
+| # | Assertion | Derivation |
+|---|-----------|------------|
+| A9 | `r_big.biomass_kg > r_small.biomass_kg` | `V` larger ⇒ `daily_biomass_kg` = `V × const` is strictly larger |
+| A10 | `capex_big > capex_small` | CAPEX is sum of terms each monotone non-decreasing in V (power-law with positive exponent plus positive additive constants); for V₁=100, V₂=10000 the increase is guaranteed |
+
+#### Testset 3: Bounds checks
+
+| # | Assertion | Derivation |
+|---|-----------|------------|
+| A11 | `0.0 < r.protein_kg / r.biomass_kg <= _SYM_PROTEIN_YIELD` (≤ 0.45) | `protein_kg = biomass_kg × 0.45 × 0.90`, so ratio = `0.45 × 0.90 = 0.405`, in (0, 0.45] |
+| A12 | `0.0 < r.co2_needed_kg / r.biomass_kg ≈ 1.8` | Ratio is exactly `_SYM_CO2_PER_KG_BIOMASS = 1.8` |
+
+#### Testset 4: Degenerate input (zero volume)
+
+| # | Assertion | Derivation |
+|---|-----------|------------|
+| A13 | `r0.biomass_kg == 0.0` | `0.0 × const = 0.0` |
+| A14 | `r0.daily_profit == 0.0` | Revenue = 0, electricity = `0.0 × const` = 0, total cost = 0 |
+| A15 | `r0 isa NamedTuple` and returns all same keys (structural, not numeric—won't count toward 12) |
+
+#### Testset 5: CAPEX at reference volume (10,000 L)
+
+| # | Assertion | Derivation |
+|---|-----------|------------|
+| A16 | `capex_ref ≈ 165_000.0` (hand check) | At ref V=10000: tanks `15.0×1^0.70=15`, PEF `50.0+10.0×1^0.50=60`, HV `30.0+5.0×1^0.30=35`, plasma `10`, control `20.0+5.0×1^0.30=25`, installation `25.0×1^0.60=25`; sum = 170.0 k€ → **170,000** €. Correction: let me recompute: `15 + 60 + 35 + 10 + 25 + 25 = 170.0`, `×1000 = 170_000`. |
+
+Wait, let me recheck: `15.0 * (10000/10000)^0.70 = 15.0 * 1.0 = 15.0`. `50.0 + 10.0 * 1.0 = 60.0`. `30.0 + 5.0 * 1.0 = 35.0`. `10.0`. `20.0 + 5.0 * 1.0 = 25.0`. `25.0 * 1.0 = 25.0`. Sum: `15.0 + 60.0 + 35.0 + 10.0 + 25.0 + 25.0 = 170.0` k€. `× 1000 = 170_000` €.
+
+So A16: `estimate_biorefinery_capex(10_000.0) ≈ 170_000.0`
+
+#### Testset 6: Standalone (no deal) vs deal
+
+| # | Assertion | Derivation |
+|---|-----------|------------|
+| A17 | `r_standalone.co2_cost > 0.0` | Without deal, CO₂ is bought at market |
+| A18 | `r_standalone.daily_profit < r_deal.daily_profit` | Paying for CO₂ and heat reduces profit |
+| A19 | `r_standalone.co2_savings == 0.0` | No deal ⇒ no savings |
+| A20 | `r_standalone.methanizer_savings == 0.0` | No deal ⇒ no savings for methanizer |
+
+That gives 20 numeric assertions, well above the 12 minimum, across all required categories.
+
+Let me also verify the standalone costs for V=100:
+
+- co2_cost = 0.000144 * 200.0 = 0.0288
+- heat_cost = 0.2 * 0.05 = 0.01
+- electricity_cost = same = ~0.0002373
+- total_cost = 0.0002373 + 0.0288 + 0.01 = 0.0390373
+- daily_profit = 0.810032 - 0.0390373 = 0.7709947
+
+So indeed standalone profit < deal profit.
+
+Now let me also double-check the zero-volume CAPEX: `estimate_biorefinery_capex(0.0)`:
+- Culture tanks: `15.0 * (0/10000)^0.70 = 15.0 * 0.0 = 0.0`
+- PEF: `50.0 + 10.0 * 0.0 = 50.0`
+- HV: `30.0 + 5.0 * 0.0 = 30.0`
+- Plasma: `10.0`
+- Control: `20.0 + 5.0 * 0.0 = 20.0`
+- Installation: `25.0 * 0.0 = 0.0`
+- Sum: `110.0 * 1000 = 110_000.0`
+
+This is a realistic engineering estimate (there are fixed costs even at zero volume — the basic PEF system, HV generator, plasma unit, and control hardware).
+
+### Ordered steps for the coder
+
+1. **Create** `test/industrial/test_biorefinery_symbiosis.jl` with content as described below (all 20 `@test` assertions across 6 `@testset` blocks).
+
+2. **Edit** `test/industrial/runtests.jl`: add `include("test_biorefinery_symbiosis.jl")` after line 57 (`include("test_algae_pef_chain.jl")`).
+
+3. **Run** `julia_gate` on the workspace. Target: VERT.
+
+4. **Self-check**: verify every planned assertion is present in the written file.
+
+### Targeted test
+
+- `test/industrial/runtests.jl` — the gate will replay this, which now includes the new file.
+
+### Acceptance criterion
+- `julia_gate` returns VERT (green). No weakening of assertions to pass.
+
+### Risks and what NOT to touch
+
+- **Do NOT modify** `src/industrial/biorefinery_symbiosis.jl` — the module under test is read-only.
+- **Do NOT modify** any other existing test file.
+- The assertion `r.biomass_kg == 0.0` at V=0 uses `==` rather than `≈` because `Float64(0.0) * const` is exactly `0.0` in IEEE 754.
+- The hand-computed `daily_profit ≈ 0.80979466...` at V=100 is derived from a chain of multiplications; use `atol=1e-4` or `rtol=1e-6` to tolerate floating-point accumulation.
+- The CAPEX reference at V=10,000 is exact (all exponents evaluate `1.0^α = 1.0`) so `≈` with `atol=1e-8` or `==` both work; I'll use `≈` for consistency.
+- The monotonicity of CAPEX: since the additive constants (`50.0`, `30.0`, `10.0`, `20.0`) dominate at small V, CAPEX(0) = 110k > 0, but CAPEX(10000) = 170k > CAPEX(100) ≈ 115.7k, and the power-law terms are strictly increasing. The check `capex(10000) > capex(100)` is safe.
+
+### Summary of assertions by count
+
+20 numeric `@test` assertions: A1-A8 (8 hand-computed values), A9-A10 (2 monotonicity), A11-A12 (2 bounds/ratio), A13-A14 (2 degenerate input), A16 (1 hand-computed CAPEX), A17-A20 (4 deal-vs-standalone).
+
+All categories covered: hand-computed values ✓, monotonicity ✓, bounds ✓, degenerate input ✓.
