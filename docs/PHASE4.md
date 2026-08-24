@@ -94,6 +94,27 @@ jamais touché.
 
 ## Journal
 
+- **J5 (24/08) — triage V49** : run propre **n° 5 consécutif**. rc=0 en **667 s**,
+  0,2235 USD, cache 43 % ; spool actif (9071 car., DONE.md concorde) ; porte
+  préchauffée essai 2. Note `TRIAGE_V49_2026-08-24.md` (219 lignes, 5 sections +
+  Boundaries) : les DEUX scores rapportés en parallèle — 2/6 (PIRT l.301, non daté)
+  vs 3/6 scellé `18302730` (11/08) puis 3/7 scellé `4096f485` (12/08) — discordance
+  **NON RÉSOLUE signalée** (comme demandé par le brief), autorité hors-borne nommée
+  mais pas citée. Dernier mot : γ*=23,47 = verdict sur `n_e = 1.0e16*P` (6 nombres
+  typés non ancrés), **BLOQUE #101** (circularité même-phrase Niemczyk 90 s/270 s),
+  3 routes ; sonde = ancrer n_e indépendamment (Ar atm. ~10 kHz, 0,53–1,60 W/cm²)
+  sous PREREG neuf ; pièges repris verbatim (« refused in advance »). **Porte :
+  ORANGE structurel doc-only** ; l'état « 2 non rejouées » élucidé :
+  `literature_constants.jl` (bonding_debonding) porté modifié antérieurement à la
+  campagne, suite ciblée 31 s > budget 30 s ⇒ rejeu direct
+  `test/bonding_debonding/runtests.jl` : **9225/9225 en 3 min 58** (GPU libre
+  vérifié avant : 0 processus). **Red team citations PASSÉ** : ~45 citations
+  ligne à ligne sur les 5 fichiers, 6+ verbatim exacts, zéro falsification ;
+  3 mineurs (2 fenêtres décalées ; self-check `git status` du coder remonté au
+  dépôt parent — le WS n'est pas un dépôt git, ride harnais à surveiller).
+  **Promu** : `bcfb69ff` sur `phase4-tests` (5e livrable). Preuves
+  `reports/phase4_jour5/` (scan secrets 0).
+
 - **J4 (24/08) — triage V44** : run propre **n° 4 consécutif**. rc=0 en **539 s**,
   0,2217 USD, cache 37 % ; spool actif (7251 car., DONE.md concorde — la ride J3 ne
   s'est pas reproduite) ; porte préchauffée essai 1. Note `TRIAGE_V44_2026-08-24.md`

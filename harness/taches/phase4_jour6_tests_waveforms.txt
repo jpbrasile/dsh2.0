@@ -1,0 +1,26 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change and report its verdict verbatim." followed by the planner's final message verbatim (if you received a short acknowledgement pointing to PLAN.md instead of the plan itself, pass that acknowledgement verbatim -- the coder will read PLAN.md).
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the plan> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia project): `src/liquid/waveform_library.jl` (505 lines, Li et al. 2024 IFSET 94 103649, nine PEF waveforms) has NO test file. Plan the writing of ONE new test file `test/liquid/test_waveform_library.jl` plus ONE include line added to `test/liquid/runtests.jl`. Nothing else may be created or modified.
+
+HARD READING BOUND -- read EXACTLY these three files, each ONCE, top to bottom, nothing else (no directory listing, no glob beyond DONE.md, no other file):
+1. `src/liquid/waveform_library.jl` (505 lines) -- the module under test.
+2. `test/liquid/test_cap_viability.jl` (117 lines) -- the house pattern: docstring with references, `using Test`, then the dual-load guard `if !@isdefined(Liquid) ... include .../src/liquid/Liquid.jl ... using .Liquid end` so the file runs BOTH standalone and from runtests.jl. Reproduce that guard exactly.
+3. `test/liquid/runtests.jl` (181 lines) -- where the include line goes (flat includes like `include("test_peroxynitrite_kinetics.jl")` near the end of the flat block).
+
+Facts verified against the source (use them as anchors; re-read them in the file itself):
+- The exports under test are the waveform block of `src/liquid/Liquid.jl` lines 505-511 (13 names): `WaveformSpec`, `li_waveform_specs`, `make_rectangle_waveform`, `make_halfsine_waveform`, `make_expdecay_waveform`, `make_exprise_waveform`, `make_twostep_waveform`, `make_triangle_waveform`, `make_oscrect_waveform`, `make_bipolar_rect_waveform`, `make_bipolar_sine_waveform`, `create_li_waveform`, `create_all_li_waveforms`. Do NOT read Liquid.jl for this -- the names above are given.
+- `li_waveform_specs()` returns a `Vector{WaveformSpec}` of EXACTLY 9 entries (7 unipolar + 2 bipolar), all with `V_peak == 7000.0` and `E_field == 17.5`.
+- Every `make_*_waveform(V_peak, t_pulse)` returns a CLOSURE `V(t)`: zero outside `[0, t_pulse]`; rectangle gives `V(0) == V_peak`; half-sine gives `V(t_pulse/2) == V_peak` (up to 1e-12 rel.) and `V(0) == 0`; exponential decay uses `tau = t_pulse/3` so `V(t_pulse) == V_peak * exp(-3)` (rel. tol 1e-12).
+- `create_li_waveform(spec)` dispatches on `spec.label` and raises `error(...)` on an unknown label -- test the error path with `@test_throws` on a hand-built `WaveformSpec` with a bogus label.
+
+Contract for the test file:
+- >= 15 `@test` assertions inside ONE top-level `@testset`; every one of the 13 exported names above is exercised at least once (constructing, calling, or checking its result).
+- CPU only: NO `using CUDA`, no GPU path; the file must pass standalone via `julia --project=. test/liquid/test_waveform_library.jl`.
+- HONESTY RULE: no expected value invented -- every reference number is either read from `waveform_library.jl` itself (specs table) or recomputed from the same closed form in the test (e.g. `exp(-3)`); if an observed value contradicts an anchor above, assert the OBSERVED value and state the contradiction in DONE.md.
+- The module under test is NOT modified. `test/liquid/runtests.jl` gets exactly ONE new include line, nothing else changes in it.
+
+Acceptance: julia_gate invoked after each change, verdict reported VERBATIM in the final message. The gate may report ORANGE if heavier pending suites exceed its budget -- in that case the standalone run of the new test file must be shown green (paste its `Test Summary` line into the final message); any ROUGE or failed test is a failure. Self-check that no file other than DONE.md, the new test file and the one-line runtests.jl edit was created or modified.
