@@ -1,0 +1,41 @@
+﻿route openrouter-banc / qwen/qwen3.8-27b  amont=openrouter.ai/api/v1  patchs=C:\Users\test\Documents\dsh2.0\harness\lean.patch.yml,C:\Users\test\Documents\dsh2.0\harness\agents.patch.yml
+dsh rc=0  duree=654.9s
+DONE.md : planner: 7965 chars
+VERT achieved. The plan is fully implemented.
+
+## Summary
+
+*
+appels enregistres : 26
+  servi=qwen/qwen3.8-27b           status=200 ms=144896 in=18586 out=6090  n_messages=4 n_tools=22 sys_chars=1890
+  servi=deepseek/deepseek-v4-pro   status=200 ms=29891  in=13824 out=229  n_messages=4 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=23971  in=19780 out=116  n_messages=8 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=22213  in=20021 out=89  n_messages=10 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=19464  in=20270 out=146  n_messages=12 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=22316  in=37712 out=150  n_messages=14 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=18740  in=38054 out=216  n_messages=16 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=14841  in=38463 out=269  n_messages=18 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=15157  in=38829 out=134  n_messages=20 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=8690   in=39873 out=132  n_messages=22 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=13057  in=42444 out=186  n_messages=24 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=58066  in=42644 out=2348  n_messages=26 n_tools=3 sys_chars=4708
+  servi=qwen/qwen3.8-27b           status=200 ms=56434  in=24869 out=2051  n_messages=6 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=7467   in=14983 out=48  n_messages=4 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=4716   in=17925 out=107  n_messages=6 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=1790   in=22499 out=32  n_messages=9 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=4631   in=22729 out=59  n_messages=11 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=3664   in=24640 out=140  n_messages=13 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=6744   in=25316 out=185  n_messages=16 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=21259  in=25575 out=948  n_messages=18 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=6611   in=26598 out=45  n_messages=20 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=3200   in=26839 out=91  n_messages=22 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=1464   in=27100 out=45  n_messages=24 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=10401  in=27314 out=551  n_messages=26 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=100871 in=27514 out=2014  n_messages=9 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=14108  in=29594 out=379  n_messages=11 n_tools=22 sys_chars=1890
+outils offerts (1er appel outille) : coder edit exit_plan_mode glob grep interrupt_agent job_kill job_list job_output julia_gate list_agents mcp__context7__query-docs mcp__context7__resolve-library-id planner pwsh read read_image searcher send_message str_replace_editor todo_write write
+route aussi openrouter / deepseek/deepseek-v4-pro : 11 appel(s)
+VERDICT : OK -- chaque appel servi par qwen/qwen3.8-27b ou deepseek/deepseek-v4-pro (11), fichier ecrit
+cout : 0.1978 USD ce run, cache 56% (402715/713995 tokens d'entree) ; grand livre +26 (696 appels)
+verdict non note : au moins un appel servi par un autre modele que qwen/qwen3.8-27b
+rc=0 duree=655s porte prechauffee=oui (essai 1)

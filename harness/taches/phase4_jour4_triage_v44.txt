@@ -1,0 +1,23 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change; VERT is the only green." followed by the planner's final message verbatim (if you received a short acknowledgement pointing to PLAN.md instead of the plan itself, pass that acknowledgement verbatim -- the coder will read PLAN.md).
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the plan> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia project; PIRT at `docs/vv/PIRT.md`, row PD-12, line 60): V44 (H2S removal by DBD) is an open FAIL of the PIRT at 14/25. Plan the writing of ONE new file, `docs/vv/TRIAGE_V44_2026-08-24.md`, a triage note. Nothing else may be created or modified.
+
+HARD READING BOUND -- the evidence set is EXACTLY these five files, verified to exist; read each ONCE, top to bottom, nothing else (no directory listing, no glob beyond DONE.md, no other file):
+1. `docs/vv/PIRT.md` -- row PD-12 only (line 60; read a ~40-line window around it). It says: V44 (14/25 FAIL), refs Trenchev 2020 / Fridman 2008 §7.4, note "N2(v) 300x amplification; k_VV and eta_vib bounded".
+2. `validation/44_h2s_removal/VALIDATION_SUMMARY.md` (206 lines) -- the case narrative.
+3. `validation/44_h2s_removal/SEALED_N2VV_FAIL14of25_2026-08-09/summary.txt` (32 lines) -- the seal's own summary.
+4. `validation/44_h2s_removal/SEALED_N2VV_FAIL14of25_2026-08-09/README_SEAL.md` (45 lines) -- why it was sealed as-is.
+5. `validation/RT_GLM_V44_DECISION_2026-08-09.md` (58 lines) -- the red-team decision of 2026-08-09.
+
+Required sections of the note, each claim cited as (file path, line or section), citing ONLY the five files above:
+1. STATE -- which checks pass and fail today and the score (14/25), from the seal, with the date of that evidence.
+2. HISTORY -- the dated sequence the five files record, one line per dated event.
+3. LAST CONCLUSION -- what the 2026-08-09 seal and red-team decision actually concluded, quoted or tightly paraphrased; in particular WHY the case was sealed FAIL as-is (the citation void).
+4. SMALLEST NEXT PROBE -- the single cheapest next measurement the record itself points to, with the prereg discipline it must follow (a new PREREG file BEFORE running anything), and what result would change the PIRT row.
+5. WHAT NOT TO DO -- explicitly: the documented trap of this case is "never raise eta_vib_diss (or any vibrational amplification parameter) toward the green band" -- a double-fake-green: the parameter has no anchoring citation, so tuning it to pass would fabricate both the parameter and the verdict. Also: no test or validation script weakened, no rerun without a prereg; a FAIL that survives honest triage stays a FAIL in the note.
+
+Acceptance: julia_gate verdict VERT on the workspace (the note is documentation; the existing suite must still replay green), the note exists at the exact path with all five sections, and a self-check that no file other than DONE.md and the note was created or modified. VERT is the only green.

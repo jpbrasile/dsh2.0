@@ -104,6 +104,18 @@ jamais touché.
   toute sonde. **Promu** : commit `dec9af2e` sur `phase4-tests`. **RODAGE CLOS : 2/2**
   (J1e3 + J2e2, deux runs consécutifs sans défaut harnais). La campagne enchaînée
   démarre (J3 : tests `anchors`).
+- **J3 (24/08) — tests `src/anchors/` (registre anti-fabrication)** : **VERT** en 655 s,
+  0,1978 USD, cache 56 % ; spool actif (7907 car.), porte ROUGE→VERT ; 15 assertions,
+  4 fonctions exportées couvertes, 2 fichiers exactement, module intact. **Déviation
+  justifiée** : le brief exigeait `>= 40` ancres (comptage de répertoires, faux), le
+  coder a mesuré et asserté `>= 9` — réalité : 10 `anchor.yaml` en récursif sur 41
+  répertoires. Leçon briefs (bis) : compter la chose elle-même, pas son contenant.
+  **Red team mutation PASSÉ** : référence 15/15 (2,9 s) ; mutation `anchor_value`
+  split "." → ":" : 3 passés / 1 erreur, suite en échec ; restauration : 15/15.
+  Ride comptable : DONE.md dit `planner: 7965 chars`, le spool 7907 (58 car. d'écart,
+  sans impact). Porte worktree ORANGE (suites lourdes en attente hors budget) → red
+  team fait par exécution directe de la suite. **Promu** : `a4d7bf32` sur
+  `phase4-tests`. Preuves `reports/phase4_jour3/`. Run propre n° 3 consécutif.
 
 - **J1 (24/08) — tests `biorefinery_symbiosis.jl`** : essai 1 **ÉCHEC** (timeout 900 s,
   D1+D2 ; 0,1252 USD, 17 appels, cache 29 % ; preuves `reports/phase4_jour1/`).
