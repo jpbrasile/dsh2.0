@@ -94,6 +94,34 @@ jamais touché.
 
 ## Journal
 
+- **J9 (24/08) — tests monte_carlo_physics, en deux essais** : **essai 1 ÉCHEC**
+  (timeout 1800 s, DONE.md absent, 0,2950 USD) — première rupture après 8 runs
+  propres. Cause racine double : **erreur de brief n° 4 (la mienne)** — la clause
+  « ORANGE par construction » n'existait que pour les briefs doc-only, pas pour
+  un chantier `test/liquid/` dont le rejeu CUDA dépasse le budget 30 s de la
+  porte — et le coder a appelé la porte **5×** (toutes ORANGE, ~106 s) puis
+  bouclé sans écrire DONE.md. Paradoxe : le livrable de l'essai 1 était complet
+  et conforme — échec de **processus**, pas de produit ; publié comme échec,
+  preuves `reports/phase4_jour9_echec1/`, WS remis à zéro exactement. Brief
+  durci (« KNOWN GATE BEHAVIOUR » : UN appel de porte, ORANGE sans échec =
+  attendu, verdict verbatim, DONE.md obligatoire dans tous les cas). **Essai 2
+  PROPRE** : rc=0 en **1348 s**, **0,2023 USD**, cache 31 %. DONE.md exemplaire
+  — porte appelée une seule fois, **verdict cité verbatim intégral** (ORANGE,
+  1 rejoué en 31 s, 0 faux, 0 err, budget dépassé), interprétation honnête
+  (« This is NOT green »). Livrable : `test_monte_carlo_physics.jl` (169 lignes,
+  67 macros @test, **665 tests runtime**) + include dans runtests.jl —
+  couverture du proxy CPU de `monte_carlo_physics.jl` (960 l., jamais testé) :
+  13 params (4 ancres littérature), plateau (3 figés, t_peak_us libre),
+  échantillonnage borné + reproductible, **ancre EROEI 9.509375 exacte**
+  (1020.0/0.75/0.0358), proxy n=300 déterministe, convergence, to_dict ; la
+  voie GPU jamais appelée. **Preuve verte standalone (moi)** : 665/665 en
+  3,2 s, WS puis worktree. **Red team mutation PASSÉ** : `_UQ_VS_TS_RATIO`
+  0.75→0.80 → 664/1, exactement l'ancre EROEI ; restore → 665/665. Promu
+  `714489f1` sur `phase4-tests` (9ᵉ livrable, non poussé). Preuves
+  `reports/phase4_jour9/` (scans secrets 0). Leçon de campagne : chaque famille
+  de chantier (doc-only, tests-CUDA-wall) a besoin de SA clause de porte dans
+  le brief — la même porte, deux excuses structurelles différentes.
+
 - **J8 (24/08) — triage V72** : run propre **n° 8 consécutif**. rc=0 en **765 s**,
   **0,3406 USD**, cache 12 % (borne la plus grosse de la campagne : ~1043 lignes
   sur 5 fichiers + fenêtre PIRT) ; porte préchauffée essai 1. Note
