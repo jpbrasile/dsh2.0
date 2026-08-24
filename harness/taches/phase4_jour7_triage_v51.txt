@@ -1,0 +1,24 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change and report its verdict verbatim." followed by the planner's final message verbatim (if you received a short acknowledgement pointing to PLAN.md instead of the plan itself, pass that acknowledgement verbatim -- the coder will read PLAN.md).
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the plan> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia project; PIRT at `docs/vv/PIRT.md`, row BD-10, line 309): V51 (multi-monomer chemistry, ozone radical interplay) is an open FAIL of the PIRT at 17/18. Plan the writing of ONE new file, `docs/vv/TRIAGE_V51_2026-08-24.md`, a triage note. Nothing else may be created or modified.
+
+HARD READING BOUND -- the evidence set is EXACTLY these four files, verified to exist; read each ONCE, top to bottom, nothing else (no directory listing, no glob beyond DONE.md, no other file):
+1. `docs/vv/PIRT.md` -- row BD-10 only (line 309; read a ~40-line window around it). It says: V51 (17/18 FAIL), ref Kossyi 1992, note "8-species ODE".
+2. `validation/FINDING_V51_A4_FLUX_LIMITED_2026-08-11.md` (608 lines) -- the flux-limited attribution (headline 13x miss on A4) and its own §10.7 "correct next step".
+3. `validation/PREREG_V51_A4_INPUTS_2026-08-12.md` (254 lines) -- the latest dated V51 document: input audit under task #74, predictions P1-P7, and the measured outcome appended after the run (the case moves DOCUMENTED 17/18 -> FAIL 17/18 -- same score, worse status; suite replay 9149/9149).
+4. `validation/FINDING_V49_NE_SCALING_UNANCHORED_2026-08-12.md` (127 lines) -- the cross-case ordering consequence: gamma* = 23.47 on V49's unanchored ne-scaling BLOCKS task #101 (wiring R_ox into the neat path to lift V51's A4), three admissible routes, V51 A4 currently sitting at route 3 ("leave A4 failing", seal `e834bfcd`).
+
+Known out-of-bounds items -- NAME them where relevant, never read or cite them: `validation/51_multi_monomer_chemistry/results/` (the case's own seal artefacts) and a probe script dated 2026-08-13 in the case directory (possibly later work; its existence may be mentioned as "later probe activity out of scope of this note's evidence").
+
+Required sections of the note, each claim cited as (file path, line or section), citing ONLY the four files above:
+1. STATE -- the score and STATUS today, dated: 17/18 was DOCUMENTED under seal `5d975a83` and moved to FAIL 17/18 after the 2026-08-12 input audit (same score, worse status -- report it exactly as the record does); the PIRT row's 17/18 FAIL; A4's number vs its bar.
+2. HISTORY -- the dated sequence the four files record, one line per dated event.
+3. LAST CONCLUSION -- what the 2026-08-12 documents actually concluded: the measured attribution ("flux-limited at the graded point"), the input-audit outcome (which inputs were wrong and whether they rescued A4 -- they did not), and the ordering: the anchored route to the bar exists (V49's R_ox) but wiring it is BLOCKED by the gamma* = 23.47 finding; the three routes in preference order and where V51 honestly sits today.
+4. SMALLEST NEXT PROBE -- what the record itself names as next, with its prereg discipline (route 1: anchor n_e independently first, task #100, then derive R_ox and only then revisit A4 under a new prereg), and what result would change the PIRT row.
+5. WHAT NOT TO DO -- explicitly, from the record: "choosing the wiring, the flux, or any R_ox scale because it lands A4 inside [0.88, 0.99]" is refused in advance; wiring gamma*-scaled R_ox into A4's path would create the same-sentence circularity (V49's calibration anchor and A4's target are transcribed from one sentence of one Niemczyk paper) and is forbidden while gamma* is unexplained; no test or validation script weakened; no rerun without a new prereg; a FAIL that survives honest triage stays a FAIL in the note.
+
+Acceptance: the note exists at the exact path with all five sections; julia_gate invoked on the workspace after writing, its verdict reported VERBATIM in the final message (a documentation-only change replays no `.jl` file and the gate then reports ORANGE "rien a rejouer" by construction -- report exactly what it prints; any ROUGE or failed test is a failure); and a self-check that no file other than DONE.md and the note was created or modified.
