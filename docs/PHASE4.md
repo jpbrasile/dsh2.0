@@ -63,6 +63,15 @@ harnais gardent leur red team unitaire (cas adversariaux dans `test_wall_unit.mj
 red-team LLM quand un livrable n'est pas mutable mécaniquement (ex. note de triage J2 :
 vérification humaine ou croisée des citations).
 
+Asymétrie mesurée le 24/08 (J4) : sur un changement **doc-only**, la porte répond
+« aucun fichier .jl modifié : rien à rejouer (verdict ORANGE, pas vert) » — **par
+construction**, VERT est inatteignable sans `.jl` rejoué (le VERT de J2 venait de
+suites `.jl` en attente dans l'état de la porte à ce moment-là, pas de la note).
+Acceptation d'un livrable doc-only, donc : (a) ORANGE structurel avec **0 échec**,
+verdict de la porte cité verbatim ; (b) rejeu direct vert de la dernière suite `.jl`
+touchée ; (c) red team citations ligne à ligne. Les briefs doc-only ne promettent
+plus « VERT is the only green » (le brief J5 applique la leçon).
+
 ## Règle des briefs (leçon J2 essai 1, 24/08)
 
 Un brief qui dit « lire au minimum … » sur un dossier non borné est un défaut de **brief**
@@ -84,6 +93,26 @@ uniquement sur « pousse » explicite. L'arbre de travail `agentic-flow-fresh` n
 jamais touché.
 
 ## Journal
+
+- **J4 (24/08) — triage V44** : run propre **n° 4 consécutif**. rc=0 en **539 s**,
+  0,2217 USD, cache 37 % ; spool actif (7251 car., DONE.md concorde — la ride J3 ne
+  s'est pas reproduite) ; porte préchauffée essai 1. Note `TRIAGE_V44_2026-08-24.md`
+  (157 lignes, 5 sections) : sceau du 09/08 FERMÉ (citation du mécanisme VIDE —
+  Fridman §7.4 = halides ; Zhao 2007 contredit la voie vibrationnelle ; barres C3 mal
+  attribuées) ; sonde la moins chère EXTERNE (lire la vraie Table 7.4, deux branches
+  pré-déclarées, sous PREREG neuf) ; piège KI-23 (η_vib_diss→0.10 = double fake-green,
+  fausse ligne « stable » à `run_validation.jl:593` armée) explicitement interdit ;
+  le FAIL reste FAIL. **Porte : ORANGE structurel** (doc-only, « rien à rejouer, pas
+  vert » par construction — voir Red team des livrables) ; 0 échec ; rejeu direct
+  `test/anchors` 15/15 en 3,0 s. **Red team citations PASSÉ** : ~50 citations
+  vérifiées ligne à ligne sur S/RS/VS/RT/PIRT l.60 ; copie sous scellé
+  `VALIDATION_SUMMARY_at_seal.md` vérifiée **byte-identique** (cmp) ; 6 citations
+  verbatim exactes ; zéro falsification. **Déviation justifiée** : le coder a lu et
+  cité cette 6e copie hors des 5 fichiers du brief — byte-identique ⇒ aucune preuve
+  nouvelle. Deux mineurs : fenêtre VSA « 59–109 » vs VS « 59–101 » pour un contenu
+  identique ; composition du jeu de preuve vs brief. Coder honnête sur l'ORANGE
+  (n'a pas cherché un faux vert). **Promu** : `ce781e4c` sur `phase4-tests`
+  (4e livrable). Preuves `reports/phase4_jour4/` (scan secrets 0).
 
 - **J2 (24/08) — triage V09** : essai 1 **ÉCHEC — défaut de brief** (1801 s tués,
   0,8451 USD, cache 54 %). Harnais irréprochable : plan-spool actif (8674 car. → PLAN.md),

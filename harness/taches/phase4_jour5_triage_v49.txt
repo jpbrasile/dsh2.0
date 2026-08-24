@@ -1,0 +1,23 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change and report its verdict verbatim." followed by the planner's final message verbatim (if you received a short acknowledgement pointing to PLAN.md instead of the plan itself, pass that acknowledgement verbatim -- the coder will read PLAN.md).
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the plan> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia project; PIRT at `docs/vv/PIRT.md`, row BD-1, line 301): V49 (plasma polymerization, FRP kinetics) is an open FAIL of the PIRT. Plan the writing of ONE new file, `docs/vv/TRIAGE_V49_2026-08-24.md`, a triage note. Nothing else may be created or modified.
+
+HARD READING BOUND -- the evidence set is EXACTLY these five files, verified to exist; read each ONCE, top to bottom, nothing else (no directory listing, no glob beyond DONE.md, no other file):
+1. `docs/vv/PIRT.md` -- row BD-1 only (line 301; read a ~40-line window around it). It says: V49 (2/6 FAIL), V60 (4/5 DOCUMENTED), refs Odian 2004 / Niemczyk 2021, GUARD "Knowledge H not supported by evidence".
+2. `validation/FINDING_V49_CORRECTED_INPUTS_2026-08-11.md` (184 lines).
+3. `validation/FINDING_V49_DEPTH_AND_PHI_2026-08-11.md` (201 lines).
+4. `validation/PREREG_V49_OXIDATION_CHANNEL_2026-08-12.md` (251 lines) -- opens by citing the seal: "Sealed FAIL 3/6", signed 2026-08-11.
+5. `validation/FINDING_V49_NE_SCALING_UNANCHORED_2026-08-12.md` (127 lines) -- the latest dated document (task #100).
+
+Required sections of the note, each claim cited as (file path, line or section), citing ONLY the five files above:
+1. STATE -- the score today with the date of each piece of evidence. The record shows TWO scores: the PIRT row says 2/6 FAIL, the 2026-08-12 prereg cites a seal at FAIL 3/6. Report BOTH with their citations; if the five files resolve the discrepancy, say how; if they do not, flag it as unresolved -- do NOT pick one silently.
+2. HISTORY -- the dated sequence the five files record, one line per dated event (2026-08-11 and 2026-08-12 are dense: corrected inputs, depth-and-phi, real-inputs seal, oxidation-channel prereg, ne-scaling finding).
+3. LAST CONCLUSION -- what the latest document (FINDING_V49_NE_SCALING_UNANCHORED, 2026-08-12) actually concluded, quoted or tightly paraphrased: what gamma* = 23.47 is a verdict ON, what "searched absence" it records, and the ORDERING consequence it states (which chantier it blocks and why).
+4. SMALLEST NEXT PROBE -- the single cheapest next measurement the record itself points to, with the prereg discipline it must follow (a new PREREG file BEFORE running anything), and what result would change the PIRT row.
+5. WHAT NOT TO DO -- explicitly: the trap of this case is the UNANCHORED ne-scaling: gamma* = 23.47 came from a typed scaling with no anchoring source, so tuning gamma*, the ne scaling, or any input toward the green band would fabricate both the parameter and the verdict. Also: no test or validation script weakened; no rerun without a new prereg; the ordering consequence (the blocked chantier) is respected, not bypassed; a FAIL that survives honest triage stays a FAIL in the note.
+
+Acceptance: the note exists at the exact path with all five sections; julia_gate invoked on the workspace after writing, its verdict reported VERBATIM in the final message (a documentation-only change replays no `.jl` file and the gate then reports ORANGE "rien a rejouer" by construction -- report exactly what it prints; any ROUGE or failed test is a failure); and a self-check that no file other than DONE.md and the note was created or modified.
