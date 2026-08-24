@@ -95,6 +95,15 @@ jamais touché.
   fichiers nommés et vérifiés (742 lignes au total). Compteur de sortie du rodage :
   reste **1/2** (seuls les runs achevés proprement comptent). Preuves
   `reports/phase4_jour2/`.
+  Essai 2 **VERT** : rc=0 en **794 s**, 0,2373 USD, cache 47 % ; spool actif (7808 car.),
+  porte ORANGE→VERT, DONE.md conforme. Le brief borné a fait tomber le coût de 0,845 →
+  0,237 USD. **Red team citations TENU** : ~40 citations vérifiées ligne à ligne contre
+  les 5 fichiers cités — zéro falsification, zéro chiffre déformé ; la note rapporte la
+  divergence 4/7 (PIRT) vs 5/7 (STOPPED 16/08) sans la résoudre, donne le dernier mot au
+  FINDING du 19/08 (levier source PRICÉ → direction : puits d'O₃), exige un préreg avant
+  toute sonde. **Promu** : commit `dec9af2e` sur `phase4-tests`. **RODAGE CLOS : 2/2**
+  (J1e3 + J2e2, deux runs consécutifs sans défaut harnais). La campagne enchaînée
+  démarre (J3 : tests `anchors`).
 
 - **J1 (24/08) — tests `biorefinery_symbiosis.jl`** : essai 1 **ÉCHEC** (timeout 900 s,
   D1+D2 ; 0,1252 USD, 17 appels, cache 29 % ; preuves `reports/phase4_jour1/`).

@@ -1,0 +1,17 @@
+
+
+Done. Both delegations completed in order:
+
+1. **Planner** — returned the plan-spool acknowledgement (full plan written to `PLAN.md`, declared 7808 chars); I verified the count independently (UTF-8 char count of `PLAN.md` = 7808, matching).
+2. **Coder** — received the contract line plus the planner's acknowledgement verbatim, read `PLAN.md`, created `docs/vv/TRIAGE_V09_2026-08-24.md` with all five sections, honored the six-file reading bound, and closed with **julia_gate verdict VERT**.
+
+`DONE.md` is written in the workspace: first line `planner: 7808 chars`, then the coder's final message verbatim. Stopping here.
+lecons: arme -- variable {{lecons}} depuis C:\Users\test\Documents\dsh2.0\harness\lecons.md, 40 lignes max par role
+query-wall: arme -- outil(s) searcher,mcp__context7__resolve-library-id,mcp__context7__query-docs, 0 segment(s) de racine, 3 identifiant(s), max 1200 car.
+secret-redactor: arme -- 16 motifs, 5 valeur(s) vive(s) (env + credentials + .env), jamais affichees
+julia-gate: arme -- porte C:/Users/test/Documents/dsh2.0/scripts/julia_gate/porte.py, projet C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework, budget 30s
+test-wall: arme -- 1 racine(s) de tests (C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework/test), cwd C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework
+plan-spool: arme -- outil(s) planner, seuil 2000 car., fichier PLAN.md, cwd C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework
+plan-spool: planner -> C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework/PLAN.md (7808 car.), accuse court rendu au parent
+julia-gate: appel 1 -> ORANGE en 0.1s (1 fichier(s))
+julia-gate: appel 2 -> VERT en 1.7s (1 fichier(s))

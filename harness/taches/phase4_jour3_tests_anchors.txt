@@ -1,0 +1,21 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change; VERT is the only green." followed by the planner's final message verbatim (if you received a short acknowledgement pointing to PLAN.md instead of the plan itself, pass that acknowledgement verbatim -- the coder will read PLAN.md).
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the plan> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia project): `src/anchors/Anchors.jl` is the only subsystem with ZERO test files (no `test/anchors/` directory exists). It is the anti-fabrication registry of primary-source reference values -- untested, it is a hole in the framework's own honesty machinery. Plan the creation of exactly TWO new files: `test/anchors/test_anchors.jl` and `test/anchors/runtests.jl` (the per-directory orchestrator, modeled on the existing pattern). The module under test must NOT be modified; no other file may be created or modified.
+
+HARD READING BOUND -- the evidence set is EXACTLY these three files, verified to exist; read each ONCE, top to bottom, nothing else:
+1. `src/anchors/Anchors.jl` (241 lines) -- the module: exports `Anchor`, `AnchorValue`, `load_anchor`, `all_anchors`, `anchor_value`, `validate_anchors`; reads `data/anchors/<slug>/anchor.yaml`.
+2. `data/anchors/choi_2006/anchor.yaml` (~30 lines) -- one real committed anchor (id `choi2006`, value `gas_production_factor` = 2.5, dimensionless).
+3. `test/industrial/runtests.jl` -- the per-directory runtests pattern to imitate.
+
+The suite must be real, not ceremonial:
+1. Cover ALL FOUR exported functions: `load_anchor`, `all_anchors`, `anchor_value`, `validate_anchors`.
+2. At least 12 `@test` assertions, each checking a NUMERIC or STRUCTURAL property (a value, a count, a bound, an error count, a raised exception) -- `isa Something` alone does not count.
+3. Include at least: (a) the registry-wide check `validate_anchors()` on the committed registry -- assert the error count it actually returns; the committed registry has 41 anchor directories, so also assert `length(all_anchors()) >= 40`; (b) one exact-value check through the dotted lookup, using the value read from `data/anchors/choi_2006/anchor.yaml` during planning (gas_production_factor = 2.5); (c) one failure-path check: a lookup of a nonexistent slug or dotted id must raise (use `@test_throws`); (d) one structural check on a loaded `Anchor` (its values list is non-empty and each value has a numeric `value` field).
+4. HONESTY RULE: if `validate_anchors()` on the committed registry reports errors, do NOT write a test asserting zero -- assert the count actually observed AND state the observed count in the coder's final message so it reaches DONE.md. A real defect found in the registry is a deliverable, not an obstacle.
+5. The tests must run WITHOUT GPU and WITHOUT network. If loading the module requires the full PlasmaDigitalTwin package, imitate how `test/industrial/runtests.jl` includes its sources.
+
+Acceptance: julia_gate verdict VERT (the new suite green AND the existing suite still replays green), both files exist at the exact paths, at least 12 assertions, and a self-check that no file other than DONE.md and the two test files was created or modified. VERT is the only green.
