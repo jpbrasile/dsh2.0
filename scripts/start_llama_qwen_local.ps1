@@ -66,7 +66,13 @@ if (-not $smi) {
         $cudaPids = @($raw | ForEach-Object { $_.ToString().Trim() } | Where-Object { $_ -ne "" })
         $gatePids = @(Get-NetTCPConnection -LocalPort 8077 -State Listen -ErrorAction SilentlyContinue |
                       Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { "$_" })
-        $etrangers = @($cudaPids | Where-Object { $gatePids -notcontains $_ })
+        # Le llama-server qui ecoute deja sur LE port cible est aussi admis : c'est
+        # l'instance que l'etape (d) va remplacer -- sans cela, un simple relancement
+        # (changer -Embeddings, changer de ctx) se refusait lui-meme exit 2 (mesure 24/08).
+        $sortants = @(Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
+                      Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { "$_" } |
+                      Where-Object { $p = Get-Process -Id ([int]$_) -ErrorAction SilentlyContinue; $p -and $p.ProcessName -ieq "llama-server" })
+        $etrangers = @($cudaPids | Where-Object { $gatePids -notcontains $_ -and $sortants -notcontains $_ })
         if ($etrangers.Count -gt 0) {
             $liste = ($etrangers | ForEach-Object {
                 $p = Get-Process -Id ([int]$_) -ErrorAction SilentlyContinue

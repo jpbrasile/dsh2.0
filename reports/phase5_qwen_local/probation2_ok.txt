@@ -1,0 +1,11 @@
+﻿route qwen-local / qwen-local  amont=127.0.0.1/v1  patchs=-
+dsh rc=0  duree=10.1s
+PONG.txt : PONG
+appels enregistres : 3
+  servi=qwen-local                 status=200 ms=1880   in=187 out=64  n_messages=2 n_tools=0 sys_chars=363
+  servi=qwen-local                 status=200 ms=7366   in=8013 out=114  n_messages=3 n_tools=25 sys_chars=4326
+  servi=qwen-local                 status=200 ms=1372   in=8197 out=53  n_messages=5 n_tools=25 sys_chars=4326
+outils offerts (1er appel outille) : create_goal edit exit_plan_mode get_goal glob grep interrupt_agent job_kill job_list job_output list_agents pwsh ralph read read_image send_message skill str_replace_editor subagent subagent_fork todo_write update_goal web_search workflow write
+VERDICT : OK -- chaque appel servi par qwen-local, fichier ecrit
+cout : 0.0000 USD ce run, cache 49% (8009/16397 tokens d'entree) ; grand livre +3 (889 appels)
+verdict note : qwen-local : VERDICT REFUSE, modele inconnu de la base ou disparu (rafraichir d'abord) -- rien ecrit

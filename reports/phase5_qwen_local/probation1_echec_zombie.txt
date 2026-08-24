@@ -1,0 +1,16 @@
+﻿route qwen-local / qwen-local  amont=127.0.0.1/v1  patchs=-
+dsh rc=1  duree=31.4s
+PONG.txt : ABSENT
+appels enregistres : 7
+  servi=None                       status=404 ms=78     in=None out=None  n_messages=3 n_tools=25 sys_chars=4326
+  servi=None                       status=404 ms=102    in=None out=None  n_messages=2 n_tools=0 sys_chars=363
+  servi=None                       status=404 ms=43     in=None out=None  n_messages=3 n_tools=25 sys_chars=4326
+  servi=None                       status=404 ms=44     in=None out=None  n_messages=3 n_tools=25 sys_chars=4326
+  servi=None                       status=404 ms=47     in=None out=None  n_messages=3 n_tools=25 sys_chars=4326
+  servi=None                       status=404 ms=53     in=None out=None  n_messages=3 n_tools=25 sys_chars=4326
+  servi=None                       status=404 ms=161    in=None out=None  n_messages=3 n_tools=25 sys_chars=4326
+outils offerts (1er appel outille) : create_goal edit exit_plan_mode get_goal glob grep interrupt_agent job_kill job_list job_output list_agents pwsh ralph read read_image send_message skill str_replace_editor subagent subagent_fork todo_write update_goal web_search workflow write
+  dsh : dsh: SERVER: 404 <!DOCTYPE html><html data-dpl-id="dpl_EzSEYH8QTGk1BWPWXjRiCHWqWG87" lang="en" class="jakarta_e63cc4aa-module__25MUSG__variable gordita_e308731d
+VERDICT : ECHEC -- appel servi par None, pas qwen-local ; PONG.txt absent (voir _fumee/dsh_out.txt)
+cout : 0.0000 USD ce run, cache 0% (0/0 tokens d'entree) ; grand livre +7 (886 appels)
+verdict non note : au moins un appel servi par un autre modele que qwen-local

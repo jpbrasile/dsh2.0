@@ -147,15 +147,20 @@ def verts_minimal(c, mid):
 
 
 def probation_de(c, m):
-    """Stealth ou gratuit : en probation tant que < N_VERTS verts sous minimal. Les autres : 0."""
-    if not (m["free"] or m["stealth"]):
+    """Stealth, gratuit ou LOCAL : en probation tant que < N_VERTS verts sous minimal. Les autres : 0.
+    Local (Phase 5, 24/08) : le README demande "probation as coder" pour le Qwen local --
+    meme mecanisme que les gratuits, la gratuite marginale ne dispense pas de faire ses preuves."""
+    if not (m["free"] or m["stealth"] or (m["provider"] or "") == "local"):
         return 0
     return 0 if verts_minimal(c, m["id"]) >= N_VERTS else 1
 
 
 def rafraichir(c, catalogue, source):
     now = maintenant()
-    avant = {r[0] for r in c.execute("SELECT id FROM modeles WHERE disparu=0")}
+    # provider='local' exclu du balayage `disparu` : un modele local (--local-upsert,
+    # Phase 5) n'est PAS dans le catalogue OpenRouter et serait sinon marque disparu
+    # a chaque rafraichissement.
+    avant = {r[0] for r in c.execute("SELECT id FROM modeles WHERE disparu=0 AND COALESCE(provider,'') != 'local'")}
     vus = set()
     nouveaux = []
     with c:                                            # une transaction : tout ou rien
@@ -332,12 +337,39 @@ def main(argv):
     ap.add_argument("--rouge", action="store_true")
     ap.add_argument("--note", default="")
     ap.add_argument("--montrer")
+    ap.add_argument("--local-upsert", help="inscrire/mettre a jour un modele LOCAL (provider='local', "
+                    "tier PRIVATE+OPEN, prix 0, probation jusqu'a %d verts minimal ; survit au --rafraichir)" % N_VERTS)
+    ap.add_argument("--ctx", type=int, default=32768, help="--local-upsert : contexte du modele local")
+    ap.add_argument("--nom", default="", help="--local-upsert : nom humain")
     ap.add_argument("--catalogue")
     ap.add_argument("--base", default=BASE)
     ap.add_argument("--sans-installer", action="store_true", help="--session : ne pas appeler providers_install.py")
     A = ap.parse_args(argv)
     BASE = A.base
     c = ouvrir(A.base)
+
+    if A.local_upsert:
+        # Phase 5 (24/08) : inscrire un modele servi LOCALEMENT (llama-server) pour que
+        # le circuit de verdicts/probation s'applique a lui aussi. Hors catalogue
+        # OpenRouter par construction ; exclu du balayage `disparu` de rafraichir().
+        mid = A.local_upsert
+        now = maintenant()
+        ex = c.execute("SELECT 1 FROM modeles WHERE id=?", (mid,)).fetchone()
+        with c:
+            if ex:
+                c.execute("UPDATE modeles SET provider='local', nom=?, ctx=?, tool_calls=1, free=0, stealth=0, "
+                          "tier='PRIVATE+OPEN', last_seen=?, disparu=0, prix_in=0.0, prix_out=0.0 WHERE id=?",
+                          (A.nom or mid, A.ctx, now, mid))
+            else:
+                c.execute("INSERT INTO modeles (id, provider, nom, ctx, tool_calls, free, stealth, probation, tier, "
+                          "first_seen, last_seen, disparu, prix_in, prix_out, cree) VALUES (?,?,?,?,?,?,?,?,?,?,?,0,?,?,?)",
+                          (mid, "local", A.nom or mid, A.ctx, 1, 0, 0, 1, "PRIVATE+OPEN", now, now, 0.0, 0.0, int(time.time())))
+            m = lignes(c, "id=?", (mid,))[0]
+            p = probation_de(c, m)
+            c.execute("UPDATE modeles SET probation=? WHERE id=?", (p, mid))
+        print("%s : local upsert ; ctx=%d ; probation=%d (verts minimal=%d/%d) ; tier=PRIVATE+OPEN" % (
+            mid, A.ctx, p, verts_minimal(c, mid), N_VERTS))
+        return 0
 
     if A.verdict:
         if A.vert == A.rouge:

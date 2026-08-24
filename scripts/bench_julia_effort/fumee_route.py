@@ -129,6 +129,20 @@ if os.path.isdir(greffons):
         shutil.copytree(os.path.join(greffons, g), d)
 
 # Enregistreur -> amont.
+# Le port DOIT etre libre AVANT de lancer notre proxy : un enregistreur zombie
+# d'un run precedent (proxy.mjs survivant a un run interrompu) repond a la sonde
+# de sante comme si c'etait le notre, avec SON amont fige -- le 24/08, un zombie
+# du 23/08 (amont openrouter.ai) a silencieusement detourne un run qwen-local
+# (7 appels en 404 Vercel). Refus bruyant, jamais de reutilisation silencieuse.
+import socket as _socket
+_s = _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM)
+try:
+    _s.bind(("127.0.0.1", PORT))
+except OSError:
+    raise SystemExit("port %d deja tenu (enregistreur zombie d un run precedent ?) : "
+                     "tuer ce processus ou relancer avec FUMEE_PORT=<port libre>" % PORT)
+finally:
+    _s.close()
 env = dict(os.environ, PROXY_PORT=str(PORT), PROXY_LOG=wire, PROXY_SLOT="0",
            UP_HOST=UP_HOST, UP_PORT=str(UP_PORT), UP_TLS=UP_TLS)
 px = subprocess.Popen(["node", os.path.join(BENCH, "proxy.mjs")], cwd=BENCH, env=env,

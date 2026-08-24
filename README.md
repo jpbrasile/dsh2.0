@@ -299,8 +299,11 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
   deliberately bad config caught by verify + auto-revert.
 
 ### 5 — Cost layer (post-sprint; OPEN-tier tasks executed by the harness itself)
-- [ ] Local Qwen serving (quantized for 24GB): wire as provider; move embeddings,
-      digests, distillation onto it; probation as coder.
+- [x] Local Qwen serving (quantized for 24GB): wire as provider; move embeddings,
+      digests, distillation onto it; probation as coder. *(2026-08-24, docs/PHASE5.md:
+      served + wired + distillation proven local at 0 USD + probation enrolled 1/3
+      verts. Reserves: distiller DEFAULT stays OpenRouter (nightly wiring is a user
+      decision) and embeddings endpoint measured but has no consumer yet.)*
 - [ ] freellmapi in Docker: real ENCRYPTION_KEY, provider keys, ToS-violating
       providers disabled, `coding` fallback chain; refresh script extended to its
       catalog; OPEN workers migrated from OpenRouter free to freellmapi chains.
