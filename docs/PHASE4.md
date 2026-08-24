@@ -94,6 +94,27 @@ jamais touché.
 
 ## Journal
 
+- **J10 (24/08) — tests oscillation_enhanced_ep** : run propre n° 10 (997 s,
+  0,2627 USD, cache 3 %, porte préchauffée à l'essai 4). DONE.md exemplaire :
+  porte appelée **exactement 1×**, verdict cité verbatim (« VERDICT ORANGE
+  (code 2, 1 tests replayed in 31s, 0 not replayed, 0 uncovered) ») — la clause
+  KNOWN GATE BEHAVIOUR née de l'échec J9-e1 a fonctionné du premier coup.
+  Livrable : `test/liquid/test_oscillation_enhanced_ep.jl` (117 l., 47 macros
+  @test, 46 tests runtime) + include dans `runtests.jl` — ancres dérivées
+  (A_m, V_cell, Am/Vc 375000, τ_m, a_p) à rtol 1e-10, Krassowska
+  (V_ep 0.258, N_0 1.5e15 + override, q 2.46), plancher wall_factor, identité
+  RE = (1−C_in)·100, déterminisme, no-op ABI (osc_enhance, k_fat, k_goertzel)
+  vérifié via `run_0d_ep_simulation` seul (piège f_goertzel documenté au
+  brief), batch des 9 waveforms Li (0,27 s mesuré), métriques structurelles
+  seulement (rank_total 36 ; l'accord modèle-expérience relève du V&V, non
+  asserté). Ancres MESURÉES par sonde live avant écriture du brief (leçon J9).
+  Preuve verte standalone 46/46 en 0,9 s (WS puis worktree). Red team
+  mutation : formule a_p (80−2)→(80−3) dans src → 45/46 avec 1 échec,
+  exactement l'ancre a_p à rtol 1e-10 ; restore → 46/46. Promu `31226904`
+  (10ᵉ livrable, non poussé). Preuves `reports/phase4_jour10/` (scans
+  secrets 0). Mineur : DONE annonce « 39 assertions », mesuré 47 macros /
+  46 runtime — écart de comptage type J6, à surveiller, non bloquant.
+
 - **J9 (24/08) — tests monte_carlo_physics, en deux essais** : **essai 1 ÉCHEC**
   (timeout 1800 s, DONE.md absent, 0,2950 USD) — première rupture après 8 runs
   propres. Cause racine double : **erreur de brief n° 4 (la mienne)** — la clause
