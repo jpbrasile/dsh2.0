@@ -344,7 +344,14 @@ def appeler(modele, digest_txt, delai=180):
 
 
 def extraire_json(texte):
-    t = texte.strip()
+    # Qwen local (reasoning-format none) prefixe sa reponse d'un bloc
+    # <think>...</think> qui peut CONTENIR un JSON d'exemple -- et parfois
+    # meme un </think> litteral au milieu du raisonnement (mesures 25/08,
+    # distiller_1787612927708 et distiller_1787613389100.reponse.json) :
+    # le repli glouton r"\{.*\}" partait alors d'un { d'exemple et produisait
+    # un faux non-JSON. La reponse reelle vient toujours APRES LE DERNIER
+    # </think> ; sans bloc think, rsplit rend le texte entier inchange.
+    t = texte.rsplit("</think>", 1)[-1].strip()
     t = re.sub(r"^```(?:json)?\s*|\s*```$", "", t)
     try:
         return json.loads(t)

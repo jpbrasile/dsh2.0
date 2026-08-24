@@ -4,6 +4,23 @@
 Une ligne = `- [date session] observation`. Les plus récentes en premier ; 60 lignes max par rôle.
 
 ## orchestrator
+- [2026-08-24 9d46e7e0] orchestrator verified the fix by running the unittest suite after editing only the source file.
+- [2026-08-24 53b7af34] The orchestrator measured PLAN.md length with pwsh after the coder had already completed, adding an unrequested verification step.
+- [2026-08-24 53b7af34] The orchestrator read and wrote DONE.md after the two required delegations, extending the run beyond the stop-after-two-delegations instruction.
+- [2026-08-24 daf021e6] The orchestrator treated the planner's plan-spool acknowledgement as sufficient for the coder, but the coder still had to read PLAN.md to obtain the full contract.
+- [2026-08-24 daf021e6] The orchestrator hit a write-tool error when overwriting DONE.md without reading it first, then recovered by reading the file and retrying the write.
+- [2026-08-24 daf021e6] The orchestrator exceeded the two-delegation stop rule by measuring PLAN.md, globbing, reading and writing DONE.md, adding extra calls after the coder finished.
+- [2026-08-24 7d3ee00d] The orchestrator completed a small single-file refactor with two reads, one write, and one unittest run, avoiding delegate overhead.
+- [2026-08-24 8c265d14] orchestrator completed the task in three calls: two file writes followed by one test run.
+- [2026-08-24 0e3c8d37] orchestrator completed a small single-file refactor without delegates by reading both files, grepping usage, writing seed.py, and running unittest
+- [2026-08-24 53f8612a] orchestrator read the source and test files before editing, then ran the unittest suite, completing the refactor in four calls.
+- [2026-08-24 70e1b2d8] orchestrator ended with error after 16.8s with zero tool calls and empty final text, so the PONG.txt creation step was not executed.
+- [2026-08-24 c073bc20] The orchestrator made an extra write of DONE.md after the two required delegations, adding a call beyond the requested stop.
+- [2026-08-24 e3f77830] The orchestrator’s first pwsh PLAN.md length check failed, and a simpler retry succeeded.
+- [2026-08-24 e3f77830] The orchestrator made extra pwsh calls after the coder delegation even though the task said to stop after two delegations.
+- [2026-08-24 073039f1] The orchestrator passed the planner's plan-spool message verbatim to the coder, which made the coder read PLAN.md instead of receiving a copied plan.
+- [2026-08-24 419383c5] orchestrator verified the edit by running the unittest suite in step 6 and reported all three tests pass.
+- [2026-08-24 cd93d1d9] orchestrator ran the exact specified unittest command after a verbose run, confirming the required invocation passed.
 - [2026-08-24 d70397c0] The orchestrator passed the planner's short spool acknowledgement (not the full plan) to the coder, relying on the coder to read PLAN.md, which worked but added an extra read call.
 - [2026-08-24 5b6f6dad] The orchestrator passed the planner's spool acknowledgement (which said to read PLAN.md) as the coder's prompt, but the coder still read PLAN.md successfully, so the indirection worked.
 - [2026-08-24 86021c46] The orchestrator measured PLAN.md with pwsh to confirm the spool size before delegating, adding a verification step that was not strictly required.
@@ -24,6 +41,8 @@ Une ligne = `- [date session] observation`. Les plus récentes en premier ; 60 l
 - [2026-08-23 d0083bd3] The orchestrator wrote a DONE.md file reporting the coder's error as the final outcome without retrying the delegation, even though the task required a successful implementation.
 
 ## planner
+- [2026-08-24 e3f77830] The planner read the source and test files before producing the plan, grounding the plan in actual file contents.
+- [2026-08-24 073039f1] The planner used a glob to confirm the target triage file did not exist before planning its creation.
 - [2026-08-24 8e2fe37f] The planner did not check whether the existing test suite already exceeded the gate budget, leading the coder to a plan that could never turn the gate green.
 - [2026-08-24 86021c46] The planner wrote the full plan to PLAN.md and returned only a spool pointer, which the orchestrator then had to measure and forward correctly.
 - [2026-08-24 145042d0] The planner used glob with pattern '**/VERDICT_V09*' and '**/PREREG_V09*' to find files outside the campaign directory, which was efficient.
@@ -35,6 +54,17 @@ Une ligne = `- [date session] observation`. Les plus récentes en premier ; 60 l
 - [2026-08-23 3813a631] The planner attempted to read a documentation file that did not exist, causing a tool error; verifying file existence before reading would avoid wasted calls.
 
 ## coder
+- [2026-08-24 53b7af34] The coder ran julia_gate once after both file changes and reported the ORANGE verdict verbatim in its final report.
+- [2026-08-24 53b7af34] The coder received a plan-spool pointer to PLAN.md and read PLAN.md plus the three referenced files before implementing, avoiding plan copying.
+- [2026-08-24 daf021e6] The coder correctly reported the julia_gate ORANGE verdict verbatim after creating only documentation files, showing the gate can be non-green without code changes.
+- [2026-08-24 daf021e6] The coder ran broad glob calls before writing the required triage note, even though the plan and task already named the exact file to create.
+- [2026-08-24 c073bc20] The coder received an ORANGE gate verdict after implementing the plan, so the run was not fully green.
+- [2026-08-24 c073bc20] The coder used multiple grep and glob calls to verify exports and module structure before writing the test file.
+- [2026-08-24 c073bc20] The coder read PLAN.md and found its first line was the planner's verification preamble rather than a clean plan header.
+- [2026-08-24 e3f77830] The coder read PLAN.md and the relevant source/test files before implementing, which helped it follow the plan contract.
+- [2026-08-24 e3f77830] The coder repeatedly received ORANGE gate verdicts while the test server was busy, so it inserted sleeps before retrying the gate.
+- [2026-08-24 073039f1] The coder treated the ORANGE julia_gate verdict as expected for a documentation-only file and did not attempt code fixes.
+- [2026-08-24 073039f1] The coder re-located and re-read the six evidence files even though the planner had already read them, adding calls but preserving the plan's citation contract.
 - [2026-08-24 8e2fe37f] The coder misinterpreted the ORANGE verdict with zero failures/errors/broken as a budget timeout rather than a possible server congestion issue, leading to premature acceptance of the result.
 - [2026-08-24 8e2fe37f] The coder triggered a shell wall refusal by attempting to run Julia directly outside the julia_gate tool, which is explicitly forbidden for test running.
 - [2026-08-24 d70397c0] The coder ran git status twice with different relative paths, both showing the same untracked file, which was unnecessary for verifying the triage note creation.

@@ -75,3 +75,29 @@ du port cible, et rien d'autre.
 - Décision de câblage (utilisateur) : distilleur de fin de session sur le
   local par défaut, et politique de co-résidence serveur/porte pendant les
   campagnes.
+
+## Câblage autonome du distilleur (25/08, ordre « câblage du distillateur en mode autonome »)
+
+- `scripts/ops/distiller_nightly.ps1` : une passe = serveur qwen-local :8004
+  trouvé-ou-lancé (« rendre le monde comme trouvé » ; refus GPU du lanceur =
+  passe SAUTÉE, jamais d'attente ni de kill), distillation des DEUX viviers
+  (`~/.dsh` et `_fumee/home`), arrêt VÉRIFIÉ port en main (exit 4 sinon),
+  journal `%USERPROFILE%\dsh-distiller-nightly.log`. Preuve 25/08 01:21 :
+  exit 0 sur les deux viviers, 0 USD, serveur arrêté, :8004 vérifié libre.
+- Correctif `harness/distiller.py extraire_json` : le vrai JSON vient après le
+  DERNIER `</think>` (`rsplit`). Deux modes d'échec mesurés sur Qwen local
+  (JSON d'exemple dans le bloc think ; `</think>` littéral dans le
+  raisonnement) — reproduits sur réponses brutes archivées, 4/4 extraites
+  après correctif, chemin OpenRouter sans think inchangé.
+- `scripts/ops/julia_gate_arret.ps1` : arrêt propre de la porte (:8077) avant
+  les balayages living-docs — correction du DEFERRED du 25/08 01:00 (« julia
+  is live: 6096 », serveur porte résident lancé par mes campagnes du 24/08).
+  Porte arrêtée à la main 25/08 01:16, :8077 vérifié libre.
+- `scripts/ops/installer_taches_nocturnes.ps1` : enregistre les tâches
+  planifiées `dsh-julia-gate-arret` (00:50 et 04:50) et
+  `dsh-distiller-nightly` (07:00, après le test-gpu de 05:00). NON INSTALLÉES
+  par l'agent : le classifieur auto-mode refuse la création de tâches
+  planifiées (Register-ScheduledTask ET schtasks) — à exécuter une fois à la
+  main : `powershell -File scripts\ops\installer_taches_nocturnes.ps1`.
+- Hors périmètre repo : la garde amont `julia_procs.ps1` (plasma) ignore la
+  règle du port 8077 — signalé, à patcher côté plasma-digital-twin.
