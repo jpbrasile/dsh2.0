@@ -219,7 +219,14 @@ param(
 $ErrorActionPreference = "Continue"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $ScratchRoot = "C:\Users\test\AppData\Local\Temp\opencode\specdec-ab"
-$DshVersion  = "0.1.0-rc.7"   # pinned 2026-08-19; NEVER re-resolved at run time
+$DshVersion  = "0.1.1-rc.2"   # pinned 2026-08-24; NEVER re-resolved at run time
+# Pin history: 0.1.0-rc.7 (2026-08-19) until 2026-08-24. Bumped because the
+# machine's dsh ecosystem migrated to 0.1.1-rc.2 (daily launcher scripts/dsh.ps1,
+# profiles, and ~/.dsh/.credentials.yaml versioned format `version:`+`refs:`);
+# rc.7's credentials-local reads only the old flat map and dies at boot
+# ("the value for \"version\" ... must be a string", run 2 of 2026-08-24).
+# The D1a gate below still empirically re-verifies grammar + config keys against
+# THIS pin at every -Run and exits 4 before any outage on a mismatch.
 $BenchPort   = 8005
 $ProdPort    = 8004
 $Launcher    = Join-Path $RepoRoot "scripts\start_llama_qwen38_27b_specdec.ps1"
