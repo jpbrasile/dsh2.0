@@ -4,14 +4,63 @@
 Une ligne = `- [date session] observation`. Les plus récentes en premier ; 60 lignes max par rôle.
 
 ## orchestrator
+- [2026-08-24 d70397c0] The orchestrator passed the planner's short spool acknowledgement (not the full plan) to the coder, relying on the coder to read PLAN.md, which worked but added an extra read call.
+- [2026-08-24 5b6f6dad] The orchestrator passed the planner's spool acknowledgement (which said to read PLAN.md) as the coder's prompt, but the coder still read PLAN.md successfully, so the indirection worked.
+- [2026-08-24 86021c46] The orchestrator measured PLAN.md with pwsh to confirm the spool size before delegating, adding a verification step that was not strictly required.
+- [2026-08-24 145042d0] The orchestrator wrote the planner's spool notice to a temp file instead of passing it directly to the coder, adding an unnecessary step.
+- [2026-08-24 e338d7c8] The orchestrator followed its own instruction to delegate exactly once each and stop, resulting in a clean single-round VERT without loops or budget waste.
+- [2026-08-24 2c2285c6] The orchestrator's final pwsh step to create DONE.md failed because the file path contained backslashes that were not properly escaped in the PowerShell command, causing exit code 1.
+- [2026-08-24 9e7bf9ad] The orchestrator relayed a planner output containing computed constants and hand-checked values as the coder's prompt, but the coder needed a step-by-step implementation plan rather than raw analysis.
+- [2026-08-24 0cd8718b] The orchestrator used a temporary file and pwsh to verify the planner's output character count and encoding before passing it to the coder.
+- [2026-08-24 b3a5eb15] The orchestrator delegated planning and coding exactly once each in strict order, then wrote DONE.md, completing the task without any retries or corrections.
+- [2026-08-24 c5180645] The orchestrator used multiple pwsh calls to inspect the planner's output for non-ASCII characters and line endings before passing it to the coder, adding latency without a gate requirement.
+- [2026-08-24 bec1e852] The orchestrator wrote the planner's output to a temporary file and later read it back with pwsh to pass to the coder, adding unnecessary steps when the planner's final message could have been passed directly.
+- [2026-08-24 b943981d] The orchestrator successfully delegated to planner and coder in sequence without reading source files, following its own task constraints exactly.
+- [2026-08-24 9afcb1fd] The orchestrator wrote the planner's final message to a temporary file and checked its length before writing DONE.md, which was unnecessary for the task but did not cause errors.
+- [2026-08-24 dbd0089c] The orchestrator used a temporary file and a PowerShell command to count planner output characters, which was unnecessary for the delegation task.
+- [2026-08-24 ac70f186] The orchestrator wrote the planner's output to a temporary file and verified its length before passing it to the coder, ensuring the full plan was transmitted.
 - [2026-08-23 3813a631] The orchestrator used a temporary file and PowerShell to measure the planner's output length before writing DONE.md, adding two extra tool calls that were not strictly required by the task.
 - [2026-08-23 c10ce871] The orchestrator wrote the planner's full output to a temporary file and then to DONE.md, including internal reasoning, instead of extracting only the final plan.
 - [2026-08-23 d0083bd3] The orchestrator wrote a DONE.md file reporting the coder's error as the final outcome without retrying the delegation, even though the task required a successful implementation.
 
 ## planner
+- [2026-08-24 8e2fe37f] The planner did not check whether the existing test suite already exceeded the gate budget, leading the coder to a plan that could never turn the gate green.
+- [2026-08-24 86021c46] The planner wrote the full plan to PLAN.md and returned only a spool pointer, which the orchestrator then had to measure and forward correctly.
+- [2026-08-24 145042d0] The planner used glob with pattern '**/VERDICT_V09*' and '**/PREREG_V09*' to find files outside the campaign directory, which was efficient.
+- [2026-08-24 e338d7c8] The planner read the source file, the existing test runner, and a sample test file to derive constants and patterns, producing a plan that the coder could implement verbatim without ambiguity.
+- [2026-08-24 9e7bf9ad] The planner tasked the coder with creating and editing test files, but the coder's sandbox forbids any test file writes outside the julia_gate tool.
+- [2026-08-24 b3a5eb15] The planner read the source file, test file, and runtests.jl before producing the plan, which gave the coder enough context to implement without further exploration.
+- [2026-08-24 c5180645] The planner read the target source file, the test runner, and the existing test file before producing the plan, ensuring line-number references were accurate.
+- [2026-08-24 b943981d] The planner read the source file, the test file, and the test runner before writing the plan, which gave the coder sufficient context to implement without further reads.
 - [2026-08-23 3813a631] The planner attempted to read a documentation file that did not exist, causing a tool error; verifying file existence before reading would avoid wasted calls.
 
 ## coder
+- [2026-08-24 8e2fe37f] The coder misinterpreted the ORANGE verdict with zero failures/errors/broken as a budget timeout rather than a possible server congestion issue, leading to premature acceptance of the result.
+- [2026-08-24 8e2fe37f] The coder triggered a shell wall refusal by attempting to run Julia directly outside the julia_gate tool, which is explicitly forbidden for test running.
+- [2026-08-24 d70397c0] The coder ran git status twice with different relative paths, both showing the same untracked file, which was unnecessary for verifying the triage note creation.
+- [2026-08-24 d70397c0] The coder ran julia_gate with a file that was not modified by the triage note creation, resulting in an ORANGE verdict that may not reflect the actual change.
+- [2026-08-24 d70397c0] The coder re-read four evidence files already read by the planner, despite the plan being the contract and the files being unchanged, consuming extra calls.
+- [2026-08-24 5b6f6dad] The coder stopped after receiving an ORANGE gate verdict, correctly interpreting that VERT was the only acceptable green per the contract, avoiding unnecessary retries.
+- [2026-08-24 5b6f6dad] The coder used glob patterns to discover files instead of relying solely on the exact file paths provided in the plan, risking reading unauthorized files.
+- [2026-08-24 5b6f6dad] The coder read extra evidence files beyond the five specified in the plan (e.g., VALIDATION_SUMMARY_at_seal.md, RT_GLM_V44_BRIEF_2026-08-09.md), violating the hard reading bound.
+- [2026-08-24 86021c46] The coder read PLAN.md, the source module, and the industrial orchestrator pattern before writing files, which matched the planner's intended contract.
+- [2026-08-24 86021c46] The coder's first julia_gate run returned ROUGE because a placeholder assertion expected 2 errors while the committed registry actually had 0, requiring one edit to fix.
+- [2026-08-24 93c42886] The coder used a glob pattern with braces '{DONE.md,docs/vv/TRIAGE_V09_2026-08-24.md}' which only returned the triage note, suggesting the glob tool may not support brace expansion.
+- [2026-08-24 93c42886] The coder ran julia_gate on a non-code file (docs/vv/TRIAGE_V09_2026-08-24.md) and received an ORANGE verdict with a note that it was 'hors champ', then ran it on test/runtests.jl and got VERT.
+- [2026-08-24 145042d0] The coder's final message indicates it was still verifying citations and had not yet written the triage note, suggesting the session ended before completion.
+- [2026-08-24 145042d0] The coder made 44 tool calls but never invoked julia_gate, despite the orchestrator's instruction to use it after every change.
+- [2026-08-24 145042d0] The coder read PLAN.md twice (calls 1 and 28) and re-read many source files multiple times, suggesting the plan was not fully internalized on first pass.
+- [2026-08-24 e338d7c8] The coder read the plan file, the source, and the runtests file before writing, then used the julia_gate tool after both file changes, achieving VERT on the first attempt.
+- [2026-08-24 2c2285c6] The coder's first julia_gate call returned ROUGE, but a single subsequent edit to the test file resolved the failure and produced a VERT verdict on the next attempt.
+- [2026-08-24 9e7bf9ad] The coder repeated a file write operation on a test file after the first attempt was rejected by the same test wall restriction, wasting a call.
+- [2026-08-24 0cd8718b] The coder's first julia_gate call returned ROUGE, requiring three subsequent edit calls before a second gate call achieved VERT.
+- [2026-08-24 b3a5eb15] The coder applied three sequential edits to the same file and then called julia_gate once on that file, obtaining VERT on the first attempt.
+- [2026-08-24 c5180645] The coder performed three separate edit calls on the same file to insert the four required functions, suggesting the plan's insertion point description allowed incremental application.
+- [2026-08-24 bec1e852] The coder attempted to read beyond the file's end (offset 684 on a 680-line file), causing a tool error, but recovered by reading the last few lines with a corrected offset.
+- [2026-08-24 b943981d] The coder achieved VERT on the first julia_gate call after two edits, showing that the plan was precise enough to avoid iterative debugging.
+- [2026-08-24 9afcb1fd] The coder retried the julia_gate tool three times after ORANGE verdicts due to a busy server, and a 45-second sleep before the fourth call resolved the issue.
+- [2026-08-24 dbd0089c] The coder achieved a VERT gate verdict on the first attempt by following the planner's contract exactly and using the julia_gate tool on the single changed file.
+- [2026-08-24 ac70f186] The coder's first julia_gate call returned ORANGE due to a busy server, requiring two retries before achieving VERT.
 - [2026-08-23 3813a631] The coder could not execute the plan's 10-point invariant self-check because it lacked direct Julia execution capability and could not add test files, so it performed only static verification.
 - [2026-08-23 c10ce871] The coder misinterpreted the gate's ORANGE verdict as a transient server issue and retried instead of investigating the test timeout.
 - [2026-08-23 c10ce871] The coder repeatedly called julia_gate on the same file without changing it, consuming all gate attempts without progress.

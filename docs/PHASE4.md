@@ -94,6 +94,32 @@ jamais touché.
 
 ## Journal
 
+- **J6 (24/08) — tests `waveform_library.jl`** : run propre **n° 6 consécutif**.
+  rc=0 en **1016 s**, 0,2781 USD, cache 49 % ; spool actif (8453 car.) ; porte
+  préchauffée essai 1. Livrable : `test/liquid/test_waveform_library.jl`
+  (29 macros `@test`, **37 tests runtime**, les 13 exports du bloc waveform
+  couverts, pas de CUDA, garde dual-load maison) + 1 include dans
+  `test/liquid/runtests.jl`. **Porte ORANGE-budget** (la suite liquid complète,
+  3894 tests, dépasse les 30 s de rejeu : `0 faux / 0 err`, cible 31 s
+  « dépassé ») ; le fallback standalone du plan a été bloqué par la politique de
+  session (pas de julia hors julia_gate) — coder honnête, rien maquillé ; preuve
+  verte faite côté dsh2.0 : **standalone 37/37 en 0,7 s** (WS puis worktree).
+  Rides DONE.md : « 103 lignes / 34 @test » — réalité 117 lignes / 29 macros /
+  37 runtime. **3e chiffre de brief faux de la campagne** : mon brief nommait le
+  champ `E_field`, le struct dit `E_peak` — le coder a lu la source et corrigé
+  (leçon briefs ter : vérifier aussi les NOMS de champs). Déviation include :
+  1 ligne de commentaire en plus (style maison) — justifiée. **Red team mutation
+  PASSÉ** : référence 37/37 (0,7 s) ; mutation `make_halfsine_waveform`
+  sin → cos : 35 passés / 2 échecs, suite en échec ; restauration : 37/37.
+  **Promu** : `e57e0d3e` sur `phase4-tests` (6e livrable). Preuves
+  `reports/phase4_jour6/` (scan secrets 0).
+  Post-scriptum distillation (24/08 soir) : une leçon distillée affirmait que le
+  coder J4 avait aussi lu `RT_GLM_V44_BRIEF_2026-08-09.md` (2e fichier hors borne).
+  Vérifié contre le journal de session : les 2 occurrences sont le CONTENU de
+  README_SEAL.md (qui cite ce nom), aucun appel read sur ce chemin — la leçon
+  sur-inférait, le red team J4 tient (seule la copie byte-identique VSA est hors
+  borne). Un diagnostic enregistré est une affirmation, pas une mesure.
+
 - **J5 (24/08) — triage V49** : run propre **n° 5 consécutif**. rc=0 en **667 s**,
   0,2235 USD, cache 43 % ; spool actif (9071 car., DONE.md concorde) ; porte
   préchauffée essai 2. Note `TRIAGE_V49_2026-08-24.md` (219 lignes, 5 sections +
