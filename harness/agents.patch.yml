@@ -124,6 +124,19 @@
     - id: test-wall
       name: dsh-test-wall
 
+# ── inserted: plan-spool -- le plan passe par reference, jamais par recopie ──
+# Rodage D3 (24/08, jour 1 essai 1) : recopier le plan du planner (~5-6 k tokens)
+# dans les arguments de l'appel `coder` a echoue 3 fois ("Upstream idle timeout
+# exceeded", 522 s et ~60 k tokens re-factures), reussi a la 4e. Le greffon
+# ecrit le texte long du planner dans PLAN.md et rend au parent un accuse court
+# qui dit au coder de LIRE le fichier. Mesure : node harness/plan_spool_unit.mjs.
+- insert:
+    - id: plan-spool
+      name: dsh-plan-spool
+      config:
+        tools: [planner]
+        seuil: 2000
+
 # ── inserted: role `coder` -- the pinned worker, files + shell + gate ─────────
 # README: "bash + editor. Loop: edit -> targeted tests -> green diff or
 # structured failure. Full suite pre-merge only." Model = the Phase 0 pinned

@@ -1,0 +1,11 @@
+{
+  "name": "dsh-plan-spool",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Le plan du planner passe par reference : ecrit dans PLAN.md par le greffon, accuse court au parent, le coder LIT le fichier -- plus jamais 5 k tokens recopies dans un argument d'outil (defaut D3 du rodage, idle timeout x3).",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  }
+}

@@ -32,7 +32,7 @@ stables » fausserait la mesure. Donc :
 |---|--------|-------|------|
 | D1 | test-wall refuse la tâche « écrire des tests » (REFUS write + str_replace_editor) | 24/08 essai 1 | **Corrigé** : `DSH_TEST_WALL_ALLOW` (fichiers exacts, posés par le script de run, hors de portée du coder) ; contrôle 41/41 ; commit 9acab0e |
 | D2 | délai 900 s trop court (tué pendant le coder ; ~400 s perdues en amont) | 24/08 essai 1 | **Corrigé** : 1800 s + politique p95 ci-dessus |
-| D3 | 3 appels qwen quasi vides (in=20281 identiques, out 36/41, 120–140 s chacun) entre planner et coder | 24/08 essai 1 | **Ouvert** : à trier sur le wire (marqueur de stagnation par appel dans fumee_route ?) |
+| D3 | 3 appels qwen quasi vides (in=20281 identiques, out 36-135, 120–140 s chacun) entre planner et coder | 24/08 essai 1 | **Diagnostiqué + corrigé** (preuve wire au prochain run). Journal de session (`session-9e7bf9ad`) : `llm/retry` 1..3, « Upstream idle timeout exceeded », sur l'étape « recopie le plan verbatim dans l'appel coder » (~6 k tokens d'arguments) ; 522 s + ~60 k tokens d'entrée re-facturés, réussite à la 4e tentative. Correctif : greffon `dsh-plan-spool` — le plan passe par référence (écrit dans PLAN.md par le greffon, accusé court au parent, le coder lit le fichier) ; contrôle `plan_spool_unit.mjs` 17/17 ; déclaré dans agents.patch.yml, jonction headless posée. Le retry dsh (politique 5×, backoff) reste le filet. |
 
 ## Promotion des livrables VERT
 
