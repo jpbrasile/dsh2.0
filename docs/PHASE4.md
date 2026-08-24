@@ -94,6 +94,25 @@ jamais touché.
 
 ## Journal
 
+- **J7 (24/08) — triage V51** : run propre **n° 7 consécutif**. rc=0 en **682 s**,
+  **0,1886 USD** (triage le moins cher de la campagne), cache 52 % ; spool actif
+  (8509 car.) ; porte préchauffée essai 1. Note `TRIAGE_V51_2026-08-24.md`
+  (103 lignes, 5 sections, 4 fichiers bornés dont le FINDING V49 inter-cas) :
+  A4 = 0.065847 contre [0.88, 0.99], **13,0× sous sa propre excuse** (plafond =
+  0,9 % du manque) ; audit d'entrées 12/08 (film 20 µm → 0.4359 µm EBP, 5,5×)
+  **ne sauve pas A4** (0.3589) et fait passer le cas **DOCUMENTED 17/18 → FAIL
+  17/18** (9/9 prédictions tenues, « la démotion est le livrable ») ; route
+  ancrée BLOQUÉE par γ*=23,47 (circularité même-phrase) — V51 assis route 3
+  (seal `e834bfcd`) jusqu'à l'ancrage de n_e (#100). Porte ORANGE structurel
+  doc-only, verdict verbatim, 0 échec. **Red team citations PASSÉ** : ~35
+  vérifiées, chiffres exacts, 3 verbatim, zéro falsification. 3 mineurs, dont
+  un notable : le DONE dit la note écrite « strictement depuis PLAN.md »,
+  citations fixées par le planner — l'exactitude ligne à ligne repose sur le
+  planner (vérifiée ici contre les fichiers réels ; à surveiller : un planner
+  qui se trompe de ligne serait recopié tel quel). **Promu** : `493c0058` sur
+  `phase4-tests` (7e livrable, non poussé). Preuves `reports/phase4_jour7/`
+  (scan secrets 0).
+
 - **J6 (24/08) — tests `waveform_library.jl`** : run propre **n° 6 consécutif**.
   rc=0 en **1016 s**, 0,2781 USD, cache 49 % ; spool actif (8453 car.) ; porte
   préchauffée essai 1. Livrable : `test/liquid/test_waveform_library.jl`
