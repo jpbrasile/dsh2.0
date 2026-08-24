@@ -8,9 +8,14 @@ tok/s, speculation harmful, systematic 55–65 min first-fill stall. (3) f16-KV
 window, plain (`reports/specdec_20260819_window_longctx64k-f16kv/`): decode
 38.8–41.7 tok/s at 29k/58k filled, prefix cache engages, stall GONE —
 **the KV quantization was the long-context killer, not the model or the 4090.**
-Production :8004 restored automatically after every window. Remaining NOT-RUN:
-mtp/dflash2 legs at f16 KV, the lossless-greedy re-check, the coding-agent A/B
-real run (harness tooling complete and verified).
+Production :8004 restored automatically after every window (until 2026-08-23,
+when production was deliberately stopped; windows since then record
+`production_restored=false` as the true pre-existing state). 2026-08-22
+(window 4): mtp leg at f16 KV RUN — MTP decode +68–86 %. 2026-08-24
+(window 6): the coding-agent A/B real run RUN — 12/12 solved, median
+wall-clock per solved task under MTP: dsh 17.8 s vs opencode 18.2 s (parity);
+MTP beats plain for both agents (−43 %/−55 %). Remaining NOT-RUN: dflash2
+legs (PR #27342 still open upstream) and the lossless-greedy re-check.
 
 ## Goal
 
@@ -404,3 +409,78 @@ The OpenCode binary currently measured on this box is **1.18.18**, while
 `AGENTS.md` still quotes **1.1.28**. The `AGENTS.md` figure is a stale doc; the
 harness and this document treat the installed binary as authoritative. Update
 `AGENTS.md` when convenient.
+
+## Window 6 — 2026-08-24, the coding-agent A/B real run (the honest consumer)
+
+The last major NOT-RUN item: `run_harness_ab.ps1 -Run`, OpenCode (leg A) vs
+DSH (leg B) driven through the same local bench server on :8005, 3 toy tasks,
+per-arm unittest grading (tests the model never sees), configs q38-plain and
+q38-mtp (dflash2 auto-skipped: no post-#27342 binary; the launcher's gate
+refusal is by design). Launcher KV default f16/f16 (the window-3/4 lesson).
+GPU checked idle before every launch; :8004 had no listener (production
+deliberately stopped 2026-08-23) — recorded, not "restored".
+
+**It took 5 runs to get one valid measurement.** Runs 1–4 each died on a real,
+distinct environment defect — none of them a model or bench-logic defect, all
+of them migration debt — found, fixed, committed, archived:
+
+1. `scripts/stop_llama_port.ps1` referenced by both bench scripts but never
+   migrated from the old repo. Imported (md5-identical in 3 sibling repos),
+   commit fc89931. Archive `reports/specdec_20260824_run1_legB_bootdead/`.
+2. `~/.dsh/profiles/{headless,web}/cordis.patch.yml` still pointed the
+   mcp-effitech server (failOnStartupError: true) at the REMOVED
+   agentic-flow-fresh path; the server had migrated to
+   `dsh2.0/scripts/dsh-mcp/effitech-image/`. Paths fixed (backups kept).
+3. The 2026-08-19 pin `@deepseek-ai/dsh@0.1.0-rc.7` cannot read the machine's
+   `.credentials.yaml` (rc.2 versioned format `version:`+`refs:`; rc.7 reads a
+   flat map only). Pin bumped to 0.1.1-rc.2, commit 93bd189. Archive
+   `reports/specdec_20260824_run2_legB_credformat/`.
+4. Bare `npx -y @deepseek-ai/dsh@0.1.1-rc.2` resolves a DRIFTED tree (65 caret
+   deps re-resolve; the documented 21/08 measurement in scripts/dsh.ps1) —
+   its --help hung >300 s at 2 GB RSS and the D1a watchdog killed it (clean
+   exit 4 BEFORE any outage; the gate works). Leg B and both D1a probes now
+   invoke `node ~/.dsh/runtime/dsh-0.1.1-rc.2/.../lib/bin.js` — the LOCKED
+   runtime (harness/runtime lockfile, 511 pkgs, pin_check.py OK), the same
+   invocation as bench.py::commande_dsh(). rc.2 renamed --dump-default-config
+   to --dump-config. Commit 5129457. Archive
+   `reports/specdec_20260824_run3_gate_refus/`.
+5. The junction `~/.dsh/profiles/headless/node_modules/dsh-subagent-timeout`
+   (21/08) still pointed at the removed agentic-flow-fresh plugin dir; its two
+   sister junctions had been repointed to dsh2.0 on 23/08 — the migration was
+   incomplete. Repointed. And (6) the repo `.env` carried a Context7 key under
+   the name `DSH_API_KEY`: dsh REFUSES to boot when a `.env` sets a reserved
+   `DSH_*` variable ("only the launching environment may set") — this silently
+   broke every dsh launched with cwd inside the repo. Renamed
+   `CONTEXT7_API_KEY` (name only). Proof after 5+6: `--profile headless
+   --help` boots the full plugin tree in <1 s. Archive
+   `reports/specdec_20260824_run4_asym_fixes_midflight/` (run 4's mtp leg ran
+   post-fix: first real dsh datapoints, plain leg pre-fix dead — asymmetric,
+   not comparable).
+
+**Run 5 (valid, `reports/specdec_20260824_run5_verdict/`): 12/12 solved.**
+Wall-clock per task (s), harness stopwatch, solved-only:
+
+| task | plain A (opencode) | plain B (dsh) | mtp A | mtp B |
+|---|---:|---:|---:|---:|
+| t1-write-module | 57.2 | 115.1 | 43.5 | 54.7 |
+| t2-fix-bug      | 21.6 |  22.3 | 15.8 | 14.2 |
+| t3-refactor     | 31.9 |  39.7 | 18.2 | 17.8 |
+| **median**      | **31.9** | **39.7** | **18.2** | **17.8** |
+
+- **MTP wins in real agent work**, not only in synthetic tok/s: median
+  −43 % for opencode, −55 % for dsh. The Phase-5 serving config is
+  **q38-mtp + KV f16**.
+- **DSH is competitive**: under MTP the medians are 17.8 vs 18.2 s — parity
+  (difference below this bench's noise; single rep). Under plain, dsh trails
+  (39.7 vs 31.9), driven by the long generation task t1 (115 vs 57 s): a slow
+  decoder amplifies dsh's extra turns; a fast one absorbs them.
+- **The DFlash2 decision rule stays open** — still no post-#27342 binary;
+  nothing here is evidence for or against DFlash2.
+- Honest limits: n=3 toy tasks, 1 rep per cell, no statistics; the leg-A-first
+  fixed order gives leg B a warm prefix-cache advantage on the shared server
+  within a config — treated as part of "same server for both arms", not
+  corrected. This is a feasibility verdict, not a paper.
+- The firewall-waiver section above still names the rc.7 pin; window 6
+  supersedes it: the pinned artifact is now the LOCKED runtime tree
+  (0.1.1-rc.2), same scrub + telemetry-off controls, D1a gate unchanged and
+  demonstrated fail-closed (run 3).
