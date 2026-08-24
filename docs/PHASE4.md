@@ -16,8 +16,20 @@ stables » fausserait la mesure. Donc :
 - **Triage de chaque run** : défaut *harnais* → correctif immédiat + contrôle mesuré +
   retry ; défaut *modèle* → distillation (leçon) + un retry avec leçon fraîche ; VERT →
   livrable promu (voir Promotion).
-- **Sortie du rodage** : l'horloge stable (1 tâche/jour, 2 semaines) ne démarre qu'après
-  **2 runs consécutifs sans défaut harnais**. Critère mesurable, pas un sentiment.
+- **Sortie du rodage** : **2 runs consécutifs sans défaut harnais**. Critère mesurable,
+  pas un sentiment.
+
+**Décision 2026-08-24 (utilisateur) : campagne enchaînée, pas d'horloge calendaire.**
+Le 1 tâche/jour × 2 semaines mesurait la dérive temporelle de la route ; ce signal sera
+échantillonné plus tard par un smoke nightly maigre **activé côté projet (agentic-flow),
+pas par dsh2.0**. À la sortie du rodage, les tâches du backlog s'enchaînent au rythme du
+triage (2–4/jour selon la revue), chacune avec triage + red team (mutation pour les
+tests, citations croisées pour les notes) + promotion si VERT. Biais assumé et noté :
+le cache chaud (68 % vs 29 % à froid) flatte coûts et latences — les chiffres du premier
+run de chaque session sont marqués à part. Backlog initial, mesuré dans le dépôt le
+24/08 : `anchors` 1 source/0 test ; `gpu3d_integration` 28 sources/6 tests ; `liquid`
+43/20 ; triages PIRT V44 (14/25), V49 (2/6), V51, V72 ; et la propre liste du dépôt
+`test/GAP_ANALYSIS.md`.
 
 ## Politique de timeout : mesurée, pas devinée
 
