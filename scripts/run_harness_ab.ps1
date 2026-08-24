@@ -227,6 +227,19 @@ $DshVersion  = "0.1.1-rc.2"   # pinned 2026-08-24; NEVER re-resolved at run time
 # ("the value for \"version\" ... must be a string", run 2 of 2026-08-24).
 # The D1a gate below still empirically re-verifies grammar + config keys against
 # THIS pin at every -Run and exits 4 before any outage on a mismatch.
+# 2026-08-24 (2): rc.2 is NEVER invoked via bare npx. `npx -y @deepseek-ai/dsh@<v>`
+# pins only the app package; its 65 caret deps re-resolve at install time and the
+# tree DRIFTS (measured 21/08 in scripts/dsh.ps1: app rc.7 + plugins rc.8, presets
+# broken; measured today: bare-npx rc.2 --help hung >300 s at 2 GB RSS and was
+# watchdog-killed). The machine's real dsh is the LOCKED runtime tree below
+# (harness/runtime/package-lock.json, 511 packages, verified by
+# `python harness/pin_check.py`); its --help answers in <1 s. Leg B and both
+# D1a probes therefore run `node <runtime bin.js>` -- also the reference
+# invocation of scripts/bench_julia_effort/bench.py::commande_dsh() (the .cmd
+# shim truncates multi-line args, so node+bin.js directly). rc.2 renamed
+# --dump-default-config to --dump-config (empirical: --help 2026-08-24).
+$DshRuntimeDir = Join-Path (Join-Path (Join-Path $env:USERPROFILE ".dsh") "runtime") ("dsh-" + $DshVersion)
+$DshBinJs      = Join-Path $DshRuntimeDir "node_modules\@deepseek-ai\dsh\lib\bin.js"
 $BenchPort   = 8005
 $ProdPort    = 8004
 $Launcher    = Join-Path $RepoRoot "scripts\start_llama_qwen38_27b_specdec.ps1"
@@ -852,7 +865,7 @@ function Invoke-LegDsh([hashtable]$task, [string]$alias, [string]$logPath, [int]
         Set-Item -Path ("env:" + $DshApiKeyEnv) -Value "bench-dummy-local-server"
         Set-Item -Path env:DSH_TELEMETRY_DISABLED -Value "1"
         try {
-            Invoke-WatchdogCommand "npx" @("-y", ("@deepseek-ai/dsh@$DshVersion"), "--profile", "headless", $briefArg) $task.dir $logPath $timeoutSec
+            Invoke-WatchdogCommand "node" @($DshBinJs, "--profile", "headless", $briefArg) $task.dir $logPath $timeoutSec
         } finally {
             Remove-Item ("env:" + $DshApiKeyEnv) -ErrorAction SilentlyContinue
             Remove-Item env:DSH_TELEMETRY_DISABLED -ErrorAction SilentlyContinue
@@ -979,6 +992,10 @@ function Restore-DshSettings($state) {
 # Any failure -> exit 4 naming exactly what is unconfirmed, BEFORE :8004 stop.
 # ----------------------------------------------------------------------------
 function Find-DshPackageDir {
+    # 2026-08-24: the authoritative install is the LOCKED runtime tree, not an
+    # npx cache. Prefer it; the npx-cache hunt below stays as a fallback only.
+    $runtimePkg = Join-Path $DshRuntimeDir "node_modules\@deepseek-ai\dsh"
+    if (Test-Path (Join-Path $runtimePkg "package.json")) { return $runtimePkg }
     $candidates = @()
     if ($env:LOCALAPPDATA) { $candidates += (Join-Path $env:LOCALAPPDATA "npm-cache\_npx") }
     if ($env:APPDATA) { $candidates += (Join-Path $env:APPDATA "npm-cache\_npx") }
@@ -1009,7 +1026,7 @@ function Test-DshConfigKnown([string]$evidenceDir) {
     try {
         # scrubbed child: the dsh telemetry/credential env must not leak here either
         $npx = Invoke-ScrubbedChild {
-            Invoke-WatchdogCommand "npx" @("-y", ("@deepseek-ai/dsh@$DshVersion"), "--help") $RepoRoot $npxLog 300
+            Invoke-WatchdogCommand "node" @($DshBinJs, "--help") $RepoRoot $npxLog 300
         }
     } catch {
         $npx = $null
@@ -1040,7 +1057,7 @@ function Test-DshConfigKnown([string]$evidenceDir) {
     $versionOk = $false
     $needleOk = @{}
     if ($pkgDir) {
-        $notes += "npx package dir: $pkgDir"
+        $notes += "dsh package dir: $pkgDir"
         # 1) installed package version must EQUAL the pinned $DshVersion.
         try {
             $pkg = Get-Content -Raw -Path (Join-Path $pkgDir "package.json") | ConvertFrom-Json
@@ -1093,7 +1110,7 @@ function Test-DshConfigKnown([string]$evidenceDir) {
     Remove-Item $dumpLog, $dumpErr -Force -ErrorAction SilentlyContinue
     try {
         $dumpCfg = Invoke-ScrubbedChild {
-            Invoke-WatchdogCommand "npx" @("-y", ("@deepseek-ai/dsh@$DshVersion"), "--profile", "headless", "--dump-default-config") $RepoRoot $dumpLog 300
+            Invoke-WatchdogCommand "node" @($DshBinJs, "--profile", "headless", "--dump-config") $RepoRoot $dumpLog 300
         }
     } catch {
         $dumpCfg = $null
@@ -1120,7 +1137,7 @@ function Test-DshConfigKnown([string]$evidenceDir) {
         if ($dumpText.Contains($needle)) {
             $needleOk[$needle] = "dump-config"
             $keys += "pkg:$needle"
-            $notes += "setting key '$needle' confirmed from --dump-default-config"
+            $notes += "setting key '$needle' confirmed from --profile headless --dump-config"
         } else {
             $needleOk[$needle] = $null   # NOT clamped here; tier-2 may fill it
         }
