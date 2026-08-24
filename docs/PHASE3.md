@@ -198,3 +198,48 @@ suivi modifié. Aucune trouvaille HIGH ; verdict « DONE-CLAIM HOLDS WITH MEDIUM
 **Coût de la phase 3** (grand livre, 23/08) : distilleur 0,0155 (dont 0,0094 perdus au
 raisonnement), injection mesurée 0,0247, poison 0,0008, A/B 0,2548, red team 0,1697 :
 **0,4655 USD**.
+
+## 9. Après le red team — la boucle jusqu'au coder (2026-08-24, « ferais » de l'utilisateur)
+
+Le §6 prouvait l'effet des leçons sur le *plan* ; restait l'effet sur le *travail*. Même tâche
+capex complète (`done_capex.txt` : orchestrateur → planner → coder → porte → DONE.md), copie
+remise à l'état propre entre les runs, campagnes `phase3/boucle*`. Preuves :
+`harness/redteam/_3boucle/` (sorties, fils, plans, DONE.md, `mesure_plans.txt`).
+
+**Runs 1–4 (matin, A1 B1 A2 B2) : INVALIDES pour le coder, 0,6315 USD passés par pertes et
+profits.** Les ORANGE du bras A étaient des replays *froids* de 31 s (> budget 30 s) : la porte
+relance son serveur Julia 900 s après le marqueur d'occupation, et l'alternance A,B,A,B a mis
+chaque run A sur serveur froid et chaque run B sur serveur chaud (horodatages dans les journaux :
+A1 06:53 froid, B1 07:04 chaud à 663 s, A2 07:15 froid à 1 364 s, B2 07:27 chaud à 687 s).
+Les marqueurs de *plan* restent valides : auto-vérification statique 2/2 en B, floue 2/2 en A.
+
+**Runs 5–8 (B3 A3 B4 A4) : porte préchauffée avant chaque run (appel direct de `porte.py`
+jusqu'à VERT, réussi à l'essai 1 les quatre fois), ordre inversé.** Valides :
+
+| run | leçons | durée dsh | coût USD | plan (car. / verdict / auto-vérif.) | porte du coder | coder (appels, s) | orch. (appels) |
+|---|---|---|---|---|---|---|---|
+| B3 | 10 | 745 s | 0,2097 | 8 647 / VERT / EVITEE | VERT | 8, 112 s | 5 |
+| A3 | vide | 900 s (coupé par fumee ; DONE.md écrit) | 0,2735 | 6 545 / PASS / floue | VERT | 5, 75 s | 15 |
+| B4 | 10 | 432 s | 0,1524 | 5 345 / VERT / EVITEE | VERT | 6, 69 s | 6 |
+| A4 | vide | 833 s | 0,2090 | 7 557 / VERT / floue | **ROUGE puis VERT** | 10, 111 s | 10 |
+
+Le ROUGE d'A4 est la faute consignée elle-même : `ParseError` à `capex_model.jl:455:54`, le
+coder avait collé la notation `-> Bool` de l'énoncé dans le Julia, puis corrigé en `::Bool`
+(fichier final et journal dans `_3boucle/`). Aucun coder B ne l'a faite.
+
+Lecture honnête, n = 2 runs valides par bras, une tâche :
+
+- **Plan** (8 runs valides pour ce marqueur) : auto-vérification qualifiée de statique **4/4 en
+  B, 0/4 en A** (la tâche exige ce self-check ; seuls les plans B précisent qu'il se fait par
+  lecture) ; verdict nommé PASS 2/4 en A, 0/4 en B. C'est l'effet le plus reproductible.
+- **Coder** (4 runs valides) : premier verdict de porte VERT 2/2 en B ; en A, 1 VERT et
+  1 ROUGE (`-> Bool`). Suggestif, pas concluant.
+- **Durée / coût** : B 589 s / 0,181 USD en moyenne contre A 867 s / 0,241 — mais la variance
+  vient surtout du bavardage de l'orchestrateur (15 et 10 appels en A contre 5 et 6 en B, rôle
+  qui ne reçoit de leçons dans aucun bras) : ne pas l'attribuer aux leçons.
+- Piège de mesure trouvé et payé : **la chaleur du serveur de porte domine les durées** ; tout
+  A/B futur sur cette chaîne doit préchauffer la porte (fait dans `run_boucle2`) ou randomiser
+  l'ordre. Coût total boucle : 1,4761 USD (0,6315 invalides + 0,8446 valides).
+
+La suite (phase 4) : l'horloge « 2 semaines stables », une vraie tâche par jour distillée en fin
+de session — c'est là que l'effet coder se mesurera sur du volume, pas sur n = 2.

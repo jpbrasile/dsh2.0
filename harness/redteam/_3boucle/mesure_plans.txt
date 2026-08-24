@@ -1,0 +1,9 @@
+plan           car.  verdict  auto-verification              -> signature (code / prose)
+plan_bA1.md    7976  VERT     floue                          2 code / 0 prose
+plan_bA2.md    8905  PASS     floue                          3 code / 0 prose
+plan_bA3.md    6545  PASS     floue                          0 code / 1 prose
+plan_bA4.md    7557  VERT     floue                          0 code / 3 prose
+plan_bB1.md    6779  VERT     EVITEE (statique)              0 code / 3 prose
+plan_bB2.md   10370  VERT     EVITEE (statique)              3 code / 0 prose
+plan_bB3.md    8647  VERT     EVITEE (statique)              3 code / 0 prose
+plan_bB4.md    5345  VERT     EVITEE (statique)              0 code / 0 prose
