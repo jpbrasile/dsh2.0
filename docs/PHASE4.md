@@ -94,6 +94,32 @@ jamais touché.
 
 ## Journal
 
+- **J8 (24/08) — triage V72** : run propre **n° 8 consécutif**. rc=0 en **765 s**,
+  **0,3406 USD**, cache 12 % (borne la plus grosse de la campagne : ~1043 lignes
+  sur 5 fichiers + fenêtre PIRT) ; porte préchauffée essai 1. Note
+  `TRIAGE_V72_2026-08-24.md` (166 lignes, 5 sections) : score reconstruit par
+  chantier — #57 PASS 7/7 (`e4a0f5de`) → #60 bras Zhao **FAIL 5/7** (C2 77,8 %,
+  C7 ablation) → #62 RT fold 6/7 (Check 2 intact) → #64 convergence NMC **5/7**
+  (« la réparation empire le score », t = −2,35, publiée telle quelle) → #75
+  LOOCV 6/7 inchangé (levier f_I mort sur batch, dérive src `5eb18077`) →
+  FINDING 18/08 : **FAIL 6/7 scellé**. Trois canaux morts par mesure, un vivant
+  (dose, 103 pp au record) sans loi ancrée (dataset synthétique, forme réfutée
+  par Safavi/Szwarc) ; blocage = **prior plat sur f_irrev sur un jeu de
+  dose-réponse** ; prochaine sonde = dose-réponse WAS ancrée indépendante de
+  Choi/Zhao sous nouveau prereg. La note **signale sans résoudre** 2
+  discordances : PIRT 6/7 FAIL (l.186/189) vs 7/7 PASS (l.189 Notes,
+  l.202/228/251/255) ; tâche #75 datée 08-08, 2 jours avant #60–#64 (08-10).
+  **Red team citations PASSÉ** : ~40 vérifiées ligne à ligne, chiffres exacts,
+  0 falsification ; 3 mineurs — citation « t > −2 » placée l.5-6 au lieu de
+  l.58 ; **DONE.md résume le verdict de porte (« ORANGE ») au lieu de le citer
+  verbatim** (exigence du brief non tenue à la lettre ; porte rejouée
+  directement : « aucun fichier .jl modifie … rien a rejouer (verdict ORANGE,
+  pas vert) », 0 échec) ; le record lui-même écrit « 103 pp » pour 120,4−15,4
+  (= 105,0 — anomalie du record, la note transcrit fidèlement). Promu
+  `b232dfda` sur `phase4-tests` (8ᵉ livrable, non poussé). Preuves
+  `reports/phase4_jour8/` (scans secrets 0). À surveiller (2ᵉ occurrence
+  après J7) : le verdict de porte rapporté en résumé plutôt que verbatim.
+
 - **J7 (24/08) — triage V51** : run propre **n° 7 consécutif**. rc=0 en **682 s**,
   **0,1886 USD** (triage le moins cher de la campagne), cache 52 % ; spool actif
   (8509 car.) ; porte préchauffée essai 1. Note `TRIAGE_V51_2026-08-24.md`
