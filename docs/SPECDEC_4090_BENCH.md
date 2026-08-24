@@ -180,11 +180,11 @@ justify running the controlled 4090 experiment.
 | GPU measurements (TTFT, tok/s, VRAM) | **RUN 2026-08-19** for the two configs above — see "Measured results" |
 | q38-dflash2 binary gate (b10488) | **REFUSED-BY-DESIGN** (exit 4): b10488 is DFlash v1 only (PR #22105); DFlash2 is PR #27342, OPEN as of 2026-08-19 |
 | DFlash2 serving verification | **NOT-RUN** (needs post-merge binary; b10488 cannot serve DFlash2) |
-| Coding-agent A/B (OpenCode vs DSH) | **NOT-RUN, pending approved outage window** |
+| Coding-agent A/B (OpenCode vs DSH) | **RUN 2026-08-24** (window 6, run 5 valid, `reports/specdec_20260824_run5_verdict/`): 12/12 solved. Median wall-clock per solved task under **q38-mtp**: dsh **17.8 s** vs opencode **18.2 s** — parity. Under plain: dsh 39.7 s vs opencode 31.9 s. Limits stated in window 6: n=3 toy tasks, 1 rep per cell, no statistics, leg-A-first order gives leg B a warm prefix cache |
 | Cross-config `--compare` lossless check | **RUN — 9/9 MISMATCH at temp 0.6** (expected for sampled decoding: RNG streams differ per path; identical-output losslessness must be asserted at temp 0 / greedy — follow-up, not a defect signal) |
 | Long-ctx matrix (29k/58k filled, KV q8_0/q4_0) | **RUN 2026-08-19** 3/3 configs: plain 3.96/1.88 tok/s, mtp +1.5/+0.7 %, dflash2 **−45/−35 %**; systematic 55–65 min first-58k-fill stall; no prefix-cache reuse (upstream-broken for this hybrid family) |
 | f16-KV window (plain, ctx 65536) | **RUN 2026-08-19**: 41.67/38.77 tok/s at 29k/58k filled (×10–20), repeat TTFT 0.4 s (prefix cache works), first fill 19.1 s, **no stall** — launcher `-Ctk/-Ctv/-UbatchSize` params added (allowlisted) |
-| Coding-agent A/B harness | **TOOLING COMPLETE 2026-08-19** (rc.7 CLI grammar, D1a empirical config gate, watchdog+scrubbed grading, reference tests, outage discipline with finally-restore; adversarial review NO-BLOCK; 36/36 offline tests). Real `-Run` pending an approved window |
+| Coding-agent A/B harness | **TOOLING COMPLETE 2026-08-19** (rc.7 CLI grammar, D1a empirical config gate, watchdog+scrubbed grading, reference tests, outage discipline with finally-restore; adversarial review NO-BLOCK; 36/36 offline tests). Real `-Run` **executed 2026-08-24**, window 6 — it took 5 runs to reach one valid measurement, runs 1–4 each killed by a distinct migration defect (all found, fixed, committed, archived) |
 
 User decision 2026-08-19 (morning): dry-run-only. **Superseded same day** by an
 explicit "do the real work if gpu is available" — the window ran with
@@ -412,7 +412,7 @@ harness and this document treat the installed binary as authoritative. Update
 
 ## Window 6 — 2026-08-24, the coding-agent A/B real run (the honest consumer)
 
-The last major NOT-RUN item: `run_harness_ab.ps1 -Run`, OpenCode (leg A) vs
+The last major NOT-RUN item, run at last: `run_harness_ab.ps1 -Run`, OpenCode (leg A) vs
 DSH (leg B) driven through the same local bench server on :8005, 3 toy tasks,
 per-arm unittest grading (tests the model never sees), configs q38-plain and
 q38-mtp (dflash2 auto-skipped: no post-#27342 binary; the launcher's gate
