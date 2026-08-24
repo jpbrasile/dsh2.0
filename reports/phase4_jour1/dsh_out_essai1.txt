@@ -1,0 +1,9 @@
+lecons: arme -- variable {{lecons}} depuis C:\Users\test\Documents\dsh2.0\harness\lecons.md, 40 lignes max par role
+query-wall: arme -- outil(s) searcher,mcp__context7__resolve-library-id,mcp__context7__query-docs, 0 segment(s) de racine, 3 identifiant(s), max 1200 car.
+secret-redactor: arme -- 16 motifs, 5 valeur(s) vive(s) (env + credentials + .env), jamais affichees
+julia-gate: arme -- porte C:/Users/test/Documents/dsh2.0/scripts/julia_gate/porte.py, projet C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework, budget 30s
+test-wall: arme -- 1 racine(s) de tests (C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework/test), cwd C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework
+test-wall: REFUS 1 -- write : write vise un fichier de tests ("C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework/test/")
+test-wall: REFUS 2 -- str_replace_editor : str_replace_editor vise un fichier de tests ("C:/Users/test/Documents/dsh2.0/scripts/bench_julia_effort/_fumee/framework/test/")
+
+[fumee_route] delai 900s depasse : arbre dsh tue

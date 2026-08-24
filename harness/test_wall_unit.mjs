@@ -68,6 +68,23 @@ for (const [nom, tool, args, motif] of [
   ['shell : git rm', 'pwsh', { command: 'git rm -q src/x.jl' }, /git rm/],
 ]) { const r = verifier(tool, args, OPTS); cas(nom, r !== null && motif.test(r.motif), r && r.motif); }
 
+console.log('== exception nommee DSH_TEST_WALL_ALLOW (la tache EST d ecrire des tests, 24/08)');
+writeFileSync(join(repo, 'test', 'physics', 'runtests.jl'), 'include("test_gas.jl")\n');
+const NOUVEAU = join(repo, 'test', 'physics', 'test_new.jl');
+const RUNTESTS = join(repo, 'test', 'physics', 'runtests.jl');
+const OPTS_ALLOW = { ...OPTS, allow: [canon(NOUVEAU), canon(RUNTESTS)] };
+for (const [nom, tool, args, attendu] of [
+  ['write du fichier permis (nouveau test)', 'write', { file_path: NOUVEAU, content: '@test 1 == 1' }, null],
+  ['str_replace_editor sur runtests.jl permis', 'str_replace_editor', { command: 'str_replace', path: RUNTESTS, old_str: 'include', new_str: 'include' }, null],
+  ['edit du fichier permis en relatif', 'edit', { file_path: 'test/physics/test_new.jl', old_string: 'a', new_string: 'b' }, null],
+  ['edit d un AUTRE test existant : toujours refuse', 'edit', { file_path: T, old_string: '1 == 1', new_string: 'true' }, /fichier de tests/],
+  ['write d un autre nouveau test non permis : refuse', 'write', { file_path: join(repo, 'test', 'physics', 'test_autre.jl'), content: '@test true' }, /fichier de tests/],
+  ['shell vers le fichier permis : toujours refuse', 'pwsh', { command: 'Set-Content ' + NOUVEAU + ' ""' }, /racine de tests/],
+]) {
+  const r = verifier(tool, args, OPTS_ALLOW);
+  cas(nom, attendu === null ? r === null : (r !== null && attendu.test(r.motif)), r && r.motif);
+}
+
 console.log('== nom court 8.3 de la racine de tests (Windows) : refuse aussi');
 let court = null;
 try { court = execFileSync('cmd', ['/c', 'for %I in ("' + join(repo, 'test') + '") do @echo %~sI'], { encoding: 'utf8' }).trim(); } catch { /* pas de cmd */ }

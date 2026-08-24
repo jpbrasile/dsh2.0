@@ -18,6 +18,14 @@
  * `node harness/test_wall_unit.mjs` (free) and on the wire by fumee_route.py
  * (stderr "test-wall: REFUS n -- ...").
  *
+ * Exception nommee (2026-08-24, phase 4 jour 1) : quand la TACHE est d'ecrire
+ * des tests, le contrat reste humain -- le harnais nomme les fichiers permis
+ * dans DSH_TEST_WALL_ALLOW (`;`-separated, fichiers exacts, pas de sous-arbre),
+ * poses a l'amorcage par le script de run, hors de portee du coder. Tout le
+ * reste de test/ reste mure, et le shell reste mure meme pour un fichier
+ * permis (les outils fichier suffisent). Constate le 24/08 : sans exception,
+ * le mur a bloque le jour 1 ("write vise un fichier de tests" x2, timeout).
+ *
  * `verifier(name, args, opts)` is exported pure for the unit control.
  */
 import { realpathSync } from 'node:fs';
@@ -60,6 +68,7 @@ function chemins(v, out = []) {
  */
 export function verifier(toolName, args, opts) {
   const roots = opts.roots || [];
+  const allow = opts.allow || [];
   const cwd = opts.cwd || process.cwd();
   if (SHELL.has(toolName)) {
     const cmd = chemins(args).join('\n');
@@ -76,6 +85,7 @@ export function verifier(toolName, args, opts) {
   for (const p of chemins(args)) {
     if (!/[\\/]/.test(p) && !FILE_TOOLS.has(toolName)) continue;  // un argument sans separateur n'est un chemin que pour un outil fichier
     const abs = isAbsolute(p) ? p : resolve(cwd, p);
+    if (allow.length && (allow.includes(canon(abs)) || allow.includes(canon(reel(abs))))) continue;  // fichier exact nomme par le harnais
     const root = sousRacine(abs, roots);
     if (root) return { motif: `${toolName} vise un fichier de tests`, extrait: p.slice(0, 80) };
   }
@@ -88,7 +98,10 @@ export function apply(ctx, config = {}) {
     .concat((process.env.DSH_TEST_WALL || '').split(';').map((x) => x.trim()).filter(Boolean))
     .concat(config.roots || []);
   const roots = [...new Set(bruts.flatMap((r) => [canon(r), canon(reel(r))]))];
-  const opts = { roots, cwd };
+  const allowBruts = (process.env.DSH_TEST_WALL_ALLOW || '').split(';').map((x) => x.trim()).filter(Boolean)
+    .concat(config.allow || []);
+  const allow = [...new Set(allowBruts.flatMap((r) => [canon(r), canon(reel(r))]))];
+  const opts = { roots, cwd, allow };
   let refus = 0;
   ctx.on('tools/pre-execute', async (exec, next) => {
     const k = verifier(exec.name, exec.arguments || {}, opts);
@@ -101,7 +114,8 @@ export function apply(ctx, config = {}) {
         + 'If a test is wrong or missing, stop and report it as a structured failure (file, line, what you expected) -- do not work around it.',
     };
   });
-  console.error(`test-wall: arme -- ${roots.length} racine(s) de tests (${bruts.map((b) => b.replace(/\\/g, '/')).join(', ')}), cwd ${cwd.replace(/\\/g, '/')}`);
+  console.error(`test-wall: arme -- ${roots.length} racine(s) de tests (${bruts.map((b) => b.replace(/\\/g, '/')).join(', ')}), cwd ${cwd.replace(/\\/g, '/')}`
+    + (allow.length ? ` ; ${allowBruts.length} fichier(s) permis par le harnais (DSH_TEST_WALL_ALLOW)` : ''));
 }
 
 function join2(a, b) { return a.replace(/[\\/]+$/, '') + '/' + b; }

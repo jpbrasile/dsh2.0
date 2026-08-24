@@ -1,0 +1,15 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change; VERT is the only green." followed by the planner's final message verbatim.
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the plan> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia, module under `src/industrial/`, tests under `test/industrial/`): `src/industrial/biorefinery_symbiosis.jl` is the ONLY industrial module with no test file. Plan the creation of `test/industrial/test_biorefinery_symbiosis.jl` and its registration in `test/industrial/runtests.jl` (an `include` line next to the existing ones). The module under test must NOT be modified.
+
+The test suite must be real, not ceremonial:
+
+1. Cover BOTH public functions: `symbiosis_economics(culture_volume_L::Real; ...)` and `estimate_biorefinery_capex(culture_volume_L::Real)`.
+2. At least 12 `@test` assertions total, each checking a NUMERIC property (value, bound, ratio, or monotonicity) -- `@test f(x) isa Something` alone does not count.
+3. Include at least: (a) one hand-computed value check at a small volume using the module's own documented constants (read them from the source before planning the expected numbers); (b) one monotonicity check (a larger culture volume must not decrease biomass output or capex); (c) one bounds check (efficiencies and fractions produce outputs consistent with 0 < fraction <= 1); (d) one degenerate input (zero or near-zero volume) with a stated expected behaviour that matches what the code actually does -- plan it from the source, do not guess.
+4. The plan must quote, for each planned assertion, the exact expected number or inequality and the one-line derivation from the module's constants.
+5. Acceptance: julia_gate verdict VERT on the workspace (which now replays the new file through runtests.jl), plus a self-check that every planned assertion is present in the written file. VERT is the only green; ORANGE or ROUGE means fix and rerun, never weaken an assertion to pass.
