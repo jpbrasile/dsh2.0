@@ -1,0 +1,30 @@
+agent-default-model:
+  provider: bench
+  model: specdec-q38-mtp
+llm-pi-ai:
+  providers:
+    bench:
+      apiKeyEnv: DSH_BENCH_API_KEY
+      api: openai-completions
+      baseURL: http://127.0.0.1:8005/v1
+      models:
+        - id: specdec-q38-mtp
+system-prompt:
+  persona: |-
+    You are a coding agent completing one self-contained programming task.
+    Work only inside the current working directory.
+    Read brief.txt for the exact task instructions.
+    Create or edit the requested files, run the tests with `python -m unittest`, and make all tests pass.
+    Do not read or write anything outside this directory, and do not use the network.
+    Be concise: finish as soon as the tests pass.
+# D5 (2026-08-20): the session-title LLM plugins would otherwise fall back to
+# the DEFAULT provider (deepseek-official) when generating a session title from
+# the first prompt, and abort the whole task with MISSING_CREDENTIAL (measured:
+# plain t2 dsh exit 1 in ~2.6 s). Pin them to the bench route like
+# agent-default-model.
+session-title-first-prompt-llm:
+  provider: bench
+  model: specdec-q38-mtp
+session-title-llm:
+  provider: bench
+  model: specdec-q38-mtp

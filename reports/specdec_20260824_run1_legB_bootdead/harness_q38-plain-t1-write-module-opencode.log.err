@@ -1,0 +1,77 @@
+[0m
+> build · specdec-q38-plain
+[0m
+[0m→ [0mRead brief.txt
+[0m
+[0m← [0mWrite rate_limiter.py
+Wrote file successfully.
+[0m
+[0m← [0mWrite test_rate_limiter.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython -m unittest test_rate_limiter -v
+test_allows_up_to_capacity_then_denies (test_rate_limiter.FixedWindowLimiterTests.test_allows_up_to_capacity_then_denies) ... ok
+test_exposes_parameters (test_rate_limiter.FixedWindowLimiterTests.test_exposes_parameters) ... ok
+test_invalid_arguments (test_rate_limiter.FixedWindowLimiterTests.test_invalid_arguments) ... ok
+test_remaining_tracks_usage (test_rate_limiter.FixedWindowLimiterTests.test_remaining_tracks_usage) ... FAIL
+test_reset_clears_counter (test_rate_limiter.FixedWindowLimiterTests.test_reset_clears_counter) ... ok
+test_reset_does_not_block_after_expiry (test_rate_limiter.FixedWindowLimiterTests.test_reset_does_not_block_after_expiry) ... ok
+test_thread_safety_total_grants_equal_capacity (test_rate_limiter.FixedWindowLimiterTests.test_thread_safety_total_grants_equal_capacity) ... ok
+test_thread_safety_with_reset (test_rate_limiter.FixedWindowLimiterTests.test_thread_safety_with_reset) ... ok
+test_window_expires_and_allows_again (test_rate_limiter.FixedWindowLimiterTests.test_window_expires_and_allows_again) ... ok
+
+======================================================================
+FAIL: test_remaining_tracks_usage (test_rate_limiter.FixedWindowLimiterTests.test_remaining_tracks_usage)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\run-q38-plain-t1-write-module-opencode\t1-write-module\test_rate_limiter.py", line 47, in test_remaining_tracks_usage
+    self.assertFalse(limiter.try_acquire())
+AssertionError: True is not false
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.083s
+
+FAILED (failures=1)
+[0m
+[0m← [0mEdit test_rate_limiter.py
+Index: C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\run-q38-plain-t1-write-module-opencode\t1-write-module\test_rate_limiter.py
+===================================================================
+--- C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\run-q38-plain-t1-write-module-opencode\t1-write-module\test_rate_limiter.py
++++ C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\run-q38-plain-t1-write-module-opencode\t1-write-module\test_rate_limiter.py
+@@ -38,13 +38,14 @@
+     limiter.reset()
+     self.assertTrue(limiter.try_acquire())
+ 
+ def test_remaining_tracks_usage(self):
+-    limiter = FixedWindowLimiter(4, 60)
+-    self.assertEqual(limiter.remaining, 4)
+-    limiter.try_acquire()
+-    limiter.try_acquire()
++    limiter = FixedWindowLimiter(2, 60)
+     self.assertEqual(limiter.remaining, 2)
++    self.assertTrue(limiter.try_acquire())
++    self.assertEqual(limiter.remaining, 1)
++    self.assertTrue(limiter.try_acquire())
++    self.assertEqual(limiter.remaining, 0)
+     self.assertFalse(limiter.try_acquire())
+     self.assertEqual(limiter.remaining, 0)
+ 
+ def test_thread_safety_total_grants_equal_capacity(self):
+
+[0m
+[0m$ [0mpython -m unittest test_rate_limiter -v
+test_allows_up_to_capacity_then_denies (test_rate_limiter.FixedWindowLimiterTests.test_allows_up_to_capacity_then_denies) ... ok
+test_exposes_parameters (test_rate_limiter.FixedWindowLimiterTests.test_exposes_parameters) ... ok
+test_invalid_arguments (test_rate_limiter.FixedWindowLimiterTests.test_invalid_arguments) ... ok
+test_remaining_tracks_usage (test_rate_limiter.FixedWindowLimiterTests.test_remaining_tracks_usage) ... ok
+test_reset_clears_counter (test_rate_limiter.FixedWindowLimiterTests.test_reset_clears_counter) ... ok
+test_reset_does_not_block_after_expiry (test_rate_limiter.FixedWindowLimiterTests.test_reset_does_not_block_after_expiry) ... ok
+test_thread_safety_total_grants_equal_capacity (test_rate_limiter.FixedWindowLimiterTests.test_thread_safety_total_grants_equal_capacity) ... ok
+test_thread_safety_with_reset (test_rate_limiter.FixedWindowLimiterTests.test_thread_safety_with_reset) ... ok
+test_window_expires_and_allows_again (test_rate_limiter.FixedWindowLimiterTests.test_window_expires_and_allows_again) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.082s
+
+OK
+[0m

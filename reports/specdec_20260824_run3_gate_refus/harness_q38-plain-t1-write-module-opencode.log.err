@@ -1,0 +1,27 @@
+[0m
+> build · specdec-q38-plain
+[0m
+[0m→ [0mRead brief.txt
+[0m
+[0m← [0mWrite rate_limiter.py
+Wrote file successfully.
+[0m
+[0m← [0mWrite test_rate_limiter.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython -m unittest test_rate_limiter -v
+test_allows_up_to_capacity (test_rate_limiter.BasicBehaviorTests.test_allows_up_to_capacity) ... ok
+test_capacity_one (test_rate_limiter.BasicBehaviorTests.test_capacity_one) ... ok
+test_invalid_capacity (test_rate_limiter.BasicBehaviorTests.test_invalid_capacity) ... ok
+test_invalid_window (test_rate_limiter.BasicBehaviorTests.test_invalid_window) ... ok
+test_reset_clears_current_window (test_rate_limiter.BasicBehaviorTests.test_reset_clears_current_window) ... ok
+test_reset_then_window_expires (test_rate_limiter.BasicBehaviorTests.test_reset_then_window_expires) ... ok
+test_window_expires (test_rate_limiter.BasicBehaviorTests.test_window_expires) ... ok
+test_concurrent_acquisitions_never_exceed_capacity (test_rate_limiter.ThreadSafetyTests.test_concurrent_acquisitions_never_exceed_capacity) ... ok
+test_concurrent_reset_and_acquire (test_rate_limiter.ThreadSafetyTests.test_concurrent_reset_and_acquire) ... ok
+
+----------------------------------------------------------------------
+Ran 9 tests in 0.909s
+
+OK
+[0m

@@ -1,0 +1,18 @@
+E
+======================================================================
+ERROR: test_rate_limiter (unittest.loader._FailedTest.test_rate_limiter)
+----------------------------------------------------------------------
+ImportError: Failed to import test module: test_rate_limiter
+Traceback (most recent call last):
+  File "C:\Users\test\anaconda3\Lib\unittest\loader.py", line 154, in loadTestsFromName
+    module = __import__(module_name)
+             ^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\run-q38-mtp-t1-write-module-dsh\t1-write-module\test_rate_limiter.py", line 2, in <module>
+    from rate_limiter import FixedWindowLimiter
+ModuleNotFoundError: No module named 'rate_limiter'
+
+
+----------------------------------------------------------------------
+Ran 1 test in 0.000s
+
+FAILED (errors=1)

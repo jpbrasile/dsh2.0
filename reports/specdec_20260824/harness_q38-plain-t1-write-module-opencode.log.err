@@ -1,0 +1,25 @@
+[0m
+> build · specdec-q38-plain
+[0m
+[0m→ [0mRead brief.txt
+[0m
+[0m← [0mWrite rate_limiter.py
+Wrote file successfully.
+[0m
+[0m← [0mWrite test_rate_limiter.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython -m unittest test_rate_limiter -v
+test_acquires_up_to_capacity (test_rate_limiter.TestFixedWindowLimiter.test_acquires_up_to_capacity) ... ok
+test_invalid_arguments (test_rate_limiter.TestFixedWindowLimiter.test_invalid_arguments) ... ok
+test_rejects_when_exhausted (test_rate_limiter.TestFixedWindowLimiter.test_rejects_when_exhausted) ... ok
+test_reset_allows_acquiring_again (test_rate_limiter.TestFixedWindowLimiter.test_reset_allows_acquiring_again) ... ok
+test_thread_safety (test_rate_limiter.TestFixedWindowLimiter.test_thread_safety) ... ok
+test_window_does_not_expire_early (test_rate_limiter.TestFixedWindowLimiter.test_window_does_not_expire_early) ... ok
+test_window_expires (test_rate_limiter.TestFixedWindowLimiter.test_window_expires) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.092s
+
+OK
+[0m

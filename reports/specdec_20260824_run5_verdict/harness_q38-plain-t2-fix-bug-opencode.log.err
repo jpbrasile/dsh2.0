@@ -1,0 +1,31 @@
+[0m
+> build · specdec-q38-plain
+[0m
+[0m→ [0mRead seed.py
+[0m→ [0mRead test_seed.py
+[0m
+[0m← [0mEdit seed.py
+Index: C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\run-q38-plain-t2-fix-bug-opencode\t2-fix-bug\seed.py
+===================================================================
+--- C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\run-q38-plain-t2-fix-bug-opencode\t2-fix-bug\seed.py
++++ C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\run-q38-plain-t2-fix-bug-opencode\t2-fix-bug\seed.py
+@@ -5,8 +5,7 @@
+ sieve = [True] * (n + 1)
+ sieve[0] = sieve[1] = False
+ for i in range(2, int(math.isqrt(n)) + 1):
+     if sieve[i]:
+-        # SEEDED BUG: the step is i, not i+1, so composites are never cleared.
+-        for j in range(i * i, n + 1, i + 1):
++        for j in range(i * i, n + 1, i):
+             sieve[j] = False
+ return [i for i in range(2, n + 1) if sieve[i]]
+\ No newline at end of file
+
+[0m
+[0m$ [0mpython -m unittest test_seed
+...
+----------------------------------------------------------------------
+Ran 3 tests in 0.000s
+
+OK
+[0m

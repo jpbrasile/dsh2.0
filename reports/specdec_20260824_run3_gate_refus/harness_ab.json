@@ -1,0 +1,154 @@
+{
+    "state_8004_before":  "C:\\Users\\test\\Documents\\dsh2.0\\reports\\specdec_20260824\\state_8004_before.json",
+    "task_timeout_seconds":  900,
+    "median_wall_s_solved_only":  {
+                                      "q38-mtp":  {
+                                                      "opencode":  null,
+                                                      "dsh":  null
+                                                  },
+                                      "q38-plain":  {
+                                                        "opencode":  24.3,
+                                                        "dsh":  null
+                                                    },
+                                      "q38-dflash2":  {
+                                                          "opencode":  null,
+                                                          "dsh":  null
+                                                      }
+                                  },
+    "timestamp":  "2026-08-24T08:44:28.6366535Z",
+    "production_restored":  false,
+    "configs":  {
+                    "q38-mtp":  {
+                                    "graded":  0,
+                                    "solved":  {
+                                                   "opencode":  0,
+                                                   "dsh":  0
+                                               },
+                                    "server_note":  "launcher exited=True exitCode=2",
+                                    "alias":  "specdec-q38-mtp",
+                                    "skipped":  false,
+                                    "server_ok":  false,
+                                    "gate_exit":  0,
+                                    "stop_8005_exit":  0,
+                                    "runs":  0,
+                                    "skip_reason":  null
+                                },
+                    "q38-plain":  {
+                                      "graded":  6,
+                                      "solved":  {
+                                                     "opencode":  3,
+                                                     "dsh":  0
+                                                 },
+                                      "server_note":  null,
+                                      "alias":  "specdec-q38-plain",
+                                      "skipped":  false,
+                                      "server_ok":  true,
+                                      "gate_exit":  0,
+                                      "stop_8005_exit":  0,
+                                      "runs":  6,
+                                      "skip_reason":  null
+                                  },
+                    "q38-dflash2":  {
+                                        "graded":  0,
+                                        "solved":  {
+                                                       "opencode":  0,
+                                                       "dsh":  0
+                                                   },
+                                        "server_note":  null,
+                                        "alias":  "specdec-q38-dflash2",
+                                        "skipped":  true,
+                                        "server_ok":  false,
+                                        "gate_exit":  null,
+                                        "stop_8005_exit":  null,
+                                        "runs":  0,
+                                        "skip_reason":  "no -Dflash2BinaryPath"
+                                    }
+                },
+    "run_error":  null,
+    "dsh_version":  "0.1.0-rc.7",
+    "started_at":  "2026-08-24T08:31:45.6029260Z",
+    "production_restored_json":  "C:\\Users\\test\\Documents\\dsh2.0\\reports\\specdec_20260824\\production_restored.json",
+    "runs":  [
+                 {
+                     "exit":  0,
+                     "arm":  "opencode",
+                     "turns":  null,
+                     "config":  "q38-plain",
+                     "error":  null,
+                     "solved":  true,
+                     "log":  "C:\\Users\\test\\Documents\\dsh2.0\\reports\\specdec_20260824\\harness_q38-plain-t1-write-module-opencode.log",
+                     "task":  "t1-write-module",
+                     "grade_exit":  0,
+                     "wall_s":  78.1,
+                     "timeout":  false
+                 },
+                 {
+                     "exit":  1,
+                     "arm":  "dsh",
+                     "turns":  null,
+                     "config":  "q38-plain",
+                     "error":  null,
+                     "solved":  false,
+                     "log":  "C:\\Users\\test\\Documents\\dsh2.0\\reports\\specdec_20260824\\harness_q38-plain-t1-write-module-dsh.log",
+                     "task":  "t1-write-module",
+                     "grade_exit":  1,
+                     "wall_s":  2.4,
+                     "timeout":  false
+                 },
+                 {
+                     "exit":  0,
+                     "arm":  "opencode",
+                     "turns":  4,
+                     "config":  "q38-plain",
+                     "error":  null,
+                     "solved":  true,
+                     "log":  "C:\\Users\\test\\Documents\\dsh2.0\\reports\\specdec_20260824\\harness_q38-plain-t2-fix-bug-opencode.log",
+                     "task":  "t2-fix-bug",
+                     "grade_exit":  0,
+                     "wall_s":  21.8,
+                     "timeout":  false
+                 },
+                 {
+                     "exit":  1,
+                     "arm":  "dsh",
+                     "turns":  null,
+                     "config":  "q38-plain",
+                     "error":  null,
+                     "solved":  false,
+                     "log":  "C:\\Users\\test\\Documents\\dsh2.0\\reports\\specdec_20260824\\harness_q38-plain-t2-fix-bug-dsh.log",
+                     "task":  "t2-fix-bug",
+                     "grade_exit":  1,
+                     "wall_s":  2.5,
+                     "timeout":  false
+                 },
+                 {
+                     "exit":  0,
+                     "arm":  "opencode",
+                     "turns":  null,
+                     "config":  "q38-plain",
+                     "error":  null,
+                     "solved":  true,
+                     "log":  "C:\\Users\\test\\Documents\\dsh2.0\\reports\\specdec_20260824\\harness_q38-plain-t3-refactor-opencode.log",
+                     "task":  "t3-refactor",
+                     "grade_exit":  0,
+                     "wall_s":  24.3,
+                     "timeout":  false
+                 },
+                 {
+                     "exit":  1,
+                     "arm":  "dsh",
+                     "turns":  null,
+                     "config":  "q38-plain",
+                     "error":  null,
+                     "solved":  false,
+                     "log":  "C:\\Users\\test\\Documents\\dsh2.0\\reports\\specdec_20260824\\harness_q38-plain-t3-refactor-dsh.log",
+                     "task":  "t3-refactor",
+                     "grade_exit":  1,
+                     "wall_s":  2.5,
+                     "timeout":  false
+                 }
+             ],
+    "dsh_settings_restored":  true,
+    "telemetry_disabled":  true,
+    "bench_base_url":  "http://127.0.0.1:8005/v1"
+}

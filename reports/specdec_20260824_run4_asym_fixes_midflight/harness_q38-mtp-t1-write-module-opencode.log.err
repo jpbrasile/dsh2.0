@@ -1,0 +1,24 @@
+[0m
+> build · specdec-q38-mtp
+[0m
+[0m→ [0mRead brief.txt
+[0m
+[0m← [0mWrite rate_limiter.py
+Wrote file successfully.
+[0m
+[0m← [0mWrite test_rate_limiter.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython -m unittest test_rate_limiter -v
+test_allows_up_to_capacity_then_denies (test_rate_limiter.FixedWindowLimiterTests.test_allows_up_to_capacity_then_denies) ... ok
+test_invalid_arguments_raise (test_rate_limiter.FixedWindowLimiterTests.test_invalid_arguments_raise) ... ok
+test_reset_is_idempotent (test_rate_limiter.FixedWindowLimiterTests.test_reset_is_idempotent) ... ok
+test_reset_releases_capacity (test_rate_limiter.FixedWindowLimiterTests.test_reset_releases_capacity) ... ok
+test_thread_safety_no_overshoot (test_rate_limiter.FixedWindowLimiterTests.test_thread_safety_no_overshoot) ... ok
+test_window_rolls_over (test_rate_limiter.FixedWindowLimiterTests.test_window_rolls_over) ... ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.152s
+
+OK
+[0m

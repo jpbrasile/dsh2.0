@@ -1,0 +1,16 @@
+[0m
+> build · specdec-q38-plain
+[0m
+[0m→ [0mRead seed.py
+[0m→ [0mRead test_seed.py
+[0m
+[0m← [0mWrite seed.py
+Wrote file successfully.
+[0m
+[0m$ [0mpython -m unittest test_seed
+....
+----------------------------------------------------------------------
+Ran 4 tests in 0.000s
+
+OK
+[0m

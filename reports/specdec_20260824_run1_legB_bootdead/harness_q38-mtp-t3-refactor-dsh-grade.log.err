@@ -1,0 +1,24 @@
+...F
+======================================================================
+FAIL: test_reversed_bounds (test_seed.TestNormalize.test_reversed_bounds)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "C:\Users\test\AppData\Local\Temp\opencode\specdec-ab\run-q38-mtp-t3-refactor-dsh\t3-refactor\test_seed.py", line 15, in test_reversed_bounds
+    self.assertEqual(normalize([-5, 5, 15], 10, 0), [0, 5, 10])
+AssertionError: Lists differ: [10, 10, 10] != [0, 5, 10]
+
+First differing element 0:
+10
+0
+
+- [10, 10, 10]
+?  -   ^^
+
++ [0, 5, 10]
+?     ^
+
+
+----------------------------------------------------------------------
+Ran 4 tests in 0.001s
+
+FAILED (failures=1)
