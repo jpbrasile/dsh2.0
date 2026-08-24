@@ -131,3 +131,25 @@ providers:
         name: DeepSeek V4 Flash
         contextWindow: 65536
         reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+
+  # ── Qwen local (RTX 4090) -- Phase 5, case "Local Qwen serving", 2026-08-24 ──
+  # Sert par scripts/start_llama_qwen_local.ps1 : llama-server b10488 CUDA sur
+  # 127.0.0.1:8004, alias `qwen-local`, Qwen3.8-27B Q4_K_M (16 Go), ctx 32768,
+  # KV f16/f16 (quantifier le KV = prefill 60x plus lent, mesure 21/08).
+  # PAS de cle : llama-server sans --api-key ignore l'en-tete Authorization ;
+  # QWEN_LOCAL_API_KEY porte une valeur factice (`local-sans-cle`) uniquement
+  # parce que dsh exige une reference resolvable par route. Debit mesure au banc
+  # (meme binaire/modele/carte) : decode ~47 t/s a ctx court, ~43 t/s a 33k.
+  # Usage vise (README Phase 5) : digests/distillation, probation coder ;
+  # embeddings quand un consommateur existera (aucun dans le harnais au 24/08).
+  qwen-local:
+    name: Qwen local (RTX 4090, llama.cpp :8004)
+    apiKeyEnv: QWEN_LOCAL_API_KEY
+    api: openai-completions
+    baseURL: http://127.0.0.1:8004/v1
+    defaultContextWindow: 32768
+    models:
+      - id: qwen-local
+        name: Qwen3.8-27B Q4_K_M local (alias llama-server)
+        contextWindow: 32768
+        reasoningEfforts: { "off": , low: low, medium: medium, high: high }

@@ -37,7 +37,8 @@ ap.add_argument("--patch", action="append", default=[])
 ap.add_argument("--tache", default=None)
 ap.add_argument("--attend-absent", default="")
 ap.add_argument("--attend-present", default="")
-ap.add_argument("--amont", default=os.environ.get("FUMEE_AMONT"))
+ap.add_argument("--amont", default=os.environ.get("FUMEE_AMONT"), help="amont de l enregistreur : hote nu "
+                "(https:443) ou URL http(s)://hote[:port] pour un amont local en clair (ex. http://127.0.0.1:8004)")
 ap.add_argument("--fichier", default="PONG.txt")
 ap.add_argument("--effort", default="off")
 ap.add_argument("--cwd", default=None, help="espace de travail de dsh (defaut : _fumee/ws) ; "
@@ -83,10 +84,22 @@ if not mu:
     raise SystemExit("baseURL illisible pour `%s` : %s" % (PROVIDER, base))
 sch, hote, port_amont, chemin = mu.group(1), mu.group(2), mu.group(3), (mu.group(4) or "/v1").rstrip("/")
 if A.amont:
-    UP_HOST, UP_TLS, UP_PORT = A.amont, "1", "443"
-elif hote in ("127.0.0.1", "localhost"):
+    # --amont : un hote nu (dorsale https:443, comportement historique) OU une
+    # URL http(s)://hote[:port] -- la forme URL est necessaire pour un amont
+    # LOCAL en clair (Phase 5 : qwen-local -> llama-server 127.0.0.1:8004).
+    ma = re.match(r"^(https?)://([^/:]+)(?::(\d+))?/?$", A.amont)
+    if ma:
+        UP_HOST = ma.group(2)
+        UP_TLS = "1" if ma.group(1) == "https" else "0"
+        UP_PORT = ma.group(3) or ("443" if ma.group(1) == "https" else "80")
+    else:
+        UP_HOST, UP_TLS, UP_PORT = A.amont, "1", "443"
+elif hote in ("127.0.0.1", "localhost") and (port_amont or "") == "8050":
     # deja une route enregistree (openrouter-banc -> :8050) : l amont reel
-    # n est pas dans le fichier, on prend le defaut historique.
+    # n est pas dans le fichier, on prend le defaut historique. Restreint au
+    # port 8050 (l enregistreur) le 24/08 : un provider local sur un AUTRE port
+    # (qwen-local :8004) est un vrai amont et tombe dans la branche generale --
+    # avant, il etait silencieusement reecrit vers openrouter.ai.
     UP_HOST, UP_TLS, UP_PORT = "openrouter.ai", "1", "443"
 else:
     UP_HOST, UP_TLS, UP_PORT = hote, ("1" if sch == "https" else "0"), (port_amont or ("443" if sch == "https" else "80"))

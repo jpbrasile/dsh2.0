@@ -54,7 +54,14 @@ LIRE = os.path.join(ICI, "session_lire.mjs")
 BASE = os.path.join(ICI, "modeles.sqlite")
 LECONS = os.path.join(ICI, "lecons.md")
 MODELE = "deepseek/deepseek-v4-pro"
-URL = "https://openrouter.ai/api/v1/chat/completions"
+# DISTILLER_URL (Phase 5, 2026-08-24) : endpoint chat-completions alternatif --
+# le cas d'usage est le Qwen LOCAL (http://127.0.0.1:8004/v1/chat/completions,
+# scripts/start_llama_qwen_local.ps1), avec --modele qwen-local. OPT-IN
+# uniquement : sans l'env, la route reste OpenRouter, rien ne change. Un
+# endpoint local (127.0.0.1/localhost) n'exige pas de cle : Bearer factice,
+# cle_openrouter() n'est pas appelee (elle leverait si la cle manquait).
+URL = os.environ.get("DISTILLER_URL") or "https://openrouter.ai/api/v1/chat/completions"
+URL_LOCALE = URL.startswith(("http://127.0.0.1", "http://localhost"))
 CREDENTIALS = os.path.join(os.path.expanduser("~"), ".dsh", ".credentials.yaml")
 CAMPAGNE = os.environ.get("DISTILLER_CAMPAGNE") or "phase3/distiller"
 ROLES = ("orchestrator", "planner", "coder", "searcher")
@@ -309,7 +316,8 @@ def appeler(modele, digest_txt, delai=180):
              "messages": [{"role": "system", "content": CONSIGNE},
                           {"role": "user", "content": "Session tree digest:\n\n" + digest_txt}]}
     req = urllib.request.Request(URL, data=json.dumps(corps).encode("utf-8"), method="POST",
-                                 headers={"Authorization": "Bearer " + cle_openrouter(), "Content-Type": "application/json",
+                                 headers={"Authorization": "Bearer " + ("local-sans-cle" if URL_LOCALE else cle_openrouter()),
+                                          "Content-Type": "application/json",
                                           "HTTP-Referer": "https://github.com/jpbrasile/dsh2.0", "X-Title": "dsh2.0 distiller"})
     t = time.time()
     try:
