@@ -309,6 +309,15 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
       catalog; OPEN workers migrated from OpenRouter free to freellmapi chains.
       **⚑ RT:** default ENCRYPTION_KEY still in place? ToS-violating provider
       reachable through a chain? PRIVATE data on a freellmapi route?
+      *(2026-08-25 progress, docs/PHASE5.md: deployment is the DESKTOP app, not
+      Docker — ENCRYPTION_KEY item N/A (no compose file; app manages its own
+      store). Route wired: repo `freellm` provider block (12 models, mirrors the
+      measured live block, recorder :8007 by design), key read per-launch from
+      the app DB via freellm_key.py (never displayed/copied), pinned smoke GREEN
+      (nemotron-3-ultra, PONG 11 s, zero fallback; gemini-3.6-flash 502
+      published). RT: 0 cohere in routes, no key material in repo, tier OPEN
+      only. Remaining: catalog refresh into modeles.py, OPEN-worker migration =
+      user decision, Done criteria unmet.)*
 - **Done (⚑ RT):** OPEN-tier work runs at ~€0 marginal cost; PRIVATE distillation
   local; OpenRouter drain drops to planning-only.
 

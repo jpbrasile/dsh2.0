@@ -153,3 +153,170 @@ providers:
         name: Qwen3.8-27B Q4_K_M local (alias llama-server)
         contextWindow: 32768
         reasoningEfforts: { "off": , low: low, medium: medium, high: high }
+  # Routeur FreeLLMAPI local (app Desktop, port 31415 -- PAS 3001, qui est le
+  # port du deploiement serveur). Agrege 16 fournisseurs gratuits derriere UN
+  # endpoint OpenAI-compatible, avec bascule sur 429 / 5xx / completion vide.
+  # Mesure 22/08 : 380 modeles servis sur 517 au catalogue.
+  #
+  # LES IDENTIFIANTS SONT DES SLUGS COURTS. `/v1/models` sert
+  # `deepseek-v4-pro`, PAS `deepseek-ai/DeepSeek-V4-Pro` : la forme longue est
+  # celle que le routeur RENVOIE dans `body["model"]`, pas celle qu'il accepte
+  # en entree. Mesure 22/08 -- la forme longue est absente de la liste.
+  #
+  # `auto` BASCULE, donc il ne sert a rien pour un banc : mesure du 22/08,
+  # un appel avec outils est parti sur DeepSeek-V4-Flash apres un
+  # `key1=rate_limited` sur le premier fournisseur. Pour mesurer, EPINGLER un
+  # id et lire `x-fallback-trail` pour prouver qu'aucune bascule n'a eu lieu.
+  freellm:
+    name: FreeLLMAPI (routeur local)
+    apiKeyEnv: DSH_FREELLM_API_KEY
+    api: openai-completions
+    # Passe par l'ENREGISTREUR (proxy.mjs, 8007 -> 31415) et non en direct :
+    # en mode `auto` le routeur choisit, et seul le fil dit lequel a repondu.
+    baseURL: http://127.0.0.1:8007/v1
+    # PLANCHER prudent, pas le sommet annonce. `/v1/models` annonce 1048576
+    # pour deepseek-v4-pro, mais c'est le catalogue qui le dit, pas le
+    # fournisseur gratuit qui sert. Sous-declarer ne provoque jamais de 400 ;
+    # sur-declarer, si.
+    defaultContextWindow: 131072
+    models:
+      # Modele VIRTUEL : le routeur choisit, et il bascule. Utile en
+      # interactif, INTERDIT pour une mesure.
+      # `auto:<profil>` choisit la STRATEGIE de classement de la chaine de
+      # repli, par requete. Le routeur en offre six -- priority, balanced,
+      # smartest, fastest, reliable, custom -- et le reglage global de
+      # cette installation est `balanced` (table settings, 22/08).
+      # `auto` nu prend le modele de plus haute priorite qui a une clef
+      # saine et de la marge : sur la campagne parallele du 22/08 ca a
+      # donne 8 runs sur 24 a dots-3-note-preview, qui faisait 1/8 --
+      # disponible, pas bon. `smartest` classe par capacite.
+      - id: auto:smartest
+        name: FreeLLMAPI - routeur, chaine classee par capacite
+        contextWindow: 131072
+        reasoningEfforts:
+          "off":
+          low: low
+          medium: medium
+          high: high
+      - id: auto
+        name: FreeLLMAPI - routeur automatique (bascule, ne pas mesurer avec)
+        contextWindow: 131072
+        reasoningEfforts:
+          "off":
+          low: low
+          medium: medium
+          high: high
+      # EPINGLE le 22/08 -- et c'est l'ajout au catalogue du routeur qui l'a
+      # debloque : un modele FIXE servi par DEUX amonts. Jusque-la il fallait
+      # choisir. Epingler sur une file gratuite unique s'effondrait
+      # (nemotron-3-ultra : 2 reussites sur 24, la plupart des runs morts en
+      # 17 s sans un seul appel abouti) ; et `auto` rendait la comparaison
+      # illisible, parce qu'on comparait des TIRAGES et pas des modeles.
+      # Le routeur porte maintenant `stealth/ox-alpha` sur la plateforme
+      # openrouter ET `x-preview-f-free` sur opencode -- meme modele, deux
+      # files, bascule automatique. Verifie par X-Routed-Via : 200 des deux
+      # cotes, et une bascule croisee observee en direct.
+      # Mesure du 22/08 en direct sur OpenRouter (corpus expert+limite) :
+      # 215 appels sur 215 servis par lui-meme -- l'epinglage tient quand la
+      # file n'est pas rationnee -- 17,3 tours d'agent par tache contre 3,6
+      # pour auto:smartest, et Julia lance 2 a 10 fois par tache la ou
+      # auto:smartest ne le lance jamais.
+      - id: stealth/ox-alpha
+        name: Ox Alpha (stealth) via FreeLLMAPI - openrouter puis opencode
+        contextWindow: 1048576
+        reasoningEfforts:
+          "off":
+          low: low
+          medium: medium
+          high: high
+      - id: x-preview-f-free
+        name: Ox Alpha Free (OpenCode Zen) via FreeLLMAPI
+        contextWindow: 1048576
+        reasoningEfforts:
+          "off":
+          low: low
+          medium: medium
+          high: high
+      # Modeles EPINGLES : reproductibles. `supported_parameters` les donne
+      # tous les trois pour tools / tool_choice / parallel_tool_calls, et
+      # `reasoning_effort` -- l'axe d'effort du banc reste donc courable.
+      # Mesure 22/08 : le SEUL des cinq epingles a repondre avec outils sans
+      # bascule. Les autres rendent 429 -- les credits HuggingFace gratuits
+      # (deepseek-v4-pro/flash, minimax) sont a sec, remise a zero ~24 h.
+      # Les deux SEULS survivants de la sonde du 22/08 apres l'epuisement de
+      # gemini-3.7-flash : ils repondent avec outils, sans bascule.
+      - id: gemini-3.6-flash
+        name: Gemini 3.6 Flash (gratuit)
+        contextWindow: 131072
+        reasoningEfforts:
+          "off":
+          low: low
+          medium: medium
+          high: high
+      # EPINGLE le 22/08 apres la campagne parallele en mode `auto` :
+      # 5/5 sur le corpus dur, le seul des huit modeles servis a ne pas
+      # avoir echoue une fois. `dots-3-note-preview`, qui a pris 8 des 24
+      # runs, faisait 1/8 -- d'ou l'ecart entre bras qu'on aurait lu comme
+      # un effet de la recherche web. Id COURT verifie contre /v1/models
+      # (380 modeles) : `nemotron-3-ultra` accepte, la forme longue
+      # `nvidia-nemotron-3-ultra-550b-a55b-bf16` est un AUTRE id.
+      - id: nemotron-3-ultra
+        name: Nemotron 3 Ultra (gratuit, 5/5 sur le corpus dur)
+        contextWindow: 131072
+        reasoningEfforts:
+          "off":
+          low: low
+          medium: medium
+          high: high
+      - id: nemotron-3-super-120b
+        name: Nemotron 3 Super 120B (gratuit, NVIDIA)
+        contextWindow: 131072
+        reasoningEfforts:
+          "off":
+          low: low
+          medium: medium
+          high: high
+      - id: gemini-3.7-flash
+        name: Gemini 3.7 Flash (gratuit, clef Google vivante)
+        contextWindow: 131072
+        reasoningEfforts:
+          "off":
+          low: low
+          medium: medium
+          high: high
+      - id: deepseek-v4-pro
+        name: DeepSeek V4 Pro (gratuit)
+        contextWindow: 131072
+        reasoningEfforts:
+          # QUOTE obligatoire : `off:` nu est le BOOLEEN false en YAML 1.1.
+          "off":
+          low: low
+          medium: medium
+          high: high
+      - id: deepseek-v4-flash
+        name: DeepSeek V4 Flash (gratuit, rapide)
+        contextWindow: 131072
+        reasoningEfforts:
+          # QUOTE obligatoire : `off:` nu est le BOOLEEN false en YAML 1.1.
+          "off":
+          low: low
+          medium: medium
+          high: high
+      - id: qwen3-coder-480b
+        name: Qwen3 Coder 480B (gratuit)
+        contextWindow: 131072
+        reasoningEfforts:
+          # QUOTE obligatoire : `off:` nu est le BOOLEEN false en YAML 1.1.
+          "off":
+          low: low
+          medium: medium
+          high: high
+      - id: glm-5.2
+        name: GLM-5.2 (gratuit)
+        contextWindow: 131072
+        reasoningEfforts:
+          # QUOTE obligatoire : `off:` nu est le BOOLEEN false en YAML 1.1.
+          "off":
+          low: low
+          medium: medium
+          high: high

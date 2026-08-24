@@ -101,3 +101,36 @@ du port cible, et rien d'autre.
   main : `powershell -File scripts\ops\installer_taches_nocturnes.ps1`.
 - Hors périmètre repo : la garde amont `julia_procs.ps1` (plasma) ignore la
   règle du port 8077 — signalé, à patcher côté plasma-digital-twin.
+
+## freellmapi — câblage repo (25/08, suite de l'ordre « freellapi »)
+
+Constat : le déploiement réel est l'**app Desktop** (PID vivant, port 31415,
+licence lifetime), PAS le Docker du README → l'item ENCRYPTION_KEY est N/A
+(pas de compose ; l'app gère son magasin). Le bloc live `~/.dsh/settings.yaml`
+n'était PAS périmé : il passe par l'enregistreur (8007→31415) **par
+conception** — en `auto` seul le fil prouve qui a répondu. Diagnostic « 8007
+stale » d'avant compaction = faux (leçon post-compaction, encore).
+
+Fait :
+- `harness/providers.yaml` : bloc `freellm` versionné = copie du bloc live
+  mesuré (12 modèles : auto:smartest, auto, stealth/ox-alpha 1M,
+  x-preview-f-free 1M, gemini-3.6/3.7-flash, nemotron-3-ultra/super,
+  deepseek-v4-pro/flash, qwen3-coder-480b, glm-5.2 ; planchers de contexte,
+  jamais les sommets du catalogue).
+- `scripts/dsh.ps1` : `DSH_FREELLM_API_KEY` lue à CHAQUE lancement dans la
+  base de l'app via `scripts/freellm_key.py` (source unique ; jamais affichée
+  — longueur seule ; jamais copiée dans un fichier ; app absente = warning et
+  MISSING_CREDENTIAL sur la seule route freellm).
+- Fumée épinglée (jamais `auto` pour mesurer) : `nemotron-3-ultra` VERT —
+  PONG en 11 s, servi par `nemotron-3-ultra-free`, x-fallback-trail vide.
+  `gemini-3.6-flash` ÉCHEC 502 (file gratuite à sec) — publié tel quel,
+  l'épinglage ne bascule pas, c'est le comportement voulu.
+- ⚑ RT : cohere absent des routes (0 occurrence, ToS ❌ respecté) ; aucune
+  matière de clé dans le dépôt (grep vérifié) ; tier **OPEN only** — aucune
+  donnée PRIVATE sur une route freellm (mur d'usage, cf. table README).
+
+Reste (non coché) : rafraîchissement du catalogue freellmapi dans
+`modeles.py` (Loop 1) ; migration des workers OPEN d'OpenRouter free vers les
+chaînes freellm = DÉCISION UTILISATEUR (recommandation : garder OpenRouter
+pour les campagnes mesurées — 215/215 sans bascule — et basculer d'abord les
+digests/brouillons) ; critères Done ⚑ RT du README.

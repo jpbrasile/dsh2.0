@@ -634,6 +634,22 @@ $env:DSH_TELEMETRY_DISABLED = '1'          # en plus du defaut DISABLED du paque
 $env:DSH_LOCAL_API_KEY      = 'local-dummy' # llama.cpp ne verifie rien, mais la
                                             # reference doit resoudre vers QUELQUE chose
 
+# FreeLLMAPI (routeur local :31415) : la clef unifiee vit dans la BASE DE L'APP
+# Desktop -- source unique, lue a CHAQUE lancement via freellm_key.py (jamais
+# affichee, jamais copiee dans un fichier ; un one-liner python -c mange les
+# guillemets, mesure 22/08 -- d'ou le script versionne). App absente = la route
+# freellm refusera (MISSING_CREDENTIAL), tout le reste fonctionne.
+if (-not $env:DSH_FREELLM_API_KEY) {
+    $freellmCle = (& python (Join-Path $PSScriptRoot 'freellm_key.py'))
+    if ($LASTEXITCODE -eq 0 -and $freellmCle) {
+        $env:DSH_FREELLM_API_KEY = "$freellmCle"
+        Write-Host ("cle FreeLLMAPI : lue dans la base de l'app (longueur {0}, jamais affichee)" -f "$freellmCle".Length)
+    } else {
+        Write-Warning "clef FreeLLMAPI introuvable (app Desktop absente ?) : la route freellm refusera (MISSING_CREDENTIAL)."
+    }
+    Remove-Variable freellmCle -ErrorAction SilentlyContinue
+}
+
 # Phase 0 (23/08) : les cles vivent dans ~/.dsh/.credentials.yaml SEULEMENT (dsh-credentials-local
 # les resout depuis les references apiKeyEnv). Le .env du depot et les variables d'environnement
 # utilisateur ont ete vides ce jour-la ; ce bloc ne charge plus rien, il VERIFIE que la reference
