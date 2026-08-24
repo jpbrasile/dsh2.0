@@ -35,6 +35,22 @@ stables » fausserait la mesure. Donc :
 | D3 | 3 appels qwen quasi vides (in=20281 identiques, out 36-135, 120–140 s chacun) entre planner et coder | 24/08 essai 1 | **Diagnostiqué + corrigé** (preuve wire au prochain run). Journal de session (`session-9e7bf9ad`) : `llm/retry` 1..3, « Upstream idle timeout exceeded », sur l'étape « recopie le plan verbatim dans l'appel coder » (~6 k tokens d'arguments) ; 522 s + ~60 k tokens d'entrée re-facturés, réussite à la 4e tentative. Correctif : greffon `dsh-plan-spool` — le plan passe par référence (écrit dans PLAN.md par le greffon, accusé court au parent, le coder lit le fichier) ; contrôle `plan_spool_unit.mjs` 17/17 ; déclaré dans agents.patch.yml, jonction headless posée. Le retry dsh (politique 5×, backoff) reste le filet. **2e mesure (essai 2, sans le greffon — booté avant le correctif)** : même étape, forme pire. Le parent a passé **1046 s à régénérer le plan (23 740 tokens de sortie)**, a écrit lui-même un `.plan_tmp.txt` (11 209 car.)… puis a recopié le plan verbatim dans l'appel coder (11 254 car.) quand même. Son contexte, gonflé par sa propre sortie, a déclenché 2 compactions en plein run (voir D4) ; tué à 1801 s à ~2 commandes de DONE.md. Preuves : `reports/phase4_jour1/session_2c2285c6_digest.txt`, `plan_tmp_essai2.txt`. **Preuve fil livrée (essai 3, spool armé)** : `plan-spool: planner -> PLAN.md (13214 car.), accuse court rendu au parent` ; l'étape est passée de **1046 s / 23 740 tokens à 160 s / 7 522 tokens** (−85 % / −68 %), run VERT en 614 s. **Clos.** |
 | D4 | Compaction en plein run qui échoue : « summarization truncated at the token cap (incomplete checkpoint) », 248 s perdues, une 2e compaction démarrait au kill | 24/08 essai 2 | **Observé, pas traité directement** : le déclencheur (contexte parent gonflé par les 23 k tokens de D3) disparaît avec le greffon plan-spool. À réévaluer seulement si une compaction en plein run réapparaît sur un run où `plan-spool: arme` figure au log. **Contre-preuve essai 3** : spool armé, zéro événement compaction dans le journal parent (`session-e338d7c8`, 1584 événements). |
 
+## Red team des livrables : la porte prouve « vert », la mutation prouve « ça mord »
+
+Constat (question utilisateur du 24/08) : jusqu'à J1, aucun red team des avancées — la
+porte VERT prouve que la suite *tourne au vert*, pas qu'elle *détecte* quoi que ce soit ;
+des tests cérémoniels passent aussi. Règle désormais : **un livrable test n'est promu
+qu'après (a) porte VERT et (b) au moins une mutation attrapée** — casser une constante du
+module dans le worktree (jamais dans le workspace d'un run en cours), porte attendue
+ROUGE, restauration `git checkout` + md5, porte de nouveau VERT. Trois verdicts, tous
+archivés. Première application (J1, post-promotion — la règle arrive après le commit
+`54196582`, validé rétroactivement) : mutation `_SYM_GROWTH_RATE_G_L_DAY 0.8→0.9` →
+**ROUGE, 4 assertions tombent** (922 ok, 4 faux) ; restauré, VERT. Les corrections
+harnais gardent leur red team unitaire (cas adversariaux dans `test_wall_unit.mjs`,
+`plan_spool_unit.mjs`) ; les briefs `*_rt.txt` restent disponibles pour une passe
+red-team LLM quand un livrable n'est pas mutable mécaniquement (ex. note de triage J2 :
+vérification humaine ou croisée des citations).
+
 ## Promotion des livrables VERT
 
 Worktree dédié `C:\Users\test\Documents\agentic-flow-phase4` (branche `phase4-tests`,
