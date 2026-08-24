@@ -63,6 +63,18 @@ harnais gardent leur red team unitaire (cas adversariaux dans `test_wall_unit.mj
 red-team LLM quand un livrable n'est pas mutable mécaniquement (ex. note de triage J2 :
 vérification humaine ou croisée des citations).
 
+## Règle des briefs (leçon J2 essai 1, 24/08)
+
+Un brief qui dit « lire au minimum … » sur un dossier non borné est un défaut de **brief**
+(ni harnais, ni modèle) : à ~25 s le tour LLM cloud, 55 lectures consciencieuses = budget
+mort sans une ligne écrite (J2e1 : 1801 s tués, 0,8451 USD, 2,96 M tokens d'entrée, le
+coder lisait encore au kill — et il contre-vérifiait même les chiffres au grep, comportement
+exemplaire). Règles : (1) **nommer les fichiers exacts** dans le brief, vérifiés existants
+au moment de l'écrire — J2e1 exigeait des `VERDICT_V09_*`/`PREREG_V09_*` qui n'existent pas
+sous ces noms dans la copie (résidu de résumé post-compaction, non mesuré) ; (2) borner :
+« ces N fichiers, une lecture chacun, rien d'autre » ; (3) dimensionner : lignes totales à
+lire × ~2-3 s/25 lignes + rédaction ≤ 60 % du délai.
+
 ## Promotion des livrables VERT
 
 Worktree dédié `C:\Users\test\Documents\agentic-flow-phase4` (branche `phase4-tests`,
@@ -72,6 +84,17 @@ uniquement sur « pousse » explicite. L'arbre de travail `agentic-flow-fresh` n
 jamais touché.
 
 ## Journal
+
+- **J2 (24/08) — triage V09** : essai 1 **ÉCHEC — défaut de brief** (1801 s tués,
+  0,8451 USD, cache 54 %). Harnais irréprochable : plan-spool actif (8674 car. → PLAN.md),
+  murs armés, zéro REFUS. Le coder : todo « lire les 16 fichiers du plan », ~55 lectures
+  méthodiques, contre-vérification des chiffres au grep — tué en pleine lecture, rien
+  écrit. Cause : brief non borné + noms de fichiers non vérifiés (voir Règle des briefs).
+  Trouvaille au passage : la ligne PIRT dit V09 **4/7** FAIL, le summary du STOPPED dit
+  **5/7** — divergence à signaler dans la note. Essai 2 lancé : brief v2 borné à 6
+  fichiers nommés et vérifiés (742 lignes au total). Compteur de sortie du rodage :
+  reste **1/2** (seuls les runs achevés proprement comptent). Preuves
+  `reports/phase4_jour2/`.
 
 - **J1 (24/08) — tests `biorefinery_symbiosis.jl`** : essai 1 **ÉCHEC** (timeout 900 s,
   D1+D2 ; 0,1252 USD, 17 appels, cache 29 % ; preuves `reports/phase4_jour1/`).

@@ -1,0 +1,25 @@
+Two delegations, in order, then stop. Do not read any source file and do not implement anything yourself.
+
+Step 1: call the `planner` tool ONCE with the task text below, verbatim, as its prompt.
+Step 2: call the `coder` tool ONCE with this prompt: the line "Implement the following plan exactly; it is the contract. Use the julia_gate tool after every change; VERT is the only green." followed by the planner's final message verbatim (if you received a short acknowledgement pointing to PLAN.md instead of the plan itself, pass that acknowledgement verbatim -- the coder will read PLAN.md).
+Step 3: write a file named DONE.md in the current workspace containing, on the first line, "planner: <number of characters of the plan> chars", then the coder's final message verbatim. Then stop.
+
+Task for the planner (Julia project; PIRT at `docs/vv/PIRT.md`, row PD-9, line 57): V09 (ozone, 3-channel) is an open FAIL of the PIRT. Plan the writing of ONE new file, `docs/vv/TRIAGE_V09_2026-08-24.md`, a triage note. Nothing else may be created or modified.
+
+HARD READING BOUND -- this is the contract's core. The evidence set is EXACTLY these six files, already located and verified to exist; the coder must read them and NOTHING else (no directory listing, no glob beyond DONE.md, no other file):
+1. `docs/vv/PIRT.md` -- row PD-9 only (line 57; read a ~40-line window around it).
+2. `validation/09_ozone_saturation/README.md` (230 lines) -- the campaign narrative.
+3. `validation/09_ozone_saturation/STOPPED_C3GRID_FAIL5of7_2026-08-16/summary.txt` (19 lines) -- the stop marker's own summary.
+4. `validation/09_ozone_saturation/STOPPED_C3GRID_FAIL5of7_2026-08-16/comparison.txt` (58 lines).
+5. `validation/09_ozone_saturation/FINDING_C3_C4_SOURCE_CEILING_2026-08-19.md` (148 lines) -- dated AFTER the stop marker; check whether it is the record's last word.
+6. `validation/09_ozone_saturation/CRITERIA_CODE_MAP_2026-08-08.md` (95 lines) -- what C1..C7 mean.
+The plan must instruct the coder to read each file ONCE, top to bottom (two reads maximum for PIRT.md to find the window), take citations while reading, then write the note. No re-reads, no exploration.
+
+Required sections of the note, each claim cited as (file path, line or section), citing ONLY the six files above:
+1. STATE -- which checks pass and fail today and the score. The PIRT row says 4/7 FAIL; the STOPPED summary says 5/7 FAIL: report BOTH, with their dates, and flag the discrepancy explicitly rather than resolving it by guesswork.
+2. HISTORY -- the sequence of attempts as the README and the two dated documents record it, one line each.
+3. LAST CONCLUSION -- what the most recent dated document (the 2026-08-19 FINDING, if its content confirms it supersedes the 2026-08-16 stop) actually concluded, quoted or tightly paraphrased.
+4. SMALLEST NEXT PROBE -- the single cheapest next measurement the record itself points to (the 2026-08-19 FINDING names where the missing factor is), with the prereg discipline it must follow (a new PREREG file BEFORE running anything), and what result would change the PIRT row.
+5. WHAT NOT TO DO -- explicitly: no parameter tuned to force a PASS, no test or validation script weakened, no rerun without a prereg; a FAIL that survives honest triage stays a FAIL in the note.
+
+Acceptance: julia_gate verdict VERT on the workspace (the note is documentation; the existing suite must still replay green), the note exists at the exact path with all five sections, and a self-check that no file other than DONE.md and the note was created or modified. VERT is the only green.

@@ -1,0 +1,80 @@
+﻿route openrouter-banc / qwen/qwen3.8-27b  amont=openrouter.ai/api/v1  patchs=C:\Users\test\Documents\dsh2.0\harness\lean.patch.yml,C:\Users\test\Documents\dsh2.0\harness\agents.patch.yml
+dsh rc=timeout  duree=1800.2s
+DONE.md : ABSENT
+appels enregistres : 69
+  servi=qwen/qwen3.8-27b           status=200 ms=173058 in=18490 out=6696  n_messages=4 n_tools=22 sys_chars=1890
+  servi=deepseek/deepseek-v4-pro   status=200 ms=6172   in=13635 out=192  n_messages=4 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=5344   in=14878 out=233  n_messages=9 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=6123   in=15350 out=293  n_messages=15 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=14512  in=34743 out=335  n_messages=21 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=8234   in=55610 out=252  n_messages=28 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=6571   in=41438 out=171  n_messages=33 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=6890   in=41977 out=234  n_messages=37 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=4733   in=44548 out=175  n_messages=41 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=7183   in=48444 out=211  n_messages=44 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=10263  in=50267 out=97  n_messages=47 n_tools=3 sys_chars=4708
+  servi=deepseek/deepseek-v4-pro   status=200 ms=55831  in=51048 out=2721  n_messages=49 n_tools=3 sys_chars=4708
+  servi=qwen/qwen3.8-27b           status=200 ms=232735 in=25427 out=8182  n_messages=7 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=2700   in=15120 out=52  n_messages=4 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5753   in=18414 out=157  n_messages=6 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=9817   in=18613 out=146  n_messages=9 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=28767  in=21331 out=158  n_messages=12 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5588   in=24959 out=81  n_messages=15 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=10573  in=33756 out=175  n_messages=17 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5301   in=46862 out=81  n_messages=20 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=30855  in=50813 out=74  n_messages=22 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5343   in=33158 out=74  n_messages=24 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=10949  in=36815 out=76  n_messages=26 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=7186   in=40326 out=76  n_messages=28 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=7125   in=43990 out=75  n_messages=30 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=6688   in=45987 out=78  n_messages=32 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=11729  in=49097 out=80  n_messages=34 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5475   in=52541 out=79  n_messages=36 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5435   in=47544 out=79  n_messages=38 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=33175  in=51212 out=113  n_messages=40 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=9339   in=51920 out=101  n_messages=43 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=296109 in=35423 out=4729  n_messages=27 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=7457   in=36848 out=102  n_messages=22 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=2714   in=39080 out=100  n_messages=25 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=8545   in=41142 out=108  n_messages=27 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=30417  in=43539 out=95  n_messages=29 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=2734   in=43978 out=52  n_messages=31 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=12235  in=47272 out=145  n_messages=33 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=6166   in=48787 out=207  n_messages=36 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5347   in=51507 out=189  n_messages=39 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=8409   in=52096 out=106  n_messages=42 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=192454 in=37238 out=7358  n_messages=23 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=30640  in=39431 out=89  n_messages=25 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=8422   in=40240 out=103  n_messages=27 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=3889   in=41624 out=89  n_messages=29 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=8190   in=43108 out=198  n_messages=31 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=3401   in=46099 out=105  n_messages=34 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=46645  in=48649 out=75  n_messages=36 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=3368   in=50535 out=78  n_messages=38 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5989   in=28299 out=84  n_messages=25 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5788   in=53756 out=79  n_messages=40 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=2979   in=28299 out=102  n_messages=25 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=10251  in=55217 out=102  n_messages=42 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=7447   in=39821 out=78  n_messages=26 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=6594   in=56331 out=164  n_messages=44 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=9863   in=42125 out=99  n_messages=30 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5071   in=58961 out=106  n_messages=47 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=2424   in=43498 out=78  n_messages=32 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=5539   in=59874 out=189  n_messages=49 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=8077   in=43498 out=348  n_messages=32 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=7032   in=62179 out=108  n_messages=52 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=7941   in=46489 out=52  n_messages=35 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=6519   in=63975 out=109  n_messages=54 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=214137 in=48928 out=8192  n_messages=37 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=4689   in=66120 out=119  n_messages=56 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=1784   in=48928 out=52  n_messages=37 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=6376   in=66518 out=215  n_messages=58 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=10576  in=50925 out=135  n_messages=39 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=6125   in=68636 out=175  n_messages=61 n_tools=9 sys_chars=2355
+outils offerts (1er appel outille) : coder edit exit_plan_mode glob grep interrupt_agent job_kill job_list job_output julia_gate list_agents mcp__context7__query-docs mcp__context7__resolve-library-id planner pwsh read read_image searcher send_message str_replace_editor todo_write write
+route aussi openrouter / deepseek/deepseek-v4-pro : 11 appel(s)
+  dsh : lecons: arme -- variable {{lecons}} depuis C:\Users\test\Documents\dsh2.0\harness\lecons.md, 40 lignes max par role
+VERDICT : ECHEC -- DONE.md absent (voir _fumee/dsh_out.txt)
+cout : 0.8451 USD ce run, cache 54% (1611501/2957286 tokens d'entree) ; grand livre +69 (646 appels)
+verdict non note : au moins un appel servi par un autre modele que qwen/qwen3.8-27b
+rc=1 duree=1801s porte prechauffee=oui (essai 1)
