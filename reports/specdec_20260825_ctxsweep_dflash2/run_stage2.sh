@@ -13,7 +13,10 @@ OUT=/c/Users/test/Documents/dsh2.0/reports/specdec_20260825_ctxsweep_dflash2
 run_config () {
   local nom="$1"; shift
   echo "=== ARC $nom ==="
-  "$PPX" -m "$MODEL" -bf "$ARC" --multiple-choice -ngl 99 -fa on "$@" \
+  # -np 8 : les taches a 5 choix exigent -np >= 5, sinon SAUTEES en
+  # silence (vu au run f16 du 25/08 : "task 210 requires a higher -np")
+  # -> echantillon biaise. 8 couvre tous les formats du fichier.
+  "$PPX" -m "$MODEL" -bf "$ARC" --multiple-choice -np 8 -ngl 99 -fa on "$@" \
     > "$OUT/stage2_arc_${nom}.txt" 2>&1
   tail -4 "$OUT/stage2_arc_${nom}.txt"
   echo "=== PPL $nom ==="

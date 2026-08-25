@@ -1,26 +1,26 @@
 Read 95309 bytes from binary file C:/Users/test/models/datasets/arc-challenge-validation.bin
-0.00.768.561 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring
-0.00.768.571 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring
-0.00.768.586 W model has unused tensor blk.64.attn_q.weight (size = 35389440 bytes) -- ignoring
-0.00.768.591 W model has unused tensor blk.64.attn_k.weight (size = 2949120 bytes) -- ignoring
-0.00.768.597 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring
-0.00.768.616 W model has unused tensor blk.64.attn_output.weight (size = 17694720 bytes) -- ignoring
-0.00.768.622 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring
-0.00.768.628 W model has unused tensor blk.64.attn_k_norm.weight (size = 1024 bytes) -- ignoring
-0.00.768.633 W model has unused tensor blk.64.ffn_gate.weight (size = 50135040 bytes) -- ignoring
-0.00.768.639 W model has unused tensor blk.64.ffn_down.weight (size = 73113600 bytes) -- ignoring
-0.00.768.644 W model has unused tensor blk.64.ffn_up.weight (size = 50135040 bytes) -- ignoring
-0.00.768.651 W model has unused tensor blk.64.nextn.eh_proj.weight (size = 55705600 bytes) -- ignoring
-0.00.768.657 W model has unused tensor blk.64.nextn.enorm.weight (size = 20480 bytes) -- ignoring
-0.00.768.663 W model has unused tensor blk.64.nextn.hnorm.weight (size = 20480 bytes) -- ignoring
-0.00.768.680 W model has unused tensor blk.64.nextn.shared_head_norm.weight (size = 20480 bytes) -- ignoring
-0.08.358.618 I cmn          init: llama threadpool init, n_threads = 24
-0.08.722.180 I 
-0.08.722.219 I system_info: n_threads = 24 (n_threads_batch = 24) / 32 | CUDA : ARCHS = 890 | USE_GRAPHS = 1 | FA_ALL_QUANTS = 1 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
-0.08.722.327 I multiple_choice_score: there are 299 tasks in prompt
-0.08.722.361 I multiple_choice_score: reading tasks.....................................................................................................................................................done
-0.08.722.656 I multiple_choice_score: preparing task data.....................................................................................................................................................done
-0.08.807.488 I multiple_choice_score : calculating TruthfulQA score over 299 tasks.
+0.00.757.118 W model has unused tensor blk.64.attn_norm.weight (size = 20480 bytes) -- ignoring
+0.00.757.129 W model has unused tensor blk.64.post_attention_norm.weight (size = 20480 bytes) -- ignoring
+0.00.757.145 W model has unused tensor blk.64.attn_q.weight (size = 35389440 bytes) -- ignoring
+0.00.757.150 W model has unused tensor blk.64.attn_k.weight (size = 2949120 bytes) -- ignoring
+0.00.757.156 W model has unused tensor blk.64.attn_v.weight (size = 4300800 bytes) -- ignoring
+0.00.757.176 W model has unused tensor blk.64.attn_output.weight (size = 17694720 bytes) -- ignoring
+0.00.757.181 W model has unused tensor blk.64.attn_q_norm.weight (size = 1024 bytes) -- ignoring
+0.00.757.186 W model has unused tensor blk.64.attn_k_norm.weight (size = 1024 bytes) -- ignoring
+0.00.757.192 W model has unused tensor blk.64.ffn_gate.weight (size = 50135040 bytes) -- ignoring
+0.00.757.197 W model has unused tensor blk.64.ffn_down.weight (size = 73113600 bytes) -- ignoring
+0.00.757.203 W model has unused tensor blk.64.ffn_up.weight (size = 50135040 bytes) -- ignoring
+0.00.757.209 W model has unused tensor blk.64.nextn.eh_proj.weight (size = 55705600 bytes) -- ignoring
+0.00.757.215 W model has unused tensor blk.64.nextn.enorm.weight (size = 20480 bytes) -- ignoring
+0.00.757.221 W model has unused tensor blk.64.nextn.hnorm.weight (size = 20480 bytes) -- ignoring
+0.00.757.238 W model has unused tensor blk.64.nextn.shared_head_norm.weight (size = 20480 bytes) -- ignoring
+0.05.866.403 I cmn          init: llama threadpool init, n_threads = 24
+0.05.929.933 I 
+0.05.929.963 I system_info: n_threads = 24 (n_threads_batch = 24) / 32 | CUDA : ARCHS = 890 | USE_GRAPHS = 1 | FA_ALL_QUANTS = 1 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | LLAMAFILE = 1 | OPENMP = 1 | REPACK = 1 | 
+0.05.930.012 I multiple_choice_score: there are 299 tasks in prompt
+0.05.930.036 I multiple_choice_score: reading tasks.....................................................................................................................................................done
+0.05.930.236 I multiple_choice_score: preparing task data.....................................................................................................................................................done
+0.05.983.434 I multiple_choice_score : calculating TruthfulQA score over 299 tasks.
 
 task	acc_norm
 1	100.00000000
@@ -153,8 +153,8 @@ task	acc_norm
 128	53.12500000
 129	53.48837209
 130	53.84615385
-131	53.43511450
-132	53.78787879
+131	54.19847328
+132	54.54545455
 133	54.13533835
 134	54.47761194
 135	54.07407407
@@ -229,13 +229,13 @@ task	acc_norm
 204	52.45098039
 205	52.68292683
 206	52.91262136
-207	53.14009662
-208	52.88461538
-209	53.11004785
-210	53.33333333
-211	53.55450237
-212	53.77358491
-213	53.52112676
+207	52.65700483
+208	52.40384615
+209	52.63157895
+210	52.85714286
+211	53.08056872
+212	53.30188679
+213	53.05164319
 214	53.27102804
 215	53.48837209
 216	53.24074074
@@ -309,21 +309,21 @@ task	acc_norm
 284	51.40845070
 285	51.22807018
 286	51.39860140
-287	51.56794425
-288	51.73611111
-289	51.90311419
-290	52.06896552
-291	51.89003436
-292	52.05479452
-293	51.87713311
-294	52.04081633
+287	51.21951220
+288	51.38888889
+289	51.55709343
+290	51.72413793
+291	51.54639175
+292	51.71232877
+293	51.53583618
+294	51.70068027
 295	51.86440678
 296	52.02702703
 297	51.85185185
 298	52.01342282
 299	52.17391304
 
-0.46.990.889 I Final result: 52.1739 +/- 2.8937
-0.46.990.889 I Random chance: 25.0419 +/- 2.5098
-0.46.990.890 I 
+0.43.926.172 I Final result: 52.1739 +/- 2.8937
+0.43.926.173 I Random chance: 25.0419 +/- 2.5098
+0.43.926.173 I 
 

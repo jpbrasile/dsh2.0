@@ -301,10 +301,31 @@ la chaîne ; `-fa on` forcé). Jeux téléchargés : wikitext-2-raw-v1.zip
 (4,7 Mo, HF ggml-org/ci) et arc-challenge-validation.bin (95 Ko, HF
 ikawrakow/validation-datasets-for-llama.cpp). Résultats au retour.
 
-**Ce qui restera non mesuré après l'étage 2** : l'acceptation spéculative
-par type de contenu (nos t/s viennent d'un texte de bench favorable) et
-la qualité logits AU CONTEXTE LONG (ARC/PPL travaillent court ; le long
-n'est couvert que par le needle).
+**Étage 2 — résultats (même binaire build-faq pour les 4 configs,
+`-fa on`, ARC 299 tâches `-np 8` — sans quoi les tâches à 5 choix sont
+sautées en silence, vu et corrigé au premier run) :**
+
+| config | ARC-Challenge (0-shot, validation) | PPL wikitext-2 |
+|---|---|---|
+| f16 | 52,17 ± 2,89 % | 6,9551 ± 0,045 |
+| q8/q8 | 51,84 ± 2,89 % | **6,9551** ± 0,045 |
+| q8-K/q4-V | 51,84 ± 2,89 % | 6,9628 ± 0,045 |
+| q4/q4 | 52,17 ± 2,89 % | 6,9686 ± 0,045 |
+
+**Tous les écarts sont dans le bruit** : ARC ±0,33 pt (barre ±2,9),
+PPL +0,19 % au pire (q4/q4). Combiné au needle 5/5 partout : sur ce
+modèle, la quantification KV est QUALITÉ-GRATUITE aux instruments
+essayés, jusqu'au q4/q4 inclus — les chiffres de #23470 (Qwen2.5-7B)
+ne se transfèrent pas. Choix retenu malgré tout : **q8-K/q4-V comme
+config de référence** (le K en 8 bits garde la marge de sécurité que
+la littérature réclame, pour 0 coût mesurable), q4/q4 réservé au
+besoin extrême de contexte (205K).
+
+**Ce qui reste non mesuré** : l'acceptation spéculative par type de
+contenu (nos t/s viennent d'un texte de bench favorable), la qualité
+logits AU CONTEXTE LONG (ARC/PPL travaillent court ; le long n'est
+couvert que par le needle), et l'absolu leaderboard-comparable
+(nécessiterait lm-eval 25-shot sur le split test).
 
 ## Validation web du sous-plan (25/08, sur question utilisateur)
 
