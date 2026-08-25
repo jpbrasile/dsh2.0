@@ -484,3 +484,62 @@ Wall-clock per task (s), harness stopwatch, solved-only:
   supersedes it: the pinned artifact is now the LOCKED runtime tree
   (0.1.1-rc.2), same scrub + telemetry-off controls, D1a gate unchanged and
   demonstrated fail-closed (run 3).
+
+
+## 2026-08-25 — Revue externe pliée au plan (chaque point marqué vérifié-ici ou repris-de-source)
+
+Contexte : l'utilisateur a apporté une revue externe d'une commande llama-server
+proposée ailleurs pour Qwen3.8-27B + DFlash2. **Les flags fautifs qu'elle
+épingle (`--chunk-size`, drafteur `Q2_K`, cache `q4_k`) ne figurent NULLE PART
+dans ce dépôt** (grep 25/08 : docs/ + scripts/ vides) — nos fenêtres mesurées
+1–6 ne sont pas concernées. Ce qui suit raffine le protocole des jambes
+**dflash2 encore NOT-RUN**.
+
+### Vérifié ICI le 25/08 (binaire b10488 `--help` + API GitHub)
+
+- **PR #27342 toujours `open`, `merged: false`** (API GitHub, `updated_at`
+  2026-08-25T07:47Z). Toute annonce « SOTA stable » reste surévaluée.
+- **`q4_k` n'est PAS un type de cache valide.** b10488 : `-ctk/-ctv` admettent
+  exactement `f32, f16, bf16, q8_0, q4_0, q4_1, iq4_nl, q5_0, q5_1`
+  (défaut f16). Les variantes draft `-ctkd/-ctvd` existent, même liste.
+- **`-ub` (ubatch, défaut 512) est le vrai bouton de chunk prefill** — la
+  taille physique soumise au GPU par lancement de kernel ; `-cb` est le
+  continuous batching (actif par défaut). Un « chunk » 8192 MONTERAIT le pic
+  VRAM, il ne l'aplatirait pas.
+- **`--spec-type` de b10488 contient `draft-dflash`** (le flag v1 — la
+  section timeline ci-dessus reste exacte : b10488 ne peut PAS servir un
+  checkpoint DFlash2).
+- **Un build local de la PR existe déjà** : `C:\Users\test\tools\llama-cpp\
+  llama-cuda-pr27342-5ecbe1a\` — c'est le levier pour courir la jambe
+  dflash2 AVANT le merge (en l'étiquetant hors-stable), si on décide de ne
+  pas attendre l'amont.
+- Poids du modèle : notre artefact Q4_K_M épinglé fait 17 106 775 008 B
+  ≈ 17,11 GB — recoupe exactement le chiffre de la source.
+
+### Repris de la source (crédible, NON re-mesuré ici)
+
+- **Profondeur de draft : 4 > 7 de ~29 % à 32k** (bench de la PR #27342) ;
+  à faible profondeur les deux se valent.
+- **Cache V quantifié coûte au décodage en profondeur** : ~38→24 tok/s à
+  ~110K en q4_0 vs f16 (discussion ggml #20969, −37 %) ; `iq4_nl` (dequant
+  par table) généralement plus lent encore. **Corrobore notre propre mesure**
+  (fenêtres 2–3 : KV q8_0/q4_0 tuait le long contexte, f16 le ressuscitait).
+- mmproj (image/vidéo) : +0,93 GB. Layout hybride : 16 couches sur 64
+  seulement portent un KV croissant (16 × [3 GatedDeltaNet+FFN] + 1
+  GatedAttention+FFN) — aide le budget, mais SE MESURE, ne se suppose pas.
+- Qwen3.8-27B : Apache 2.0, sorti 14/08/2026, 262K natif.
+
+### Conséquences sur le protocole des jambes dflash2 (quand elles courront)
+
+1. `--spec-type draft-dflash --spec-draft-n-max 4` (pas 7) — et jamais le
+   chemin générique `-md`+`--draft-max` seul.
+2. Drafteur **Q4_K_M** (le nôtre, sha épinglé) — jamais Q2_K.
+3. KV **f16** en long contexte (notre conclusion mesurée) ; si quantifier :
+   q8_0 K / q4_0 V, jamais `q4_k` (invalide).
+4. `-ub` laissé à 512 ; pas de « gros chunk ».
+5. Démarrer à **128K**, `nvidia-smi` en main, avant de viser 200K+ — le
+   budget 24 GB est plus serré que les annonces (17,11 GB + drafteur +
+   buffers + KV).
+
+Rien ici n'invalide les fenêtres 1–6 ; le rule-gate DFlash2 (§ décision)
+reste ouvert et inchangé.
