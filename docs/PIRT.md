@@ -138,4 +138,7 @@ un échec du repli est journalisé mais ne bloque pas la distillation.
 (l'append au fil du triage se prouve à la prochaine campagne) ; **D3 câblé**
 (la preuve « une nuit complète » se lit dans le journal nocturne après
 l'installation des tâches — toujours en attente d'exécution manuelle de
-`installer_taches_nocturnes.ps1`) ; **D4** : red team du chantier ci-dessous.
+`installer_taches_nocturnes.ps1`) ; **D4 fait** : red team par
+`deepseek/deepseek-v4-pro` (charge vérifiée OPEN-pure), triage
+`redteam/6-pirt-25-08.md` — 1 correctif retenu (P2 : champs vides rejetés),
+1 résidu accepté documenté (P7), aucun HIGH ouvert. **Chantier clos.**

@@ -30,6 +30,10 @@ Principes (docs/PIRT.md) :
 
 Sorties : 0 repli fait (y compris « aucun changement ») ; 1 evenements.jsonl
 absent ; 2 ligne invalide (rien ecrit) ; 3 erreur d'ecriture.
+
+Residu accepte (red team D4, P7) : un exit 3 peut laisser pirt.sqlite ecrit et
+PIRT.md non regenere -- les deux sont des DERIVES reconstruits au repli
+suivant, l'etat se repare seul ; la source (JSONL) n'est jamais touchee.
 """
 import argparse
 import io
@@ -59,9 +63,13 @@ def lire_evenements(chemin):
                 print("evenements.jsonl ligne %d : JSON invalide (%s) -- rien n'est ecrit" % (num, exc))
                 sys.exit(2)
             manquants = [c for c in ("date", "phenomene", "type", "donnees", "source") if c not in e]
-            if manquants or e["type"] not in TYPES or not isinstance(e["donnees"], dict):
-                print("evenements.jsonl ligne %d : champs manquants/invalides %s -- rien n'est ecrit"
-                      % (num, manquants or [e.get("type")]))
+            # Red team D4 (P2, 25/08) : un champ present mais VIDE passait la
+            # validation structurelle -- exige des chaines non vides.
+            vides = [c for c in ("date", "phenomene", "type", "source")
+                     if c in e and (not isinstance(e[c], str) or not e[c].strip())]
+            if manquants or vides or e["type"] not in TYPES or not isinstance(e["donnees"], dict):
+                print("evenements.jsonl ligne %d : champs manquants/vides/invalides %s -- rien n'est ecrit"
+                      % (num, manquants + vides or [e.get("type")]))
                 sys.exit(2)
             e["_ordre"] = num
             evenements.append(e)
