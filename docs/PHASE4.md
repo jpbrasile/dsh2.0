@@ -94,6 +94,59 @@ jamais touché.
 
 ## Journal
 
+- **Interlude (25/08) — audit-mutation gpu3d_integration (campagne 8 h, C4)** :
+  4 familles auditées (mutation d'une constante de formule dans le src WS,
+  rerun, restore vérifié md5 == worktree, rerun vert) : **chemistry NO-BITE**
+  (OZONE_F_N2A_BRANCH 1.2→1.3 ⇒ 76/76 — la constante n'est qu'un kwarg par
+  défaut de `ozone_yield_g_per_kwh`, jamais exercée par test_ozone_3d.jl) ;
+  **pic_core** bite 109/1 et **coupling** bite 91/1, mais dans les deux cas
+  l'unique échec est l'assertion du littéral (aucune propagation
+  fonctionnelle ; kernels GPU-only sautés sans GPU) ; **amr NO-BITE**
+  (create_jet_config z_chemistry_fraction 0.85→0.8 ⇒ 0 échec — le test écrase
+  toujours le défaut ou n'assert jamais le seuil dérivé). Deux renforcements
+  ciblés planifiés (C5, post-fenêtres) : asserter `ozone_yield_g_per_kwh` au
+  défaut (ancres sondées : G=8.3827397962e-01 à f=1.2 vs 8.4559514974e-01 à
+  f=1.3, garde dégénérée exacte) et asserter le défaut jet
+  `FrontPositionThreshold(0.85)`.
+
+- **J12 (25/08) — tests `ar_jet_chemistry_3d.jl`** : run propre (rc=0, 860,7 s,
+  0,1645 USD, cache 57 %), porte appelée 1×, ORANGE-budget verbatim (clause
+  KNOWN GATE BEHAVIOUR). Livrable :
+  `test/gpu3d_integration/chemistry/test_ar_jet_chemistry_3d.jl` (66 tests
+  runtime) + 1 include dans runtests.jl — constantes littérature (Velazco 1978,
+  Herron 1999, Bogaerts 2002, Kogelschatz 2003, Watanabe 1953, Klages 2023),
+  taux dérivés (k_exc_eff, 1/τ) rtol 1e-6, pas mono-cellule sur ancres
+  MESURÉES par sonde avant brief (dont S_O_VUV == 0 exact au step),
+  sensibilité H2O directionnelle, cellule air pur X_Ar=0,
+  `vuv_radial_redistribute!`, diagnostics, déterminisme, CPU-only. Standalone
+  66/66 en 0,8 s (WS puis worktree). Red team mutation : TAU_AR_JET_AR2
+  3.0e-6→3.5e-6 ⇒ 62/4, exactement les ancres visées ; restore md5 ⇒ 66/66.
+  Défaut modèle mineur : `range(...)` passés où la signature citée au brief
+  exige `Vector{Float64}` — 2 lignes corrigées main au triage, leçon laissée
+  au distillateur. **Promu** `e5e94dae` (non poussé). Preuves
+  `reports/phase4_jour12/` (scans secrets 0). **Après J11+J12, les 28 sources
+  gpu3d_integration ont toutes un test dédié ou un agrégateur exercé.**
+
+- **J11 (25/08) — tests `ar_ion_chemistry_3d.jl`** : run propre (rc=0, 565,6 s,
+  0,1632 USD, cache 41 %, 13 appels qwen/deepseek), porte 1× ORANGE-budget
+  verbatim. Livrable :
+  `test/gpu3d_integration/chemistry/test_ar_ion_chemistry_3d.jl` (273 l.,
+  70 tests runtime) + 1 include — constantes littérature (Bogaerts 2002,
+  Shon & Kushner 1994), taux dérivés (k_cluster_eff, alpha_dr(T_e)) rtol 1e-6,
+  pas pulse + afterglow sur ancres sondées avant brief, identité exacte
+  S_ArS_recycle == S_e_recomb, clamp ambipolaire (centre == 0 mesuré), no-op
+  enabled=false, diagnostics, déterminisme, CPU-only. La non-conservation du
+  split d'opérateur en dt raide est documentée en commentaire, délibérément
+  NON assertée. Standalone 70/70 en 0,5 s (WS puis worktree). Red team
+  mutation : ALPHA_DR_300 8.5e-13→9.0e-13 ⇒ 65/5, exactement les ancres
+  visées ; restore md5 ⇒ 70/70. **Erreur de brief n° 5 (la mienne)** :
+  3 littéraux Float32 invalides (`8.5e-13f0` — en Julia le `f` REMPLACE le
+  `e`, le suffixe `f0` ne suit jamais un exposant) copiés fidèlement par le
+  coder ⇒ 3 UndefVarError `f0` ; la porte n'a rien attrapé (rejeu
+  budget-coupé = rien n'a tourné) — c'est la preuve standalone qui a mordu.
+  Corrigés main + les deux briefs purgés. **Promu** `847ed501` (non poussé).
+  Preuves `reports/phase4_jour11/` (scans secrets 0).
+
 - **J10 (24/08) — tests oscillation_enhanced_ep** : run propre n° 10 (997 s,
   0,2627 USD, cache 3 %, porte préchauffée à l'essai 4). DONE.md exemplaire :
   porte appelée **exactement 1×**, verdict cité verbatim (« VERDICT ORANGE

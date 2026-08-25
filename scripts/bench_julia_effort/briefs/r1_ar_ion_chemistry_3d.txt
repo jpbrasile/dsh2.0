@@ -1,0 +1,58 @@
+Two delegations, in order, then stop: first call the planner tool once, then call the coder tool once with the plan reference, then write DONE.md and stop. Do not add extra verification steps after the coder finishes.
+
+TASK — write the missing test suite for src/gpu3d_integration/ar_ion_chemistry_3d.jl (Phase 22 Ar ion chemistry: Ar+ clustering, Ar2+ dissociative recombination, ambipolar diffusion). This source (445 lines) has NO dedicated test file today.
+
+FILES TO CREATE (the ONLY files you may write):
+1. test/gpu3d_integration/chemistry/test_ar_ion_chemistry_3d.jl  (new)
+2. test/gpu3d_integration/runtests.jl  (one include line added in the chemistry testset, style of the neighbours)
+
+FILES TO READ — these exact files, ONE read each, nothing else:
+1. src/gpu3d_integration/ar_ion_chemistry_3d.jl   (445 lines — the module under test)
+2. test/gpu3d_integration/chemistry/test_ozone_3d.jl  (401 lines — the convention model: header docstring, include-if-not-defined guard, testset structure)
+3. test/gpu3d_integration/runtests.jl  (~40 lines — where to add the include)
+Do NOT glob, do NOT explore other directories. The three files above are verified to exist.
+
+TEST CONTRACT — CPU ONLY (use_gpu=false everywhere; never require CUDA.functional()):
+a) Configuration: default_ar_ion_chemistry_config() literature constants asserted exactly:
+   k_cluster == 2.5e-43 (Float64, Bogaerts 2002), alpha_dr_300 ≈ 8.5f-13,
+   dr_exponent ≈ -0.67f0, D_a ≈ 2.0f-2, T_e ≈ 11600f0,
+   N_gas ≈ 2.4463134e25 (rtol 1e-6; formula p_atm/(k_B*T_gas), k_B = 1.380649e-23).
+b) Derived rates (measured anchors, rtol 1e-6):
+   Float32(k_cluster * Float64(N_gas)^2) ≈ 1.49611232e8
+   Float32(8.5e-13 * (11600/300)^(-0.67)) ≈ 7.3435032e-14
+c) State: create_ar_ion_chemistry_state((2,2,2); use_gpu=false) allocates Arrays of zeros,
+   dims stored; reset_ar_ion_chemistry_state! zeroes a dirtied state.
+d) Single-cell pulse step (dims (2,2,2), n_Ar_plus .= 1f18, n_Ar2_plus .= 0,
+   ne_ext = fill(1f18,...), X_Ar = fill(1f0,...), dt = 1e-6, afterglow=false):
+   n_Ar_plus ≈ 6.639611e15 ; n_Ar2_plus ≈ 7.0150768e19 ;
+   S_ArS_recycle ≈ 2.5757618e24 (all rtol 1e-6) ; and the IDENTITY
+   S_ArS_recycle == S_e_recomb must hold elementwise (exact equality).
+   Cross-check n_Ar_plus against the hand-derived implicit update
+   n/(1 + k_eff*X_Ar^2*dt) at rtol 1e-6.
+e) Afterglow step (n_Ar_plus .= 5f17, n_Ar2_plus .= 5f17, same ne_ext ignored,
+   dt=1e-6, afterglow=true): ne_afterglow ≈ 1.0e18 (quasi-neutrality
+   n_Ar+ + n_Ar2+), n_Ar_plus ≈ 3.3198054e15, n_Ar2_plus ≈ 3.5541181e19 (rtol 1e-6).
+f) Positivity: after any step above, all state arrays are >= 0 everywhere.
+   DO NOT assert ion-number conservation across the clustering step: the
+   operator-split source term over-produces Ar2+ for stiff dt (measured:
+   n_Ar2+ ends at 7.015e19 from 1e18 total ions at dt=1e-6, X_Ar=1).
+   Document this with a comment in the test file, never with an assertion.
+g) Ambipolar diffusion (step_ambipolar_diffusion!, dt=1e-7, dx=dy=dz=1e-4):
+   uniform field (all 1f18) is EXACTLY unchanged (zero Laplacian);
+   single central peak on (3,3,3) decreases: center after ≈ 0 EXACTLY (the max(0,...) clamp engages: D*dt*|lap| exceeds n here; assert == 0, this is measured behaviour),
+   face neighbour ≈ 2.0e17 (rtol 1e-6), total stays >= 0.
+h) enabled=false config: step_ar_ion_chemistry! is a strict no-op (arrays unchanged).
+i) Diagnostics: ar_ion_chemistry_diagnostics returns a NamedTuple with exactly the keys
+   (:Ar_plus_peak, :Ar_plus_total, :Ar2_plus_peak, :Ar2_plus_total,
+    :S_ArS_recycle_peak, :S_ArS_recycle_total, :ne_afterglow_peak),
+   values consistent with maximum/sum of the arrays.
+j) Determinism: two identical runs from identical initial state give identical arrays.
+Target: >= 40 @test macros, structured in @testset blocks mirroring a)-j).
+
+KNOWN GATE BEHAVIOUR (do not fight the gate): call the julia_gate tool EXACTLY ONCE,
+after BOTH files are written. A CUDA replay can exceed the gate's 30 s budget: an
+ORANGE verdict WITH ZERO FAILURES is the expected outcome and is acceptable — quote
+the gate verdict VERBATIM in DONE.md and do not call the gate again. ROUGE (real
+test failures) means fix the test file once, then one final gate call. DONE.md is
+MANDATORY in all cases, even after an ORANGE or a failure: write what was done,
+the verbatim gate verdict, and the exact list of files changed. Then stop.

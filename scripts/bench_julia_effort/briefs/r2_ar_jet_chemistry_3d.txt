@@ -1,0 +1,62 @@
+Two delegations, in order, then stop: first call the planner tool once, then call the coder tool once with the plan reference, then write DONE.md and stop. Do not add extra verification steps after the coder finishes.
+
+TASK — write the missing test suite for src/gpu3d_integration/ar_jet_chemistry_3d.jl (Phase 21 Ar* jet chemistry: metastable quenching, excimer formation, VUV photolysis, Penning O and OH sources). This source (511 lines) has NO dedicated test file today.
+
+FILES TO CREATE (the ONLY files you may write):
+1. test/gpu3d_integration/chemistry/test_ar_jet_chemistry_3d.jl  (new)
+2. test/gpu3d_integration/runtests.jl  (one include line added in the chemistry testset, style of the neighbours)
+
+FILES TO READ — these exact files, ONE read each, nothing else:
+1. src/gpu3d_integration/ar_jet_chemistry_3d.jl   (511 lines — the module under test)
+2. test/gpu3d_integration/chemistry/test_ozone_3d.jl  (401 lines — the convention model: header docstring, include-if-not-defined guard, testset structure)
+3. test/gpu3d_integration/runtests.jl  (~40 lines, as changed by the previous run — where to add the include)
+Do NOT glob, do NOT explore other directories. The three files above are verified to exist.
+
+TEST CONTRACT — CPU ONLY (use_gpu=false everywhere; never require CUDA.functional()):
+a) Configuration: default_ar_jet_chemistry_config() literature constants asserted exactly
+   or at rtol 1e-6: k_Ar_O2 ≈ 2.1f-16 (Velazco 1978), k_Ar_N2 ≈ 6.9f-17,
+   k_Ar_H2O ≈ 1.5f-16 (Herron 1999), k_excimer == 1.1e-44 (Float64, Bogaerts 2002),
+   tau_Ar2 ≈ 3.0f-6 (Kogelschatz 2003), sigma_O2_VUV ≈ 1.17f-21 (Watanabe 1953),
+   k_O3_form == 6.0e-46 (Float64), eta_O ≈ 2.0f0 (Klages 2023 anchor),
+   X_H2O ≈ 0.01f0, N_gas ≈ 2.4463134e25 (rtol 1e-6),
+   k_O_O3 ≈ Float32(8.0e-18*exp(-2060.0/300.0)) = 8.3355556e-21 (rtol 1e-6).
+b) Derived rates (measured anchors, rtol 1e-6):
+   Float32(k_excimer * Float64(N_gas)^2) ≈ 6.582894e6
+   1f0/tau_Ar2 ≈ 333333.3125f0 (exact Float32)
+c) State: create_ar_jet_chemistry_state((2,2,2); use_gpu=false) allocates six zero Arrays
+   (n_ArS, n_Ar2S, Q_VUV, S_O_penning, S_O_VUV, S_OH), dims stored;
+   reset_ar_jet_chemistry_state! zeroes a dirtied state.
+d) Single-cell step (dims (2,2,2), n_ArS .= 1f18, n_Ar2S .= 0, X_Ar = fill(0.9f0,...),
+   dt = 1e-7): measured anchors at rtol 1e-6:
+   n_ArS ≈ 1.6063565e7 (yes, quenching at (1-X_Ar)=0.1 ambient is this fast) ; n_Ar2S ≈ 2.0761417e16 ;
+   Q_VUV ≈ 6.9204716e21 ; S_O_penning ≈ 8.6811294e24 ;
+   S_O_VUV ≈ 0 EXACTLY (S_O_VUV is not produced by step_ar_jet_chemistry!; assert == 0) ; S_OH ≈ 1.4763826e23.
+   Cross-check the DIRECTION of each: n_ArS decreases from 1f18 (quenching + excimer
+   losses), n_Ar2S grows from 0, all sources are >= 0.
+e) H2O sensitivity (directional, no exact ratio asserted): build a second config with
+   X_H2O = 0.02 (other defaults unchanged) and run the identical single-cell step:
+   S_OH must be STRICTLY GREATER than with X_H2O = 0.01. Read the kernel to write an
+   explanatory comment, but do not assert an exact ratio you did not measure.
+f) Positivity: after the step, all six arrays >= 0 everywhere.
+g) X_Ar = 0 cell: pure air cell — excimer channel (∝ X_Ar^2) is OFF; n_Ar2S stays 0
+   and Q_VUV stays 0 for that cell when starting from zero n_Ar2S.
+h) Diagnostics: ar_jet_chemistry_diagnostics returns a NamedTuple with exactly the keys
+   (:ArS_peak, :Ar2S_peak, :Q_VUV_total, :S_O_penning_total, :S_O_VUV_total,
+    :S_OH_total), values consistent with maximum/sum of the arrays.
+i) vuv_radial_redistribute!: single exported method, signature
+   vuv_radial_redistribute!(state, config, X_Ar_3d, x_centers::Vector{Float64},
+   y_centers::Vector{Float64}, dr::Float64). Call it on a small state where Q_VUV
+   has a single central peak; read its docstring/body ONCE in the source file (it is
+   inside the single allowed read) and assert the behaviour it documents (at minimum:
+   arrays stay >= 0, and S_O_VUV becomes > 0 somewhere if the function deposits VUV
+   photolysis sources).
+j) Determinism: two identical runs from identical initial state give identical arrays.
+Target: >= 40 @test macros, structured in @testset blocks mirroring a)-j).
+
+KNOWN GATE BEHAVIOUR (do not fight the gate): call the julia_gate tool EXACTLY ONCE,
+after BOTH files are written. A CUDA replay can exceed the gate's 30 s budget: an
+ORANGE verdict WITH ZERO FAILURES is the expected outcome and is acceptable — quote
+the gate verdict VERBATIM in DONE.md and do not call the gate again. ROUGE (real
+test failures) means fix the test file once, then one final gate call. DONE.md is
+MANDATORY in all cases, even after an ORANGE or a failure: write what was done,
+the verbatim gate verdict, and the exact list of files changed. Then stop.
