@@ -101,6 +101,18 @@ foreach ($vivier in @("$env:USERPROFILE\.dsh", "$DEPOT\scripts\bench_julia_effor
 }
 
 # --- 3. rendre le monde comme trouve (et le VERIFIER) ------------------------
+if ($dejaLa) {
+    # Red team 25/08 (B1) : un serveur TROUVE sain n'est pas arrete -- mais on
+    # re-mesure sa sante en sortie et on la JOURNALISE, pour qu'une mort
+    # pendant la passe (cause externe) laisse une trace au lieu d'un exit 0 muet.
+    $encoreSain = $false
+    try {
+        $rep = Invoke-WebRequest -Uri "http://127.0.0.1:8004/health" -UseBasicParsing -TimeoutSec 3
+        if ($rep.StatusCode -eq 200) { $encoreSain = $true }
+    } catch {}
+    if ($encoreSain) { Ecrire "serveur trouve toujours sain en sortie (non arrete, comme promis)" }
+    else { Ecrire "ATTENTION : le serveur trouve sain au depart ne repond plus en sortie -- cette passe ne l'a pas arrete ; cause externe a investiguer" }
+}
 if (-not $dejaLa) {
     & powershell -NoProfile -ExecutionPolicy Bypass -File "$DEPOT\scripts\stop_llama_port.ps1" -Port 8004 |
         ForEach-Object { Add-Content -LiteralPath $JOURNAL -Value ("    " + $_) -Encoding UTF8 }

@@ -1,0 +1,45 @@
+Two delegations, in order, then stop: first call the planner tool once, then call the coder tool once with the plan reference, then write FINDINGS.md and stop. Do not add extra verification steps after the coder finishes.
+
+ROLE — you are the RED TEAM. The files in this workspace are harness
+deliverables that a worker session declared "done" on 25/08. Your single job
+is to FALSIFY those done-claims: unverified assumptions, code that does not do
+what the claim says, silent failure paths, permission or secret leaks, cost
+leaks. You are reviewing, not fixing. STATIC ANALYSIS ONLY.
+
+HARD RULES:
+- Do NOT execute any of the reviewed scripts (they manage scheduled tasks, a
+  GPU server and a test gate on the host). No pwsh execution of them, no
+  python execution of distiller.py. Read and reason only.
+- Do NOT call the julia_gate tool (no Julia in scope).
+- The ONLY file you may write is FINDINGS.md (workspace root).
+- Do not modify any reviewed file.
+
+FILES TO READ — these exact files, ONE read each, nothing else:
+1. CLAIMS.md                                (69 lines — the done-claims, your target list)
+2. harness/distiller.py                     (567 lines)
+3. harness/providers.yaml                   (322 lines)
+4. scripts/dsh.ps1                          (819 lines — the freellm block is near the
+                                             other DSH_*_API_KEY blocks; claim E only,
+                                             do not review the whole file)
+5. scripts/freellm_key.py                   (52 lines)
+6. scripts/ops/distiller_nightly.ps1        (122 lines)
+7. scripts/ops/julia_gate_arret.ps1         (34 lines)
+8. scripts/ops/installer_taches_nocturnes.ps1 (24 lines)
+Do NOT glob, do NOT explore other directories. All eight files are verified to
+exist in the workspace.
+
+FINDINGS.md FORMAT (mandatory):
+# Red team — harness deliverables 25/08 (worker: stealth/ox-alpha via freellmapi)
+Then one section per finding:
+## <n>. [<HIGH|MEDIUM|LOW>] <one-line title>
+- Claim attacked: <A1..F2 or "none — new issue">
+- Evidence: <file>:<line(s)> plus a short quoted excerpt
+- Failure scenario: concrete inputs/state -> wrong outcome
+- Suggested check: the smallest command or test a human could run to confirm
+Rules of evidence: every finding MUST cite file:line. A claim you tried to
+falsify and could not gets one line in a final "## Claims that held" section
+(claim id + why it held, one sentence). Do not pad: zero HIGH findings is an
+acceptable outcome if that is what the code shows. End with a "## Verdict"
+section: for each claim group A-F, HOLDS / BROKEN / PARTIAL with one sentence.
+
+FINDINGS.md is MANDATORY in all cases, even if you find nothing. Then stop.

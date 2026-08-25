@@ -191,7 +191,7 @@ providers:
       # donne 8 runs sur 24 a dots-3-note-preview, qui faisait 1/8 --
       # disponible, pas bon. `smartest` classe par capacite.
       - id: auto:smartest
-        name: FreeLLMAPI - routeur, chaine classee par capacite
+        name: FreeLLMAPI - routeur, chaine classee par capacite (bascule, ne pas mesurer avec)
         contextWindow: 131072
         reasoningEfforts:
           "off":
@@ -223,7 +223,11 @@ providers:
       # auto:smartest ne le lance jamais.
       - id: stealth/ox-alpha
         name: Ox Alpha (stealth) via FreeLLMAPI - openrouter puis opencode
-        contextWindow: 1048576
+        # Red team 25/08 (F1) : 1048576 etait le SOMMET catalogue, en
+        # contradiction avec la doctrine plancher du bloc (l.177). Ramene au
+        # plancher prudent ; le sommet n'a jamais ete mesure aupres du
+        # fournisseur gratuit qui sert.
+        contextWindow: 131072
         reasoningEfforts:
           "off":
           low: low
@@ -231,7 +235,8 @@ providers:
           high: high
       - id: x-preview-f-free
         name: Ox Alpha Free (OpenCode Zen) via FreeLLMAPI
-        contextWindow: 1048576
+        # Red team 25/08 (F1) : meme correction que stealth/ox-alpha.
+        contextWindow: 131072
         reasoningEfforts:
           "off":
           low: low

@@ -1,8 +1,11 @@
 # stop_llama_port.ps1 -- stop ONLY a llama-server listening on one specific port.
 #
 # Port-scoped and name-checked: we find the process bound to -Port, and stop it
-# ONLY if its ProcessName is "llama-server". We NEVER touch :8004 (production)
-# and NEVER kill an unrelated process.
+# ONLY if its ProcessName is "llama-server". We NEVER kill an unrelated process.
+# (Triage red team 25/08 : l'ancienne ligne « we NEVER touch :8004 » datait du
+# monde banc-:8005 ; distiller_nightly.ps1 appelle desormais ce script sur
+# :8004 pour arreter le serveur QU'IL a lance -- le garde-fou reel est le
+# name-check llama-server + REFUS exit 1, pas le numero de port.)
 #
 # Usage:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\stop_llama_port.ps1 -Port 8005
