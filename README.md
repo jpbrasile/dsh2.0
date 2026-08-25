@@ -264,6 +264,11 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
   → fixed, wall unit 35/35). `redteam/2-done.md`, `docs/PHASE2.md` §7. Phase 2 total 1.22 USD.
 
 ### 3 — Memory
+- [ ] PIRT registry (proposed 2026-08-25, user "go PIRT"): the nightly loop
+      additionally folds campaign triage events (mutation bite/no-bite, promoted
+      suites, anchors, V&V notes) into a phenomena ranking table; importance is
+      human-only; data PRIVATE (framework repo), tooling OPEN. Design + seed
+      rows + done-criteria: `docs/PIRT.md`.
 - [x] Session-end distiller (DeepSeek off-peak; local Qwen after Phase 5):
       scores → SQLite; lessons → planner notes.
       **⚑ RT:** poison a session log with adversarial content; check it does not
