@@ -578,6 +578,11 @@ Décode (t/s), n_past 507 → 62 115 :
   mesure — **n-max 7 (défaut README) reste le réglage servi**.
 - Coût : +1,9 GiB VRAM vs MTP (23,1 GiB au pic, tient sur 24 GB texte
   seul ; avec mmproj ≈ 24,2 GiB — JUSTE) ; prefill −8–13 %.
+- **mmproj résident (contrainte utilisateur 25/08)** : options mesurables —
+  (a) mmproj VRAM + n7 ≈ 24,2 GiB (marge ~350 MiB, risqué) ; (b)
+  `--no-mmproj-offload` (flag vérifié sur b10488 ET build PR, défaut =
+  offload) : projecteur en RAM système, VRAM ≈ 23,1 GiB, encodage image
+  sur CPU à mesurer ; (c) mmproj VRAM + n4 ≈ 23,7 GiB, décode −3 %.
 - Validation web du sous-plan (question utilisateur) : PR open, tête
   `f7aadef` 13 commits devant notre build (dont `Optimize Dflash 2 cost`,
   `Revert draft sampling in rejection sampling`, mrope fix) — **ces

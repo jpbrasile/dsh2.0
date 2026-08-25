@@ -88,6 +88,15 @@ Contrôle de continuité : le bras mtp-b10488 recoupe la fenêtre 4 du 22/08
 3. Le coût : +1,9 GiB de VRAM et ~10 % de prefill. Au budget 24 GB avec
    mmproj (1 136 MiB), dflash2-n7 à ctx 65536 ≈ 24,2 GiB — JUSTE. Texte
    seul : marge 1,5 GiB.
+3bis. **mmproj résident (contrainte utilisateur 25/08)** — trois options
+   chiffrées, flag `--no-mmproj-offload` vérifié présent sur b10488 ET le
+   build PR (défaut = offload GPU) :
+   a) mmproj en VRAM + n7 : ≈ 24,2 GiB sur 24,56 — marge ~350 MiB, risqué ;
+   b) `--no-mmproj-offload` (projecteur en RAM système) + n7 : VRAM reste
+      ≈ 23,1 GiB, marge 1,5 GiB ; coût : encodage image sur CPU (TTFT des
+      images seulement, décode texte intact) — À MESURER avant d'adopter ;
+   c) mmproj en VRAM + n4 : ≈ 23,7 GiB, marge ~0,8 GiB, décode −3 %
+      (110–123 vs 110–128 t/s).
 
 ## Validation web du sous-plan (25/08, sur question utilisateur)
 
