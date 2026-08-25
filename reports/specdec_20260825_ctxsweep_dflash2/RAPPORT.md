@@ -98,6 +98,47 @@ Contrôle de continuité : le bras mtp-b10488 recoupe la fenêtre 4 du 22/08
    c) mmproj en VRAM + n4 : ≈ 23,7 GiB, marge ~0,8 GiB, décode −3 %
       (110–123 vs 110–128 t/s).
 
+## Deuxième passe — tête fraîche `f7aadef` (build utilisateur-cloné, compilé ici le 25/08)
+
+Le clone humain a débloqué le rebuild (VS2022 + nvcc 12.1, arch 89, cible
+llama-server, exit 0) ; binaire installé `llama-cuda-pr27342-f7aadef\`,
+allowlisté dans le lanceur, tests 37/37. Décode (t/s), mêmes points :
+
+| n_past | n7 5ecbe1a | **n7 f7aadef** | n4 f7aadef | n7 f7aadef p-min 0.75 |
+|-------:|-----------:|---------------:|-----------:|----------------------:|
+|    507 |     127,40 |     **133,85** |     129,98 | 132,93 |
+|  8 395 |     128,19 |     **133,69** |     122,22 | — |
+| 16 205 |     121,01 |     **126,42** |     124,89 | — |
+| 32 060 |     109,84 |     **114,53** |     114,99 | 114,09 |
+| 62 115 |     116,87 |     **122,08** |     116,10 | 121,87 |
+
+- **La tête fraîche paie +4 à +6 % sur toute la courbe** (le commit
+  `Optimize Dflash 2 cost` en chiffres) ; VRAM inchangée (23 006→23 078 MiB).
+- **n4 < n7 se confirme sur la tête fraîche** (4 points sur 5 ; 32k à
+  égalité) — la réfutation du « 4>7 » tient aussi après l'optimisation.
+- **p-min 0.75 : neutre** (<1 % vs n7 nu, 3 points) — la reco communautaire
+  « bandwidth-poor » ne s'applique pas au 4090 ; p_min reste à 0.
+- Acceptation n7 f7aadef : 0,43–0,61 (inchangée vs 5ecbe1a) — le gain
+  vient du coût du draft, pas de l'acceptation.
+- Gain total vs MTP actuel : **+53 à +65 %** selon le point.
+
+## Plafonds de contexte (ordre « on peut monter le contexte ? attention aux oom »)
+
+Méthode : prédiction d'abord (65 KiB/jeton de KV f16 mesuré fenêtre 4 +
+bases VRAM mesurées ici), puis un serveur à la fois, nvidia-smi en main.
+
+| config (texte seul, f16) | plafond | mesure au plafond | pic VRAM |
+|---|---|---|---|
+| dflash2-n7 (5ecbe1a) | **80K** (88K = OOM arithmétique : +532 MiB > marge 488) | 105,2 t/s @ n_past 77 415 | 24 076 / 24 564 MiB |
+| q38-mtp | **96K** | 64,6 t/s @ n_past 94 173 | 23 428 MiB |
+| q38-plain | 128K **chargé** (24 084 MiB, marge 480) | point profond NON mesuré (interrompu par l'utilisateur) | — |
+
+**KV quantifié : la sortie de secours n'existe pas.** L'hypothèse « le q
+asymétrique rend de la VRAM » est mesurée morte sur cette famille hybride :
+K q8_0 / V f16 (jamais mesuré avant ici) rend bien 1 538 MiB mais coûte
+prefill ×38 (68,3 vs ~2 600 t/s à 14k) et décode ×4,8 (16,9 vs ~81) —
+même pathologie que le q8_0/q4_0 des fenêtres 2-3. f16 est OBLIGATOIRE.
+
 ## Validation web du sous-plan (25/08, sur question utilisateur)
 
 Fait par mes propres requêtes le 25/08 :

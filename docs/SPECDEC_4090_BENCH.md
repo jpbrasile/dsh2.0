@@ -592,3 +592,17 @@ Décode (t/s), n_past 507 → 62 115 :
   commit du 21/08) — sonde p-min 0.60–0.75 réservée au nouveau build.
 - Le rule-gate (§ décision) reste ouvert : ceci est du t/s serveur ; la
   décision se prend au wall-clock médian par tâche résolue (harnais A/B).
+
+**Deuxième passe (même jour, après-midi) — tête `f7aadef` compilée ici**
+(clone humain, VS2022+nvcc 12.1 arch 89, allowlist, tests 37/37) :
+n7 = 114,5–133,9 t/s (**+4–6 % vs 5ecbe1a** — `Optimize Dflash 2 cost`
+mesuré ; acceptation inchangée 0,43–0,61 : le gain est le coût du draft),
+n4 < n7 confirmé sur la tête fraîche, p-min 0.75 neutre (<1 %, reste à 0).
+Gain total vs MTP actuel : **+53–65 %**. Plafonds contexte mesurés (f16,
+texte seul, prédits puis vérifiés nvidia-smi en main) : **dflash2-n7 80K**
+(105,2 t/s @ 77k, pic 24 076 MiB ; 88K = OOM arithmétique), **mtp 96K**
+(64,6 t/s @ 94k, 23 428 MiB), plain 128K chargé (24 084 MiB) mais point
+profond non mesuré (interrompu). **KV quantifié définitivement clos** : la
+variante K-seul q8_0/f16 (jamais mesurée avant) rend 1 538 MiB et coûte
+prefill ×38 / décode ×4,8 — même pathologie ; f16 obligatoire. Le lanceur
+gagne `-SpecDraftPMin` (0 = flag absent, argv inchangé).

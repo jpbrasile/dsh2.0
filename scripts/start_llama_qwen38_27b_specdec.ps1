@@ -153,6 +153,7 @@ param(
     [int]$ImageMaxTokens = 0,
     [string]$LogPath,
     [int]$SpecDraftNMax = 0,
+    [double]$SpecDraftPMin = 0,
     [switch]$CheckOnly,
     [switch]$AssumeDflash2Capable
 )
@@ -176,6 +177,7 @@ $script:KnownDflash2Builds = @{}
 # pre-upstream-merge: this binary predates any post-merge release; re-verify
 # with the real DFlash2 checkpoint in the approved outage window.
 $script:KnownDflash2Builds["0.1.2-dev (build 1, commit 5ecbe1a)"] = "PR #27342 head 5ecbe1a built locally 2026-08-19 (pre-upstream-merge), --help draft-dflash verified"
+$script:KnownDflash2Builds["0.1.2-dev (build 1, commit f7aadef)"] = "PR #27342 head f7aadef (24/08) built locally 2026-08-25 from user-cloned z-lab/llama.cpp-fork dflash2 (13 commits past 5ecbe1a: Optimize Dflash 2 cost, rejection-sampling revert, mrope fix, p_min), --help draft-dflash verified"
 
 # --- per-config defaults ----------------------------------------------------
 # Pinned artifact paths (see docs/SPECDEC_4090_BENCH.md). The launcher NEVER
@@ -423,6 +425,12 @@ if ($Config -eq "q38-mtp") {
         "-md", $draft,
         "--spec-draft-n-max", $(if ($SpecDraftNMax -gt 0) { "$SpecDraftNMax" } else { "7" })
     )
+    # -SpecDraftPMin (0 = flag absent, argv byte-identical) : le p_min dflash2
+    # n'existe que depuis le commit du 21/08 (post-5ecbe1a) ; sonde de la reco
+    # communautaire 0.60-0.75, a n'utiliser que sur un build >= f7aadef.
+    if ($SpecDraftPMin -gt 0) {
+        $cmdArgs += @("--spec-draft-p-min", ("{0}" -f $SpecDraftPMin))
+    }
 }
 
 # --- (c) -CheckOnly: print the FULL effective argv, then exit without launch --

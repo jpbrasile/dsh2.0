@@ -1,0 +1,8 @@
+serveur : specdec-q38-mtp  build=b10488-9d77fa172  n_ctx=98304  vision=False
+    calibrage :    100 mots ->    290 jetons (2.900 jeton/mot)
+    calibrage :    172 mots ->    578 jetons (3.360 jeton/mot)
+    calibrage :    148 mots ->    482 jetons (3.257 jeton/mot)
+~500       n_past=507    prefill=  1162.1 t/s (   507 tok)  decode= 73.64 t/s ( 220 tok)
+    calibrage :   2800 mots ->  12890 jetons (4.604 jeton/mot)
+    calibrage :   3041 mots ->  14095 jetons (4.635 jeton/mot)
+~14k       n_past=14120  prefill=    68.3 t/s ( 14120 tok)  decode= 16.88 t/s ( 256 tok)

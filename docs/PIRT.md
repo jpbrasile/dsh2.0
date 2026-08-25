@@ -149,3 +149,44 @@ l'installation des tâches — toujours en attente d'exécution manuelle de
 `deepseek/deepseek-v4-pro` (charge vérifiée OPEN-pure), triage
 `redteam/6-pirt-25-08.md` — 1 correctif retenu (P2 : champs vides rejetés),
 1 résidu accepté documenté (P7), aucun HIGH ouvert. **Chantier clos.**
+
+## Automatisation progressive (décidée 25/08, cran 1 non lancé)
+
+Décision utilisateur : la boucle nocturne peut traiter *petit à petit* la
+file de travail déjà validée du registre, si rien de plus urgent. Le mot
+« traiter » s'arrête AVANT le merge — l'automatisation va jusqu'à la
+proposition, jamais au-delà (cohérent avec le principe 1 amendé : l'humain
+n'arbitre que les désaccords, et ici il valide chaque merge).
+
+Rôles (fixés par ordre utilisateur du 25/08) :
+- **Ouvrier** : modèle local (les données du registre sont PRIVATE — elles
+  ne sortent jamais vers une route OPEN, principe 2 inchangé).
+- **Red team** : z.ai GLM-5.3 en premier, repli OpenRouter si saturé.
+  Fail-closed : les deux routes mortes ⇒ le chantier de la nuit s'arrête,
+  il ne « fait sans » jamais. *(dégât évité : un correctif plausible-mais-
+  faux validé par personne.)*
+
+Trois conditions non négociables :
+1. **Une nuit = une branche + un rapport, jamais un merge.** Le traitement
+   nocturne atterrit sur une branche dédiée ; l'humain merge au matin.
+   *(dégât évité : de la physique non relue sur main avec l'élan de la nuit.)*
+2. **Le log de nuit est généré, pas rédigé** : gabarit fixe
+   Quoi / Pourquoi / Preuve / Reste, sans jargon, dérivé des artefacts de
+   la nuit — c'est la pièce qui rend la validation de merge humaine
+   réellement exerçable. *(leçon existante : « derived at generation time,
+   not typed ».)*
+3. **1 sujet par nuit, budget plafonné** — le « petit à petit » est
+   mécanique, pas une intention.
+
+Déploiement en trois crans mesurables :
+- **Cran 1 (à blanc)** : une nuit produit proposition + red team + log,
+  ZÉRO changement de code ; on mesure coût et durée.
+- **Cran 2** : ajoute le brouillon de traitement, toujours branche seule.
+- **Cran 3** : régime de croisière (1 sujet/nuit, merge humain au matin).
+
+Frontière des dépôts, rappelée parce qu'elle porte tout : CE dépôt
+(dsh2.0) est OPEN — il porte l'outillage, ce document, et AUCUN nom de
+phénomène ni identifiant de claim ; le registre, ses données et le poster
+qui les affiche vivent dans le dépôt framework PRIVATE. Le texte PIRT du
+poster reflète la même posture (automatique jusqu'à la proposition, merge
+humain, outillage open / données privées) depuis le 25/08.
