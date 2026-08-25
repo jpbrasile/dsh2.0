@@ -1,0 +1,27 @@
+- dirname: 2026-08-25-11-54-27--dsh-q8q4-160k-dflash2
+  test_cases: 225
+  model: openai/specdec-q38-dflash2
+  edit_format: whole
+  commit_hash: 5dc9490-dirty
+  pass_rate_1: 16.9
+  pass_rate_2: 52.0
+  pass_num_1: 38
+  pass_num_2: 117
+  percent_cases_well_formed: 99.1
+  error_outputs: 28
+  num_malformed_responses: 3
+  num_with_malformed_responses: 2
+  user_asks: 174
+  lazy_comments: 0
+  syntax_errors: 0
+  indentation_errors: 0
+  exhausted_context_windows: 23
+  prompt_tokens: 2494595
+  completion_tokens: 678918
+  test_timeouts: 3
+  total_tests: 225
+  command: aider --model openai/specdec-q38-dflash2
+  date: 2026-08-25
+  versions: 0.86.3.dev
+  seconds_per_case: 52.2
+  total_cost: 0.0000

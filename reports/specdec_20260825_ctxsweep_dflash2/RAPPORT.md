@@ -364,3 +364,44 @@ Fait par mes propres requêtes le 25/08 :
 - PR #27342 toujours open/unmerged (25/08) : rien ici n'est « stable amont ».
 - Décision du rule-gate : ce sont des t/s serveur ; la métrique de décision
   reste le wall-clock médian par tâche résolue (harnais A/B, fenêtre 6).
+
+## 7quater — Aider polyglot : 52,0 % pass_rate_2 (25/08, ordre « go aider dès que possible »)
+
+Harnais officiel Aider-AI/aider en docker (exécute le code du modèle —
+jamais hors conteneur), 225 exercices Exercism vérifiés sur disque
+(cpp 26, go 39, java 47, javascript 49, python 34, rust 30), 6 langages,
+`--threads 1`, edit format `whole`, 2 essais (défaut du board,
+`benchmark.py:200`). Serveur : build-faq q8-K/q4-V @163840, dflash2 n7,
+alias `specdec-q38-dflash2`, `reasoning_tag: think` (le modèle émet
+`<think>` dans le contenu).
+
+**Résultat officiel (aider_polyglot_stats.yml, 225 cas) :**
+
+| métrique | valeur |
+|---|---|
+| pass_rate_2 | **52,0 %** (117/225) |
+| pass_rate_1 | 16,9 % (38/225) |
+| well_formed | 99,1 % |
+| exhausted_context_windows | 23 |
+| error_outputs / malformed / timeouts | 28 / 3 / 3 |
+| seconds_per_case | 52,2 |
+| jetons | 2 494 595 prompt / 678 918 complétion |
+
+Placement board (consulté 25/08) : Qwen2.5-Coder-32B 16,4 · Qwen3 32B
+40,0 · **nous 52,0** · Qwen3 235B-A22B 59,6 · têtes de board ~88.
+Réserve de comparaison : notre run est en `whole`, les gros modèles en
+`diff` (le format est affiché par ligne sur le board).
+
+Incident tracé : arrêt global du harnais de session à 100/225 (15 h 32)
+— PAS un OOM (log serveur net en plein traitement, zéro CUDA error ;
+7 tâches de fond tuées au même instant, dont des boucles mortes
+antérieures). Serveur relancé à l'identique (23 666 MiB, même charge au
+MiB), reprise `--cont` vérifiée (premier exercice repris : rust), zéro
+résultat pollué (dernier cas pré-arrêt : vraie sortie modèle,
+0 error_output). Les 100 premiers et 125 derniers cas sont disjoints
+dans le temps, même binaire même config.
+
+Mesure adjacente : acceptation draft dflash2 sur contenu Aider réel
+~52 % (log serveur, task 98089 : 640/1232) — vs >90 % sur remplissage
+déterministe. La réserve « acceptation dépendante du contenu » est
+maintenant chiffrée.

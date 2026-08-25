@@ -671,3 +671,10 @@ jour : f16 80K -> q8/q8 131K (79,4 @124k) -> q8K/q4V 160K (68,5 @154k) ->
 q4/q4 204,8K (65,9 @189k, qualite disqualifiante probable). Restent avant
 revendication SOTA : greedy-diff/rappel long sur NOTRE modele, acceptation
 au propre, et publication (pousse).
+
+**Addendum 25/08 soir — score agent.** Aider polyglot (harnais officiel,
+docker, 225 exercices, 2 essais, `whole`) sur la config publiée
+(build-faq, q8-K/q4-V @163840, dflash2 n7) : **pass_rate_2 = 52,0 %**,
+well_formed 99,1 %. Board du 25/08 : Qwen3 32B 40,0 < nous < Qwen3
+235B-A22B 59,6. Acceptation draft sur ce contenu réel ~52 %. Détail et
+incident de reprise : RAPPORT 7quater ; YAML : aider_polyglot_stats.yml.

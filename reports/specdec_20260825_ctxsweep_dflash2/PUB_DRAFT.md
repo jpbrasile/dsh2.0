@@ -71,13 +71,26 @@ réservé au besoin extrême 205K.
 
 | métrique | valeur |
 |---|---|
-| pass_rate_1 | **EN COURS** |
-| pass_rate_2 | **EN COURS** |
-| percent_cases_well_formed | **EN COURS** |
+| **pass_rate_2 (chiffre du board)** | **52,0 %** (117/225) |
+| pass_rate_1 | 16,9 % (38/225) |
+| percent_cases_well_formed | 99,1 % |
+| seconds_per_case | 52,2 s (~3 h 16 au total) |
 
 225 exercices, 6 langages, harnais officiel en docker, `--threads 1`,
-edit format `whole`, serveur local :8005 (config du tableau 1).
-Smoke 2 exercices : exit 0, 100 % well-formed, 0 erreur.
+edit format `whole`, 2 essais (standard du board), serveur local :8005
+(config du tableau 1). Jetons servis : 2,49 M prompt + 0,68 M
+complétion. Acceptation draft observée sur ce contenu réel : ~52 %.
+
+**Placement (board consulté le 25/08/2026)** : Qwen3 32B 40,0 % ·
+**nous 52,0 %** · Qwen3 235B-A22B 59,6 % · Qwen2.5-Coder-32B 16,4 %.
+Un 27B quantifié Q4 **local** au-dessus du 32B de sa propre famille,
+avec 160K de contexte et ~120 t/s de décode utile.
+
+Réserves : edit format `whole` (accepté et affiché par le board, mais
+les gros modèles y sont en `diff`) ; 23 cas ont épuisé une fenêtre de
+contexte interne (28 error_outputs, 3 timeouts) — marge d'amélioration,
+pas gonflement ; run interrompu par un arrêt machine externe à 100/225
+et repris par `--cont` (résultats disjoints dans le temps, même config).
 
 ### Comparables publiés (vérifiés le 25/08/2026)
 
