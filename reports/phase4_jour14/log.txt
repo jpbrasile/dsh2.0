@@ -1,0 +1,31 @@
+LIBRE pour 35 min (il est 07:51:13)
+test-wall allow : C:\Users\test\Documents\dsh2.0\scripts\bench_julia_effort\_fumee\framework\test\gpu3d_integration\amr\test_adaptive_subcycle.jl
+route openrouter-banc / qwen/qwen3.8-27b  amont=openrouter.ai/api/v1  patchs=C:\Users\test\Documents\dsh2.0\harness\lean.patch.yml,C:\Users\test\Documents\dsh2.0\harness\agents.patch.yml
+dsh rc=0  duree=932.0s
+DONE.md : # DONE — adaptive subcycle test-suite strengthening
+
+## What was done
+
+**Why.** 
+appels enregistres : 14
+  servi=qwen/qwen3.8-27b           status=200 ms=73827  in=18655 out=3306  n_messages=4 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=320921 in=33973 out=11490  n_messages=7 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=84683  in=45495 out=2507  n_messages=9 n_tools=22 sys_chars=1890
+  servi=deepseek/deepseek-v4-pro   status=200 ms=58882  in=18996 out=3281  n_messages=4 n_tools=3 sys_chars=17809
+  servi=qwen/qwen3.8-27b           status=200 ms=38966  in=48204 out=1482  n_messages=11 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=3749   in=15408 out=54  n_messages=4 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=3837   in=19516 out=81  n_messages=6 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=50142  in=20135 out=737  n_messages=8 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=9125   in=20939 out=81  n_messages=10 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=27485  in=21845 out=908  n_messages=12 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=41915  in=50608 out=442  n_messages=13 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=144303 in=51394 out=2095  n_messages=16 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=22189  in=45024 out=186  n_messages=18 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=22963  in=45242 out=328  n_messages=20 n_tools=22 sys_chars=1890
+outils offerts (1er appel outille) : coder edit exit_plan_mode glob grep interrupt_agent job_kill job_list job_output julia_gate list_agents mcp__context7__query-docs mcp__context7__resolve-library-id planner pwsh read read_image searcher send_message str_replace_editor todo_write write
+route aussi openrouter / deepseek/deepseek-v4-pro : 1 appel(s)
+VERDICT : OK -- chaque appel servi par qwen/qwen3.8-27b ou deepseek/deepseek-v4-pro (1), fichier ecrit
+cout : 0.2276 USD ce run, cache 26% (116976/455434 tokens d'entree) ; grand livre +14 (995 appels)
+verdict non note : au moins un appel servi par un autre modele que qwen/qwen3.8-27b
+
+[exited with code 0]

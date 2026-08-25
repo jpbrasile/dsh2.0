@@ -94,6 +94,22 @@ jamais touché.
 
 ## Journal
 
+- **J14 (25/08) — renforcement défauts jet/streamer (C5, 2ᵉ angle mort C4 fermé)** :
+  essai 1 **ÉCHEC publié** (279 s, 0,0509 USD — `PI_AI_ERROR: Upstream error
+  from CoreWeave: Internal server error`, panne amont OpenRouter ; WS vérifié
+  intact au md5). Essai 2 **PROPRE** : rc=0 en 932 s, 0,2276 USD, cache 26 %,
+  14 appels ; porte 1× — **VERT** verbatim : « VERDICT VERT (code 0, 1 tests
+  replayed in 8s, 0 not replayed, 0 uncovered) », 97 ok. Livrable : +1 testset
+  « Convenience constructor defaults » (19 @test, 362→404 l.) dans
+  test_adaptive_subcycle.jl, seul fichier touché — défauts jet
+  (FrontPositionThreshold z_fraction == 0.85, l'ancre du run ;
+  FrontVelocityStable(5000.0, 0.5, 10) ; z_target 0.038f0 ; modes), override
+  0.9, défauts streamer (v_min 100000.0, z_fraction 0.9). Standalone vert (WS
+  puis worktree). **Contre-mutation** 0.85→0.8 ⇒ 18/1, l'échec exactement sur
+  l'assertion du défaut (l.383) ; restore md5 ⇒ vert. Les DEUX angles morts
+  mesurés en C4 sont fermés. **Promu** `07ba046c` (non poussé). Preuves
+  `reports/phase4_jour14/` (scan secrets 0, log de l'échec 1 inclus).
+
 - **J13 (25/08) — renforcement `ozone_yield_g_per_kwh` (C5, angle mort C4 fermé)** :
   run propre (rc=0, 664,7 s, 0,1871 USD, cache 19 %, 12 appels), porte appelée
   1× — **VERT du premier coup**, verbatim : « VERDICT VERT (code 0, 1 tests

@@ -1,0 +1,19 @@
+LIBRE pour 35 min (il est 07:45:35)
+test-wall allow : C:\Users\test\Documents\dsh2.0\scripts\bench_julia_effort\_fumee\framework\test\gpu3d_integration\amr\test_adaptive_subcycle.jl
+route openrouter-banc / qwen/qwen3.8-27b  amont=openrouter.ai/api/v1  patchs=C:\Users\test\Documents\dsh2.0\harness\lean.patch.yml,C:\Users\test\Documents\dsh2.0\harness\agents.patch.yml
+dsh rc=1  duree=279.1s
+DONE.md : ABSENT
+appels enregistres : 5
+  servi=qwen/qwen3.8-27b           status=200 ms=189045 in=18655 out=9451  n_messages=4 n_tools=22 sys_chars=1890
+  servi=deepseek/deepseek-v4-pro   status=200 ms=4829   in=17969 out=99  n_messages=4 n_tools=3 sys_chars=17809
+  servi=deepseek/deepseek-v4-pro   status=200 ms=3481   in=23858 out=111  n_messages=6 n_tools=3 sys_chars=17809
+  servi=deepseek/deepseek-v4-pro   status=200 ms=53278  in=28339 out=2487  n_messages=8 n_tools=3 sys_chars=17809
+  servi=qwen/qwen3.8-27b           status=200 ms=25544  in=18066 out=746  n_messages=7 n_tools=22 sys_chars=1890
+outils offerts (1er appel outille) : coder edit exit_plan_mode glob grep interrupt_agent job_kill job_list job_output julia_gate list_agents mcp__context7__query-docs mcp__context7__resolve-library-id planner pwsh read read_image searcher send_message str_replace_editor todo_write write
+route aussi openrouter / deepseek/deepseek-v4-pro : 3 appel(s)
+  dsh : lecons: arme -- variable {{lecons}} depuis C:\Users\test\Documents\dsh2.0\harness\lecons.md, 40 lignes max par role
+VERDICT : ECHEC -- DONE.md absent (voir _fumee/dsh_out.txt)
+cout : 0.0509 USD ce run, cache 57% (60878/106887 tokens d'entree) ; grand livre +5 (981 appels)
+verdict non note : au moins un appel servi par un autre modele que qwen/qwen3.8-27b
+
+[exited with code 1]
