@@ -152,6 +152,7 @@ param(
     [string]$Mmproj = "",
     [int]$ImageMaxTokens = 0,
     [string]$LogPath,
+    [int]$SpecDraftNMax = 0,
     [switch]$CheckOnly,
     [switch]$AssumeDflash2Capable
 )
@@ -413,10 +414,14 @@ if ($Config -eq "q38-mtp") {
     # Per PR #27342 semantics (VERIFY at runtime via --help; DFlash2
     # auto-enables from the checkpoint; block size default). --spec-draft-n-max
     # follows the official incoai README block-8 flag set (7 draft tokens).
+    # -SpecDraftNMax (0 = default 7) added 25/08 for the ctx-sweep parametric
+    # study: the PR #27342 bench reports n-max 4 beating 7 by ~29 % at 32k
+    # (folded review, docs/SPECDEC_4090_BENCH.md 25/08) -- measured HERE, not
+    # assumed. Unset => argv byte-identical to before this parameter existed.
     $cmdArgs += @(
         "--spec-type",        "draft-dflash",
         "-md", $draft,
-        "--spec-draft-n-max", "7"
+        "--spec-draft-n-max", $(if ($SpecDraftNMax -gt 0) { "$SpecDraftNMax" } else { "7" })
     )
 }
 

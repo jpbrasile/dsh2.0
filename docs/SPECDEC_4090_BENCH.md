@@ -543,3 +543,47 @@ dans ce dépôt** (grep 25/08 : docs/ + scripts/ vides) — nos fenêtres mesur�
 
 Rien ici n'invalide les fenêtres 1–6 ; le rule-gate DFlash2 (§ décision)
 reste ouvert et inchangé.
+
+## Fenêtre 7 — 2026-08-25 : étude paramétrique tps × contexte × spéculation (jambes dflash2, PREMIÈRE MESURE RÉELLE)
+
+Ordre utilisateur : « jambes dflash2 : fais l'étude paramétrique tps vs
+context vs mtp actuel ». Rapport complet + preuves :
+`reports/specdec_20260825_ctxsweep_dflash2/RAPPORT.md`. Même outil et mêmes
+points que la fenêtre 4 (`bench_llama_ctx.py`, ctx 65536, KV f16, greedy,
+1 rép/point) ; discipline warmup ajoutée (1er tir froid : prefill −57 %,
+décode insensible — mesuré, bras MTP re-tiré chaud). Le lanceur gagne
+`-SpecDraftNMax` (0 = défaut 7, argv inchangé ; tests 37/37).
+
+**Première : un checkpoint DFlash2 a réellement SERVI ici** (build local PR
+#27342 tête `5ecbe1a`, allowlisté ; garde anti-charabia : texte greedy lu,
+cohérent). La « serving verification » NOT-RUN depuis le 19/08 est levée.
+
+Décode (t/s), n_past 507 → 62 115 :
+
+| bras | 507 | 8 395 | 16 205 | 32 060 | 62 115 | acceptation |
+|---|---:|---:|---:|---:|---:|---|
+| q38-mtp b10488 (« actuel ») | 79,6 | 84,1 | 80,8 | 75,0 | 74,0 | 0,95–0,99 |
+| dflash2 n-max 7 | **127,4** | **128,2** | **121,0** | 109,8 | **116,9** | 0,51–0,61 |
+| dflash2 n-max 4 | 123,1 | 115,8 | 119,3 | **110,3** | 110,7 | 0,70–0,79 |
+| dflash2 n-max 2 | 94,3 | 89,5 | 87,9 | 83,8 | 81,1 | 0,84–0,89 |
+
+- **DFlash2 (n7) bat le MTP actuel de +46 à +60 % en décode sur tout le
+  domaine 507→62k** — l'effondrement « −45 % » du 19/08 était bien un
+  artefact (KV quantifié + binaire v1), jamais un chiffre DFlash2.
+- **Les deux recos externes de petit n-max sont réfutées ICI** : ordre
+  monotone mesuré n2 < n4 ≤ n7 (le « 4>7 de 29 % » du testeur de la PR et
+  le « 24 GB culmine à 2 » communautaire ne se transportent pas ; seul
+  « re-balayer sur SA config » survit). Conséquence : le point 1 des
+  « conséquences protocole » ci-dessus (n-max 4) est REMPLACÉ par la
+  mesure — **n-max 7 (défaut README) reste le réglage servi**.
+- Coût : +1,9 GiB VRAM vs MTP (23,1 GiB au pic, tient sur 24 GB texte
+  seul ; avec mmproj ≈ 24,2 GiB — JUSTE) ; prefill −8–13 %.
+- Validation web du sous-plan (question utilisateur) : PR open, tête
+  `f7aadef` 13 commits devant notre build (dont `Optimize Dflash 2 cost`,
+  `Revert draft sampling in rejection sampling`, mrope fix) — **ces
+  chiffres minorent vraisemblablement la tête courante** ; le rebuild à
+  `f7aadef` attend le clone (bloqué classifieur, commande fournie à
+  l'humain). p_min dflash2 inexistant dans notre build (antérieur au
+  commit du 21/08) — sonde p-min 0.60–0.75 réservée au nouveau build.
+- Le rule-gate (§ décision) reste ouvert : ceci est du t/s serveur ; la
+  décision se prend au wall-clock médian par tâche résolue (harnais A/B).

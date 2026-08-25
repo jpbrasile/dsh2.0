@@ -176,7 +176,10 @@ class SpecDeclToolingTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         out = r.stdout
         self.assertIn("--flash-attn on", out)
-        self.assertIn("--cache-type-k q8_0", out)
+        # Default flipped q8_0 -> f16 on 21/08/2026 (measured on this card:
+        # quantized KV = 60x prefill collapse past ~10k ctx for 674 MiB saved).
+        # Assertion aligned 25/08 -- it still asserted the pre-flip default.
+        self.assertIn("--cache-type-k f16", out)
         self.assertIn("--host 127.0.0.1", out)
         self.assertIn("--alias specdec-q38-plain", out)
         self.assertNotIn("--spec-type", out)
@@ -217,6 +220,19 @@ class SpecDeclToolingTest(unittest.TestCase):
                               "-AssumeDflash2Capable", "-CheckOnly"], env=env)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
         self.assertIn("--spec-draft-n-max 7", r.stdout)
+
+    def test_a_golden_argv_dflash2_spec_draft_n_max_override(self):
+        # -SpecDraftNMax 4 (added 25/08 for the ctx-sweep parametric study;
+        # PR #27342 bench reports 4 > 7 by ~29 % at 32k) overrides the default
+        # 7; unset keeps the argv byte-identical (covered by the test above).
+        env = with_path([self.smi_dir_empty])
+        r = run_ps(LAUNCHER, ["-Config", "q38-dflash2", "-ModelPath", str(self.model),
+                              "-DraftPath", str(self.draft), "-BinaryPath", str(self.bin_dflash),
+                              "-AssumeDflash2Capable", "-CheckOnly",
+                              "-SpecDraftNMax", "4"], env=env)
+        self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+        self.assertIn("--spec-draft-n-max 4", r.stdout)
+        self.assertNotIn("--spec-draft-n-max 7", r.stdout)
 
     # ---- (b) refusals ------------------------------------------------------
     def test_b_dflash2_missing_draft_returns_4(self):
@@ -511,13 +527,16 @@ class SpecDeclToolingTest(unittest.TestCase):
     # ---- KV-cache type / ubatch overrides (2026-08-19 f16 experiment) -------
     def test_kv_defaults_in_argv(self):
         # No -Ctk/-Ctv/-UbatchSize: the effective argv keeps the hardcoded
-        # defaults (q8_0 / q4_0 / 512) -- byte-identical to today.
+        # defaults (f16 / f16 / 512). The defaults were q8_0/q4_0 until
+        # 21/08/2026, when the measured 60x prefill collapse flipped them to
+        # f16 -- these assertions still expected the pre-flip values and were
+        # aligned 25/08 (the launcher was right, the test was stale).
         env = with_path([self.smi_dir_empty])
         r = run_ps(LAUNCHER, ["-Config", "q38-plain", "-ModelPath", str(self.model),
                               "-BinaryPath", str(self.bin_dflash), "-CheckOnly"], env=env)
         self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
-        self.assertIn("--cache-type-k q8_0", r.stdout)
-        self.assertIn("--cache-type-v q4_0", r.stdout)
+        self.assertIn("--cache-type-k f16", r.stdout)
+        self.assertIn("--cache-type-v f16", r.stdout)
         self.assertIn("--ubatch-size 512", r.stdout)
 
     def test_kv_overrides_in_argv(self):
