@@ -48,6 +48,19 @@ function Ecrire([string]$m) {
 
 Ecrire "=== passe distiller-nightly ==="
 
+# --- 0.5. repli PIRT (chantier docs/PIRT.md, 25/08) --------------------------
+# AVANT l'etape serveur : 0 LLM, 0 USD, CPU seul -- tourne meme les nuits ou
+# le GPU refuse et ou la distillation est SAUTEE. Donnees PRIVATE cote
+# framework ; un echec du repli est JOURNALISE mais ne bloque pas la passe.
+$PIRT_DIR = "C:\Users\test\Documents\agentic-flow-phase4\plasma-digital-twin\pirt"
+if (Test-Path "$PIRT_DIR\evenements.jsonl") {
+    & python "$DEPOT\harness\pirt.py" --pirt $PIRT_DIR 2>&1 |
+        ForEach-Object { Add-Content -LiteralPath $JOURNAL -Value ("    " + $_) -Encoding UTF8 }
+    Ecrire ("repli PIRT : exit=" + $LASTEXITCODE + "  (0 fait, 1 jsonl absent, 2 ligne invalide rien ecrit, 3 ecriture)")
+} else {
+    Ecrire "repli PIRT : evenements.jsonl absent, saute (repertoire pirt/ non deploye)"
+}
+
 # --- 1. serveur : trouve ou lance -------------------------------------------
 $dejaLa = $false
 try {

@@ -105,3 +105,37 @@ il mesure — aucun travail rétroactif, aucun parsing de prose.
 - Risque principal : la tentation de laisser la machine remplir `importance` —
   interdit par principe 1 ; le second : des événements écrits en prose libre —
   paré par le gabarit JSONL obligatoire au triage.
+
+## Implémentation (25/08, « pirt add on ») — écarts assumés vs la proposition
+
+Outillage : `harness/pirt.py` (OPEN). Données : `plasma-digital-twin/pirt/`
+(PRIVATE) — `phenomenes.yaml` (humain, porte `importance`),
+`evenements.jsonl` (source de vérité, append-only), `PIRT.md` (bloc généré),
+`pirt.sqlite` (cache dérivé, gitignoré, reconstruit à chaque repli).
+
+Trois raffinements mesurés sur l'amorçage, documentés ici parce qu'ils
+précisent le schéma proposé :
+
+1. **`couverture` = dernier événement par (phénomène, constante)**, pas le
+   cumul brut : un no-bite fermé par un renforcement prouvé (ozone C4→J13)
+   compte 1.0, pas 0.5 — c'est l'état du verrou qui classe, pas l'historique.
+2. **Colonne `portee` ajoutée** (`ancres` > `litteral` > `aucune`) : l'audit
+   C4 a montré deux « bites » qui ne mordent que sur l'assertion du littéral
+   (pic_core 1/110, coupling 1/92) — sans cette colonne ils seraient
+   indistinguables d'un verrou réel, et le tri les fait remonter en tête.
+3. **La base SQLite est un dérivé, jamais la source** : reconstruite de zéro
+   à chaque repli depuis le JSONL (idempotence par construction, md5 du
+   PIRT.md identique sur double run) ; fail-closed : une ligne invalide ⇒
+   exit 2 et RIEN n'est écrit.
+
+Câblage : étape 0.5 de `scripts/ops/distiller_nightly.ps1`, AVANT l'étape
+serveur — le repli tourne même les nuits où le GPU refuse (0 LLM, 0 USD) ;
+un échec du repli est journalisé mais ne bloque pas la distillation.
+
+État des Done : **D1 fait** (comptes des 6 lignes d'amorçage reproduits :
+9/99, 1/19, 1/110, 1/92, 5/70, 4/66 ; idempotence et fail-closed testés) ;
+**D2 gabarit prouvé** sur les événements réels de la campagne du 25/08
+(l'append au fil du triage se prouve à la prochaine campagne) ; **D3 câblé**
+(la preuve « une nuit complète » se lit dans le journal nocturne après
+l'installation des tâches — toujours en attente d'exécution manuelle de
+`installer_taches_nocturnes.ps1`) ; **D4** : red team du chantier ci-dessous.
