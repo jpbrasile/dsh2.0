@@ -1,0 +1,5 @@
+serveur : specdec-q38-dflash2  build=b1-f7aadef  n_ctx=65536  vision=False
+    calibrage :    100 mots ->    290 jetons (2.900 jeton/mot)
+    calibrage :    172 mots ->    578 jetons (3.360 jeton/mot)
+    calibrage :    148 mots ->    482 jetons (3.257 jeton/mot)
+~500       n_past=507    prefill=   679.2 t/s (   507 tok)  decode=128.70 t/s ( 220 tok)

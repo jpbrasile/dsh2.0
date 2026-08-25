@@ -17,6 +17,15 @@ Limites ; « vérifie les problèmes potentiels de warm up » : fait, quantifié
 - Serveur : lanceur `start_llama_qwen38_27b_specdec.ps1`, ctx 65536,
   KV f16/f16, ubatch 512, pas de mmproj (texte seul), port 8005,
   production :8004 volontairement arrêtée depuis le 23/08 (pré-existant).
+- **`--parallel 1` épinglé et vérifié** (question utilisateur 25/08) : le
+  lanceur le passe toujours (ligne `"--parallel", "1"`), et les 12 logs
+  serveur du balayage portent tous `n_slots = 1` avec `n_ctx_slot` égal au
+  `-c` entier (65536 / 81920 / 98304 / 131072). Conséquences : le contexte
+  n'est jamais divisé entre slots (les plafonds 80K/96K/128K et le
+  65 KiB/jeton seraient faux avec `-np > 1`, car `n_ctx_slot = c / np`),
+  et les requêtes du bench sont sérialisées côté serveur — aucun débit
+  n'est contaminé par du batching inter-slots. `kv_unified = 'false'`
+  partout (défaut).
 - Modèle cible : Qwen3.8-27B Q4_K_M épinglé (17 106 775 008 B) ; draft
   DFlash2 incoai Q4_K_M épinglé (1 143 006 752 B).
 - **Warmup (ordre utilisateur, mesuré)** : le 1er tir d'un serveur froid
@@ -131,13 +140,110 @@ bases VRAM mesurées ici), puis un serveur à la fois, nvidia-smi en main.
 |---|---|---|---|
 | dflash2-n7 (5ecbe1a) | **80K** (88K = OOM arithmétique : +532 MiB > marge 488) | 105,2 t/s @ n_past 77 415 | 24 076 / 24 564 MiB |
 | q38-mtp | **96K** | 64,6 t/s @ n_past 94 173 | 23 428 MiB |
-| q38-plain | 128K **chargé** (24 084 MiB, marge 480) | point profond NON mesuré (interrompu par l'utilisateur) | — |
+| q38-plain | 128K **chargé** (24 084 MiB, marge 480) | point profond mesuré (relance après interruption non voulue) : **s'effondre** — prefill 72,8 t/s (28,4 min de remplissage !), décode 16,73 t/s @ n_past 123 909 | 24 110 MiB |
 
-**KV quantifié : la sortie de secours n'existe pas.** L'hypothèse « le q
-asymétrique rend de la VRAM » est mesurée morte sur cette famille hybride :
-K q8_0 / V f16 (jamais mesuré avant ici) rend bien 1 538 MiB mais coûte
-prefill ×38 (68,3 vs ~2 600 t/s à 14k) et décode ×4,8 (16,9 vs ~81) —
-même pathologie que le q8_0/q4_0 des fenêtres 2-3. f16 est OBLIGATOIRE.
+**Verdict 128K f16 : charge mais ne sert pas.** Cause non prouvée ; la
+marge VRAM de ~450 MiB est le suspect (le même bras en q8/q8 avec ~870 MiB
+de marge sert à pleine vitesse, voir 7bis — compatible avec l'hypothèse,
+pas une preuve du mécanisme).
+
+**KV quantifié, verdict INITIAL (dépassé le soir même — gardé comme trace) :**
+« K q8_0 / V f16 rend 1 538 MiB mais coûte prefill ×38 (68,3 t/s à 14k) et
+décode ×4,8 (16,9) — même pathologie que le q8_0/q4_0 des fenêtres 2-3 ;
+f16 obligatoire. » Ce verdict était vrai des combinaisons MESURÉES mais la
+variable causale n'était pas le type : c'était la MIXITÉ. Voir 7bis.
+
+## 7bis — KV quantifié débloqué : les kernels FA sont symétriques (25/08 soir, ordre « web search : d'autres l'ont fait »)
+
+**Cause racine, prouvée dans nos binaires.** Sans `GGML_CUDA_FA_ALL_QUANTS`
+(=OFF dans notre CMakeCache f7aadef ; le zip officiel b10488 est bâti
+pareil), le build CUDA ne compile que 4 kernels flash-attention vec :
+`f16/f16`, `q4_0/q4_0`, `q8_0/q8_0`, `bf16/bf16`
+(`ggml/src/ggml-cuda/CMakeLists.txt:119-124`). Toute combinaison **mixte**
+tombe sur un repli silencieux ×25-38, sans warning (issue upstream #24485 :
+96 vs 2 361 t/s de prefill). Nos deux essais pathologiques — q8_0/q4_0
+(fenêtres 2-3, la reco de la revue externe) et q8_0-K/f16-V (25/08) —
+étaient tous deux mixtes. La seule combinaison rapide déjà présente,
+q8_0/q8_0 symétrique, n'avait jamais été mesurée.
+
+**Sonde q8_0/q8_0 @65536 (f7aadef n7, protocole identique à la sonde kq8) :**
+
+| point | kq8 mixte (pathologique) | q8/q8 symétrique | f16 n7 (réf.) |
+|---|---|---|---|
+| ~500, décode | 73,6 t/s | **131,9** | 133,9 |
+| ~14k, prefill | 68,3 | **2 316** | ~2 000 |
+| ~14k, décode | 16,9 | **129,6** | ~126 |
+
+VRAM 21 202 MiB (−1 862 vs f16). Vitesse f16, KV ÷2 : la pathologie était
+le kernel manquant, pas la quantification.
+
+**dflash2 n7 q8_0/q8_0 @131 072 — balayage complet (impossible en f16,
+plafond 80K) :** VRAM 23 698 chargé / 23 858 sous charge, marge ~870 MiB.
+
+| n_past | prefill t/s | décode t/s |
+|---|---|---|
+| 507 | 1 132 | 131,1 |
+| 8 395 | 2 299 | 131,6 |
+| 16 205 | 2 345 | 125,6 |
+| 32 060 | 2 225 | 104,4 |
+| 62 115 | 2 011 | 93,4 |
+| 99 117 | 1 787 | 74,7 |
+| 123 909 | **1 654** | **79,4** |
+
+Au point 123 909 : **×23 en prefill et ×4,75 en décode** vs le plain f16
+@128K (72,8 / 16,7). Le remplissage 125k passe de 28,4 min à 75 s.
+(Le décode 93,4 @62k est −23 % vs f16@65K — 138 jetons générés seulement,
+acceptation spéculative sous KV quantifié à retirer au propre.)
+
+**Sonde q4_0/q4_0 @65536 :** VRAM 20 178 MiB (−2 886 vs f16) ; ~500 :
+133,8 t/s (= f16) ; ~14k : prefill 2 276, décode 117,6 (−9 % vs q8/q8).
+Aucun effondrement.
+
+**200K atteint et balayé.** `-c 204800` q4/q4 charge à **23 306 MiB**
+(prédit 23 272, écart 34 MiB) — le `-c 200000` de la revue externe,
+inatteignable en f16 (~28 GiB), est réel sur la 4090 sans rebuild :
+
+| n_past | prefill t/s | décode t/s |
+|---|---|---|
+| 507 | 1 813 | 134,0 |
+| 32 060 | 2 203 | 116,7 |
+| 62 115 | 2 011 | 91,7 |
+| 123 909 | 1 671 | 73,8 |
+| **188 643** | **1 414** | **65,9** |
+
+**MAIS la qualité disqualifie probablement le q4/q4** (question utilisateur
+« le dissymétrique q8 q4 était pour la qualité ») — discussion upstream
+#23470 (mai-août 2026, KL-divergence sur Qwen2.5-7B + ARC-500) :
+
+| KV | KLD moyen | tokens identiques |
+|---|---|---|
+| q8/q8 | 0,0018 | 98,0 % |
+| q8-K/q4-V | 0,0048 | 96,7 % |
+| q4/q4 | **5,51** | **11,6 %** |
+
+« q4_0 sur K seul reproduit l'effondrement ; q4_0 sur V seul change 1/500
+réponses. » Le K ne supporte pas 4 bits ; le tableau 200K ci-dessus est un
+plafond de VITESSE, pas une config de production. (Chiffres d'un autre
+modèle de la famille — à recouper sur le nôtre avant toute décision.)
+
+**Asymétrique q8-K/q4-V ESSAYÉ sur f7aadef (pas seulement déduit)** :
+20 422 MiB, ~500 : 75,4 t/s ; ~14k : prefill **36,6** / décode **8,3 t/s**
+— effondrement confirmé sur ce binaire (kernel mixte absent). C'est
+pourtant LE réglage de qualité (96,7 % ci-dessus) : d'où la route B.
+
+**Route B lancée le 25/08 au soir** : rebuild f7aadef avec
+`-DGGML_CUDA_FA_ALL_QUANTS=ON` (build-faq séparé, l'installé n'est pas
+touché) → débloquera q8-K/q4-V, plafond prédit ~160K (24,4 KiB/jeton).
+Leviers notés non essayés : `--cache-type-k-draft/v-draft` (KV du DRAFT,
+vus dans un repo Windows-DFlash2 tournant q4/q4 @262K sur 4090 moddée
+48 GB — sans contrôle qualité apparent). Forks TurboQuant (X-15,
+Indras-Mirror TBQ4) : hors upstream, incompatibilités MTP/vision —
+seulement si besoin au-delà.
+
+**Limite honnête inchangée** : la qualité sous KV quantifié n'est pas
+mesurée ICI (sources externes seulement) — rappel long + greedy-diff vs
+f16 + acceptation au propre restent les préalables production, y compris
+pour le candidat q8/q8 @128K.
 
 ## Validation web du sous-plan (25/08, sur question utilisateur)
 

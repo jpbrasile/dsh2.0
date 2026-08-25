@@ -606,3 +606,55 @@ profond non mesuré (interrompu). **KV quantifié définitivement clos** : la
 variante K-seul q8_0/f16 (jamais mesurée avant) rend 1 538 MiB et coûte
 prefill ×38 / décode ×4,8 — même pathologie ; f16 obligatoire. Le lanceur
 gagne `-SpecDraftPMin` (0 = flag absent, argv inchangé).
+
+## Fenêtre 7bis — 2026-08-25 soir : le « f16 obligatoire » est RENVERSÉ (kernels FA symétriques)
+
+Ordre utilisateur : « web search : tu n'as pas réussi mais d'autres l'ont
+fait récemment ». Verdict : ils avaient raison, et la fenêtre 7 se trompait
+de variable causale.
+
+**Cause racine (prouvée dans nos binaires, pas sur le web)** : sans
+`GGML_CUDA_FA_ALL_QUANTS` (OFF chez nous ET dans les zips officiels), le
+build CUDA ne compile que 4 kernels FA vec — `f16/f16`, `q4_0/q4_0`,
+`q8_0/q8_0`, `bf16/bf16` (`ggml-cuda/CMakeLists.txt:119-124`). Toute
+combinaison KV **mixte** ⇒ repli silencieux ×25-38 (issue #24485, jamais
+de warning). Nos deux essais « pathologiques » (q8_0/q4_0 des fenêtres
+2-3 — la reco de la revue externe — et K-seul q8_0/f16 de la fenêtre 7)
+étaient tous deux mixtes. La combinaison rapide déjà compilée, q8_0/q8_0
+symétrique, n'avait jamais été essayée.
+
+**Mesures (f7aadef n7, greedy, warmup jeté, 1 rép/pt)** :
+- q8/q8 @65536 : décode 131,9 / prefill 2 316 à 14k — **vitesse f16,
+  −1 862 MiB** (21 202 vs 23 064).
+- q8/q8 @**131 072** (impossible en f16, plafond 80K) : 7 points, décode
+  131 → **79,4 t/s @ n_past 123 909**, prefill 1 654 à 125k, VRAM 23 858.
+  Le plain f16 @128K au même point : 72,8 / 16,73 t/s (mesuré le soir
+  même : « charge mais ne sert pas », marge 450 MiB — en q8/q8 la marge
+  remonte à ~870 MiB et tout va vite ; hypothèse pression-VRAM compatible,
+  mécanisme non prouvé).
+- q4/q4 @65536 : 133,8 t/s au point 500 (= f16), 117,6 à 14k (−9 % vs
+  q8/q8), 20 178 MiB.
+- q4/q4 @**204 800** : CHARGE à 23 306 MiB (prédit 23 272) — le
+  `-c 200000` de la revue externe, inatteignable en f16 (~28 GiB), tient
+  sur la 4090 sans rebuild. Balayage profond : voir RAPPORT.md 7bis.
+
+**Limite honnête** : qualité sous KV quantifié NON mesurée (vitesse/VRAM
+seulement) ; avant production : rappel long, greedy-diff vs f16, taux
+d'acceptation au propre. Routes suivantes : rebuild
+`-DGGML_CUDA_FA_ALL_QUANTS=ON` (q8-K/q4-V asymétrique), forks TurboQuant
+(4090 : X-15 07/05, Indras-Mirror TBQ4 03/08 — hors upstream).
+
+**Addendum 25/08 tard — 200K balayé, qualité recadrée, asymétrique essayé.**
+q4/q4 @204 800 balayage complet : 134,0 t/s @507 -> **65,9 t/s @ n_past
+188 643** (prefill 1 414), VRAM stable. MAIS discussion upstream #23470
+(KLD, Qwen2.5-7B + ARC-500) : q8/q8 = 98,0 % de tokens identiques,
+q8-K/q4-V = 96,7 %, **q4/q4 = 11,6 %** (« q4_0 sur K seul reproduit
+l'effondrement ») -> le 200K est un plafond de VITESSE, pas une config de
+production ; l'intuition utilisateur (« le dissymétrique était pour la
+qualité ») est validée par la source. Asymétrique q8-K/q4-V ESSAYÉ sur
+f7aadef (ordre « l'as-tu essayé ? ») : 36,6 / 8,3 t/s à 14k — effondré,
+kernel mixte absent, comme prédit. Route B lancée : rebuild
+`-DGGML_CUDA_FA_ALL_QUANTS=ON` (build-faq séparé) -> visera q8-K/q4-V
+~160K. Leviers non essayés notés : `--cache-type-k-draft/v-draft`.
+Config recommandée en attendant le rebuild : **q8/q8 @131 072** (79,4 t/s
+au point 123 909, qualité 98 % selon source externe — à recouper ici).
