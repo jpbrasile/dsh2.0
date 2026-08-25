@@ -264,11 +264,20 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
   → fixed, wall unit 35/35). `redteam/2-done.md`, `docs/PHASE2.md` §7. Phase 2 total 1.22 USD.
 
 ### 3 — Memory
-- [ ] PIRT registry (proposed 2026-08-25, user "go PIRT"): the nightly loop
-      additionally folds campaign triage events (mutation bite/no-bite, promoted
-      suites, anchors, V&V notes) into a phenomena ranking table; importance is
-      human-only; data PRIVATE (framework repo), tooling OPEN. Design + seed
-      rows + done-criteria: `docs/PIRT.md`.
+- [x] PIRT registry (proposed 2026-08-25 "go PIRT"; implemented same day, user
+      "pirt add on"): campaign triage events (mutation bite/no-bite, promoted
+      suites, anchors, V&V notes) fold nightly into a phenomena ranking table;
+      importance is human-only; data PRIVATE (framework `pirt/`), tooling OPEN
+      (`harness/pirt.py`). **⚑ RT** (D4): deepseek-v4-pro on an OPEN-pure
+      payload, `redteam/6-pirt-25-08.md` — 1 finding kept and fixed (empty
+      fields now fail closed), no HIGH open. D1 proved on the 6 seed rows
+      (report counts reproduced exactly; idempotent by md5; fail-closed
+      tested); D2 template proved on the real 25/08 events; D3 wired as
+      nightly step 0.5 (0 LLM, 0 USD — full-night proof pending the scheduled
+      tasks' manual installation). First measured top-3: the two literal-only
+      locks (penning, electron mass) then the AMR jet threshold. Human input
+      still open: the `importance` column of `pirt/phenomenes.yaml`.
+      `docs/PIRT.md` (design + implementation addendum).
 - [x] Session-end distiller (DeepSeek off-peak; local Qwen after Phase 5):
       scores → SQLite; lessons → planner notes.
       **⚑ RT:** poison a session log with adversarial content; check it does not
@@ -309,6 +318,17 @@ criterion only. Intermediate ⚑ RT steps are covered by free, repeatable contro
       served + wired + distillation proven local at 0 USD + probation enrolled 1/3
       verts. Reserves: distiller DEFAULT stays OpenRouter (nightly wiring is a user
       decision) and embeddings endpoint measured but has no consumer yet.)*
+      *(2026-08-25 update: nightly wiring ORDERED by user and built —
+      `scripts/ops/distiller_nightly.ps1` (find-or-launch :8004, leave-as-found,
+      verified stop) + `julia_gate_arret.ps1` (00:50/04:50 pre-sweep) +
+      `installer_taches_nocturnes.ps1`; a manual pass ran green 25/08 01:21
+      (exit 0, both pools, server stopped verified). **⚑ RT** on the wiring +
+      routes: `redteam/5-harnais-25-08.md` (deepseek-v4-flash via OpenRouter,
+      user order after freellmapi shedding measured) — 2 findings kept and
+      fixed (context-window floors, post-run health journal), 8 refuted
+      against code, no HIGH open. STILL PENDING: the user must run
+      `installer_taches_nocturnes.ps1` once — measured 25/08: tasks not
+      registered yet.)*
 - [ ] freellmapi in Docker: real ENCRYPTION_KEY, provider keys, ToS-violating
       providers disabled, `coding` fallback chain; refresh script extended to its
       catalog; OPEN workers migrated from OpenRouter free to freellmapi chains.
