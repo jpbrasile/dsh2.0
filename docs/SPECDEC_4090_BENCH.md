@@ -658,3 +658,16 @@ kernel mixte absent, comme prédit. Route B lancée : rebuild
 ~160K. Leviers non essayés notés : `--cache-type-k-draft/v-draft`.
 Config recommandée en attendant le rebuild : **q8/q8 @131 072** (79,4 t/s
 au point 123 909, qualité 98 % selon source externe — à recouper ici).
+
+**Addendum 25/08 nuit — route B faite : l'asymetrique qualite tourne a 160K.**
+Rebuild `build-faq` avec `-DGGML_CUDA_FA_ALL_QUANTS=ON` (meme empreinte de
+version que l'installe : le CHEMIN -BinaryPath distingue, allowlist
+annotee, tests 37/37). q8-K/q4-V @65536 : 36,6/8,3 -> **2 324 / 122,2 t/s**
+(x63 recupere). Balayage @**163 840** (predit 23 656 MiB, charge 23 666,
+ecart 10 ; 23 832 sous charge) : 123,4 t/s @32k, 92,5 @62k, 78,5 @124k,
+**68,5 t/s @ n_past 153 759** — aucun effondrement. Config d'equilibre
+vitesse x qualite (96,7 % selon #23470) x contexte. Recap des plafonds du
+jour : f16 80K -> q8/q8 131K (79,4 @124k) -> q8K/q4V 160K (68,5 @154k) ->
+q4/q4 204,8K (65,9 @189k, qualite disqualifiante probable). Restent avant
+revendication SOTA : greedy-diff/rappel long sur NOTRE modele, acceptation
+au propre, et publication (pousse).

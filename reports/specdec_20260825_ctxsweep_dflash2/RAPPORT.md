@@ -231,9 +231,30 @@ modèle de la famille — à recouper sur le nôtre avant toute décision.)
 — effondrement confirmé sur ce binaire (kernel mixte absent). C'est
 pourtant LE réglage de qualité (96,7 % ci-dessus) : d'où la route B.
 
-**Route B lancée le 25/08 au soir** : rebuild f7aadef avec
-`-DGGML_CUDA_FA_ALL_QUANTS=ON` (build-faq séparé, l'installé n'est pas
-touché) → débloquera q8-K/q4-V, plafond prédit ~160K (24,4 KiB/jeton).
+**Route B FAITE le 25/08 au soir** : rebuild f7aadef avec
+`-DGGML_CUDA_FA_ALL_QUANTS=ON` (build-faq séparé, l'installé pas touché ;
+même empreinte de version — le CHEMIN distingue, allowlist annotée,
+tests 37/37 re-passés). Résultat :
+
+- Sonde @65536 : q8-K/q4-V passe de 36,6/8,3 à **2 324 / 122,2 t/s** à
+  14k — ×63 récupéré, VRAM 20 690 MiB.
+- **Balayage @163 840 (prédit 23 656 MiB, chargé 23 666 — écart 10 MiB ;
+  23 832 sous charge, marge ~730)** :
+
+| n_past | prefill t/s | décode t/s |
+|---|---|---|
+| 507 | 881 | 109,6 |
+| 32 060 | 2 217 | **123,4** |
+| 62 115 | 2 018 | 92,5 |
+| 123 909 | 1 676 | 78,5 |
+| **153 759** | **1 544** | **68,5** |
+
+Aucun effondrement. C'est la config d'équilibre : le réglage QUALITÉ de
+#23470 (96,7 % tokens identiques) au contexte 160K à 68,5 t/s profond.
+Curiosité notée : au point 500 ce build génère 158 jetons (vs 220-224
+build standard) et lit 107-111 t/s — sortie différente sous KV quantifié
+(longueur de réponse greedy change), pas une régression prouvée ; les
+points 32k+ sont au niveau ou AU-DESSUS du q8/q8 standard.
 Leviers notés non essayés : `--cache-type-k-draft/v-draft` (KV du DRAFT,
 vus dans un repo Windows-DFlash2 tournant q4/q4 @262K sur 4090 moddée
 48 GB — sans contrôle qualité apparent). Forks TurboQuant (X-15,

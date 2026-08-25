@@ -177,7 +177,7 @@ $script:KnownDflash2Builds = @{}
 # pre-upstream-merge: this binary predates any post-merge release; re-verify
 # with the real DFlash2 checkpoint in the approved outage window.
 $script:KnownDflash2Builds["0.1.2-dev (build 1, commit 5ecbe1a)"] = "PR #27342 head 5ecbe1a built locally 2026-08-19 (pre-upstream-merge), --help draft-dflash verified"
-$script:KnownDflash2Builds["0.1.2-dev (build 1, commit f7aadef)"] = "PR #27342 head f7aadef (24/08) built locally 2026-08-25 from user-cloned z-lab/llama.cpp-fork dflash2 (13 commits past 5ecbe1a: Optimize Dflash 2 cost, rejection-sampling revert, mrope fix, p_min), --help draft-dflash verified"
+$script:KnownDflash2Builds["0.1.2-dev (build 1, commit f7aadef)"] = "PR #27342 head f7aadef (24/08) built locally 2026-08-25 from user-cloned z-lab/llama.cpp-fork dflash2 (13 commits past 5ecbe1a: Optimize Dflash 2 cost, rejection-sampling revert, mrope fix, p_min), --help draft-dflash verified. ATTENTION deux binaires portent cette empreinte : llama-cuda-pr27342-f7aadef (standard, 4 kernels FA symetriques seuls) et src-dflash2/build-faq (GGML_CUDA_FA_ALL_QUANTS=ON, 25/08 soir, KV mixte q8K/q4V rapide) -- seul le CHEMIN -BinaryPath les distingue, le journal de l'arm doit le porter"
 
 # --- per-config defaults ----------------------------------------------------
 # Pinned artifact paths (see docs/SPECDEC_4090_BENCH.md). The launcher NEVER
