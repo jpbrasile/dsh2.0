@@ -1,0 +1,29 @@
+LIBRE pour 35 min (il est 03:50:51)
+test-wall allow : C:\Users\test\Documents\dsh2.0\scripts\bench_julia_effort\_fumee\framework\test\gpu3d_integration\chemistry\test_ozone_3d.jl
+route openrouter-banc / qwen/qwen3.8-27b  amont=openrouter.ai/api/v1  patchs=C:\Users\test\Documents\dsh2.0\harness\lean.patch.yml,C:\Users\test\Documents\dsh2.0\harness\agents.patch.yml
+dsh rc=0  duree=664.7s
+DONE.md : # DONE — ozone_yield_g_per_kwh test hardening
+
+## What was done
+
+Mandated sequen
+appels enregistres : 12
+  servi=qwen/qwen3.8-27b           status=200 ms=284863 in=18980 out=13531  n_messages=4 n_tools=22 sys_chars=1890
+  servi=deepseek/deepseek-v4-pro   status=200 ms=3244   in=18457 out=117  n_messages=4 n_tools=3 sys_chars=17809
+  servi=deepseek/deepseek-v4-pro   status=200 ms=68086  in=31275 out=3667  n_messages=7 n_tools=3 sys_chars=17809
+  servi=qwen/qwen3.8-27b           status=200 ms=61664  in=32748 out=2451  n_messages=7 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=2701   in=16614 out=28  n_messages=4 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=4035   in=21433 out=65  n_messages=6 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=1898   in=23887 out=40  n_messages=8 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=19336  in=29697 out=1118  n_messages=10 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=4489   in=30882 out=44  n_messages=12 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=63803  in=31167 out=1834  n_messages=14 n_tools=9 sys_chars=2355
+  servi=qwen/qwen3.8-27b           status=200 ms=67750  in=37069 out=3220  n_messages=10 n_tools=22 sys_chars=1890
+  servi=qwen/qwen3.8-27b           status=200 ms=13944  in=40377 out=285  n_messages=13 n_tools=22 sys_chars=1890
+outils offerts (1er appel outille) : coder edit exit_plan_mode glob grep interrupt_agent job_kill job_list job_output julia_gate list_agents mcp__context7__query-docs mcp__context7__resolve-library-id planner pwsh read read_image searcher send_message str_replace_editor todo_write write
+route aussi openrouter / deepseek/deepseek-v4-pro : 2 appel(s)
+VERDICT : OK -- chaque appel servi par qwen/qwen3.8-27b ou deepseek/deepseek-v4-pro (2), fichier ecrit
+cout : 0.1871 USD ce run, cache 19% (62389/332586 tokens d'entree) ; grand livre +12 (958 appels)
+verdict non note : au moins un appel servi par un autre modele que qwen/qwen3.8-27b
+
+[exited with code 0]

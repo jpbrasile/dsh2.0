@@ -94,6 +94,22 @@ jamais touché.
 
 ## Journal
 
+- **J13 (25/08) — renforcement `ozone_yield_g_per_kwh` (C5, angle mort C4 fermé)** :
+  run propre (rc=0, 664,7 s, 0,1871 USD, cache 19 %, 12 appels), porte appelée
+  1× — **VERT du premier coup**, verbatim : « VERDICT VERT (code 0, 1 tests
+  replayed in 3.2s, 0 not replayed, 0 uncovered) », 99 ok. Livrable : +1
+  testset « First-principles G-value » (23 @test, 76→99) dans
+  test_ozone_3d.jl, seul fichier touché — appel nominal VIA LE KWARG PAR
+  DÉFAUT sur ancres sondées rtol 1e-6 (R_O3 2.29e8, G 8.3827397962e-1,
+  eV_per_O3 2.1365182533e3, η 1.2263351049e-3), identité défaut==explicite,
+  sensibilité f=1.3 strictement croissante, 2 gardes dégénérées exactes,
+  expression définissante de OZONE_G_FACTOR_G_PER_KWH. Standalone 99/99 en
+  0,6 s (WS puis worktree). **Contre-mutation** OZONE_F_N2A_BRANCH 1.2→1.3 ⇒
+  90/9, les 9 échecs tous dans le nouveau testset (littéral l.401, ancres
+  nominales l.415-417, identité l.423-425, sensibilité l.433-434) ; restore
+  md5 ⇒ 99/99. L'angle mort mesuré en C4 (76/76 muté) est fermé. **Promu**
+  `5780f658` (non poussé). Preuves `reports/phase4_jour13/` (scan secrets 0).
+
 - **Interlude (25/08) — audit-mutation gpu3d_integration (campagne 8 h, C4)** :
   4 familles auditées (mutation d'une constante de formule dans le src WS,
   rerun, restore vérifié md5 == worktree, rerun vert) : **chemistry NO-BITE**
