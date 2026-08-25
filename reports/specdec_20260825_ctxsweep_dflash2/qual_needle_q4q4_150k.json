@@ -1,0 +1,22 @@
+{
+ "label": "q4q4",
+ "mode": "needle",
+ "cible": 150000,
+ "n_past": 148837,
+ "codes": [
+  1150,
+  1318,
+  1548,
+  1840,
+  2194
+ ],
+ "trouves": [
+  1150,
+  1318,
+  1548,
+  1840,
+  2194
+ ],
+ "score": 5,
+ "reponse": "\n\n<think>\nThe user wants me to find five secret codes hidden in a very long technical journal text. Let me search through the text for the secret codes.\n\nLooking through the text, I can find:\n\n1. \"Note importante: le code secret alpha est 1150.\" - found after bloc1332\n2. \"Note importante: le code secret bravo est 1318.\" - found after bloc6660\n3. \"Note importante: le code secret charlie est 1548.\" - found after bloc13322\n4. \"Note importante: le code secret delta est 1840.\" - found after bloc19983\n5. \"Note importante: le code secret echo est 2194.\" - found after bloc25311\n\nSo the five codes in order are:\n- alpha: 1150\n- bravo: 1318\n- charlie: 1548\n- delta: 1840\n- echo: 2194\n</think>\n\n1150\n1318\n1548\n1840\n2194"
+}

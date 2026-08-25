@@ -261,10 +261,50 @@ vus dans un repo Windows-DFlash2 tournant q4/q4 @262K sur 4090 moddée
 Indras-Mirror TBQ4) : hors upstream, incompatibilités MTP/vision —
 seulement si besoin au-delà.
 
-**Limite honnête inchangée** : la qualité sous KV quantifié n'est pas
-mesurée ICI (sources externes seulement) — rappel long + greedy-diff vs
-f16 + acceptation au propre restent les préalables production, y compris
-pour le candidat q8/q8 @128K.
+## 7ter — Banc QUALITÉ, étage 1 : needle + greedy-diff (25/08 après-midi, ordre « les deux, attention aux launch nightly »)
+
+Nocturne vérifié AVANT de lancer : aucune tâche installée (noms exacts
+`dsh-julia-gate-arret` / `dsh-distiller-nightly` absents de schtasks —
+l'installateur attend toujours son exécution manuelle) ; banc calé
+l'après-midi, GPU rendu à 0 MiB entre configs.
+
+Outil : `scripts/bench_kv_quality.py` (selftest known-BAD, garde
+hors-bornes héritée, codes déterministes par profondeur). Budget needle
+512 jetons — leçon mesurée : à 128 jetons la RÉFÉRENCE f16 rendait 3/5,
+le modèle brûlait le budget en `<think>` avant d'atteindre delta/echo
+(échec de budget, pas de rappel ; protocole corrigé, référence retirée).
+
+**Needle (5 codes plantés à 5/25/50/75/95 %, 1 tir greedy, verite
+terrain objective) — TOUT PASSE :**
+
+| config | 60k | 120k | 150k | 190k |
+|---|---|---|---|---|
+| f16 (réf., plafond 65K) | **5/5** | — | — | — |
+| q8/q8 @131K | **5/5** | **5/5** | — | — |
+| q8-K/q4-V @160K (FAQ) | **5/5** | **5/5** | **5/5** | — |
+| q4/q4 @204,8K | **5/5** | **5/5** | **5/5** | **5/5** |
+
+**L'effondrement q4-K de #23470 NE SE REPRODUIT PAS sur Qwen3.8-27B** au
+rappel saillant — dépendance modèle confirmée (leurs chiffres venaient de
+Qwen2.5-7B à ctx 512). Le needle ne discrimine aucune config.
+
+**Greedy-diff vs f16 (3 profondeurs, 256 jetons)** : divergence de
+trajectoire, pas dégradation prouvée — préfixes identiques 33-256 jetons,
+et l'ordre n'est pas stable (q8q4 rend 100 % à 60k là où q8q8 rend 73 %) :
+un seul flip de jeton en début de génération suffit à faire diverger tout
+le reste (fil du rasoir greedy). Instrument déclaré NON discriminant pour
+classer les configs ; c'est le niveau logits qui tranche → étage 2.
+
+**Étage 2 lancé** (ARC-challenge 299 tâches + PPL wikitext-2, 4 configs,
+MÊME binaire build-faq pour toutes — le delta mesure la config KV, jamais
+la chaîne ; `-fa on` forcé). Jeux téléchargés : wikitext-2-raw-v1.zip
+(4,7 Mo, HF ggml-org/ci) et arc-challenge-validation.bin (95 Ko, HF
+ikawrakow/validation-datasets-for-llama.cpp). Résultats au retour.
+
+**Ce qui restera non mesuré après l'étage 2** : l'acceptation spéculative
+par type de contenu (nos t/s viennent d'un texte de bench favorable) et
+la qualité logits AU CONTEXTE LONG (ARC/PPL travaillent court ; le long
+n'est couvert que par le needle).
 
 ## Validation web du sous-plan (25/08, sur question utilisateur)
 

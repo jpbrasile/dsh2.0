@@ -1,0 +1,28 @@
+{
+ "label": "q8q8",
+ "mode": "diff",
+ "n_predict": 256,
+ "points": [
+  {
+   "cible": 500,
+   "n_mots": 148,
+   "n_past": 518,
+   "contenu": "\n\n<think>\nThe user is asking me to look at a \"technical journal\" that consists of a sequence of blocks (bloc0 through bloc147), and then:\n1. Write a paragraph describing the structure of this journal\n2. Propose three numbered improvements\n\nLet me analyze the structure:\n- It starts with \"Voici un journal technique.\" (Here is a technical journal)\n- Then it lists bloc0 through bloc147 sequentially (148 blocks total)\n- It ends with \"Fin du journal.\" (End of journal)\n\nThe structure is extremely simple and repetitive - it's just a linear enumeration of 148 blocks with no content, no hierarchy, no metadata, no timestamps, no descriptions. It's essentially a flat list.\n\nLet me write a paragraph in French describing this structure, then propose three numbered improvements.\n</think>\n\n**Description de la structure**\n\nCe journal technique se présente comme une séquence linéaire et plate de 148 entrées (de bloc0 à bloc147), encadrées par une phrase d'introduction (« Voici un journal technique. ») et une phrase de clôture (« Fin du journal. »). Chaque bloc est identifié uniquement par un",
+   "predicted_n": 256
+  },
+  {
+   "cible": 14000,
+   "n_mots": 3041,
+   "n_past": 14131,
+   "contenu": "\n\n<think>\nThe user is asking me to look at a \"technical journal\" that consists of a sequence of blocks numbered from bloc0 to bloc3040. They want me to:\n1. Write a paragraph describing the structure of this journal\n2. Propose three numbered improvements\n\nLet me analyze the structure:\n- It starts with \"Voici un journal technique.\" (Here is a technical journal)\n- Then it lists blocks from bloc0 to bloc3040 sequentially\n- It ends with \"Fin du journal.\" (End of journal)\n\nThe structure is extremely simple and repetitive - it's just a sequential enumeration of 3041 blocks (from 0 to 3040) with no actual content, no timestamps, no descriptions, no categorization. It's essentially a placeholder or skeleton.\n\nLet me write a paragraph in French describing this structure, then propose three improvements.\n</think>\n\nCe journal technique se présente comme une énumération linéaire et uniforme de 3 041 entrées, identifiées séquentiellement de « bloc0 » à « bloc3040 », encadrées par une phrase d'introduction (« Voici un journal technique. ») et une",
+   "predicted_n": 256
+  },
+  {
+   "cible": 60000,
+   "n_mots": 12000,
+   "n_past": 60926,
+   "contenu": "\n\n<think>\nThe user is asking me to look at a \"technical journal\" that consists of a sequence of blocks numbered from bloc0 to bloc11999 (12,000 blocks total). They want me to:\n1. Write a paragraph describing the structure of this journal\n2. Propose three numbered improvements\n\nLet me analyze the structure:\n- It starts with \"Voici un journal technique.\" (Here is a technical journal)\n- Then it lists bloc0 through bloc11999 sequentially\n- It ends with \"Fin du journal.\" (End of journal)\n\nThe structure is extremely simple and repetitive - it's just a sequential enumeration of 12,000 blocks with no actual content, no metadata, no timestamps, no descriptions, no hierarchy. It's essentially a flat list of identifiers.\n\nLet me write a paragraph in French describing this structure, then propose three improvements.\n</think>\n\nCe journal technique se présente comme une séquence linéaire et plate de 12 000 entrées (de bloc0 à bloc11999), délimitées par un en-tête (« Voici un journal technique. ») et un pied de page (« Fin du journal",
+   "predicted_n": 256
+  }
+ ]
+}
