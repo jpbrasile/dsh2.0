@@ -1,0 +1,50 @@
+Two delegations, in order, then stop: first call the planner tool once, then call the coder tool once with the plan reference, then write DONE.md and stop. Do not add extra verification steps after the coder finishes.
+
+TASK — strengthen an existing test suite. A mutation audit (25/08) proved that
+test/gpu3d_integration/chemistry/test_ozone_3d.jl does NOT catch a change of
+OZONE_F_N2A_BRANCH (1.2 -> 1.3 left all 76 tests green): the constant is only the
+default kwarg of ozone_yield_g_per_kwh (src lines 478-544) and that function is never
+called by the suite. Add ONE new @testset exercising ozone_yield_g_per_kwh, so the
+mutation bites.
+
+FILES TO MODIFY (the ONLY file you may write):
+1. test/gpu3d_integration/chemistry/test_ozone_3d.jl  (401 lines — APPEND one @testset
+   inside the existing top-level testset, matching the file's style. Do NOT touch the
+   existing testsets. No runtests.jl change: the file is already included.)
+
+FILES TO READ — these exact files, ONE read each, nothing else:
+1. src/gpu3d_integration/ozone_3d.jl   (544 lines — ozone_yield_g_per_kwh is at the
+   end, lines 478-544, with its docstring)
+2. test/gpu3d_integration/chemistry/test_ozone_3d.jl  (the file you extend)
+Do NOT glob, do NOT explore other directories. Both files are verified to exist.
+
+TEST CONTRACT — pure CPU arithmetic, no GPU, no state needed:
+a) Constants: OZONE_F_N2A_BRANCH == 1.2 exactly;
+   OZONE_G_FACTOR_G_PER_KWH ≈ 1.7909876587e3 (rtol 1e-6) and equals
+   48.0 * 3.6e6 / (6.022e23 * 1.602176634e-19) exactly (it is defined that way).
+b) Nominal call THROUGH THE DEFAULT KWARG (this is the whole point — do NOT pass
+   f_n2a_branch here). Frozen inputs, measured anchors (probe of 25/08, rtol 1e-6):
+     r = ozone_yield_g_per_kwh(1.0e8, 5.0e6, 2.0e7, 1.0e5, 200.0, 2.4463134e25)
+     r.R_O3      ≈ 2.29e8            (= 2*k_d + k_att + 1.2*k_n2_elec)
+     r.G_g_kWh   ≈ 8.3827397962e-1
+     r.eV_per_O3 ≈ 2.1365182533e3
+     r.eta_dissoc≈ 1.2263351049e-3
+c) Default-equals-explicit identity: the same call with f_n2a_branch = 1.2 passed
+   explicitly returns a NamedTuple whose four fields are == the fields of r.
+d) Sensitivity direction (measured): with f_n2a_branch = 1.3 and the same inputs,
+   R_O3 ≈ 2.31e8 and G_g_kWh ≈ 8.4559514974e-1 (rtol 1e-6), both STRICTLY GREATER
+   than the defaults of b).
+e) Degenerate guards (measured, assert exact equality): both
+   ozone_yield_g_per_kwh(1e-9, 0.0, 0.0, 1.0e5, 200.0, 2.4463134e25)   [R_O3 < 1e-3]
+   and
+   ozone_yield_g_per_kwh(1.0e8, 5.0e6, 2.0e7, 0.5, 200.0, 2.4463134e25) [v_d < 1.0]
+   return (G_g_kWh = 0.0, eV_per_O3 = Inf, eta_dissoc = 0.0, R_O3 = 0.0).
+Target: >= 12 new @test macros in ONE new @testset block; total suite must stay green.
+
+KNOWN GATE BEHAVIOUR (do not fight the gate): call the julia_gate tool EXACTLY ONCE,
+after the file is written. A replay can exceed the gate's 30 s budget: an ORANGE
+verdict WITH ZERO FAILURES is the expected outcome and is acceptable — quote the gate
+verdict VERBATIM in DONE.md and do not call the gate again. ROUGE (real test
+failures) means fix the test file once, then one final gate call. DONE.md is
+MANDATORY in all cases, even after an ORANGE or a failure: write what was done,
+the verbatim gate verdict, and the exact list of files changed. Then stop.
