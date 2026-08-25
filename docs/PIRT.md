@@ -11,10 +11,17 @@ la matière première existe déjà : l'audit-mutation est une mesure directe du
 
 ## Principes non négociables
 
-1. **L'importance est humaine.** La machine mesure la couverture et la
-   confiance ; elle ne décide JAMAIS qu'un phénomène est important. La colonne
-   `importance` n'est écrite que par l'humain (1=support, 2=significatif,
-   3=critique pour les grandeurs d'intérêt).
+1. **L'importance : proposeur + red team ; l'humain n'arbitre que les
+   désaccords.** (Règle générale, ordre utilisateur du 25/08 — remplace la
+   version initiale « la colonne n'est écrite que par l'humain ».) Fable 5
+   propose chaque valeur avec justification ancrée dans les sources ; un red
+   team indépendant (deepseek-v4-pro, route payante — données PRIVATE) audite ;
+   convergence après triage ⇒ valeur retenue sans intervention humaine ;
+   désaccord proposeur/red-team ⇒ tranché par l'humain, seul cas où il
+   intervient (précédent : pic_core, 2 vs 1, arbitré 2 le 25/08). Toute valeur
+   reste révocable par l'humain à tout moment ; la machine ne décide jamais
+   SEULE (deux avis indépendants exigés). Échelle inchangée (1=support,
+   2=significatif, 3=critique pour les grandeurs d'intérêt).
 2. **Cloisonnement des niveaux.** Les DONNÉES du registre (noms de phénomènes,
    fichiers du framework, valeurs d'ancres) sont PRIVATE : la base et les
    événements vivent dans le dépôt framework (`plasma-digital-twin/pirt/`).
