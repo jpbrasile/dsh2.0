@@ -14,8 +14,17 @@ when production was deliberately stopped; windows since then record
 (window 4): mtp leg at f16 KV RUN — MTP decode +68–86 %. 2026-08-24
 (window 6): the coding-agent A/B real run RUN — 12/12 solved, median
 wall-clock per solved task under MTP: dsh 17.8 s vs opencode 18.2 s (parity);
-MTP beats plain for both agents (−43 %/−55 %). Remaining NOT-RUN: dflash2
-legs (PR #27342 still open upstream) and the lossless-greedy re-check.
+MTP beats plain for both agents (−43 %/−55 %). 2026-08-26: the
+**lossless-greedy re-check is RUN, and the answer is NO** — 12 GPQA items,
+`temperature 0`, `top_k 1`, fixed seed, same binary both sides: plain vs
+dflash2 diverge **12/12**, first differing byte at 58–1113, while both
+controls are mute (plain vs plain across two processes 12/12 identical;
+dflash2 vs dflash2 same process 12/12 identical). Speculation with the
+dflash2 draft is therefore **not lossless**, and the GPQA production arm runs
+without it (46.9 t/s instead of 103.6). Files:
+`scripts/gpqa/sonde_glouton_{A1,A2}_plain.jsonl` and `..._{B1,B2}_dflash2.jsonl`,
+probe `scripts/gpqa/sonde_specdec_glouton.py`. Remaining NOT-RUN: dflash2
+legs (PR #27342 still open upstream).
 
 ## Goal
 

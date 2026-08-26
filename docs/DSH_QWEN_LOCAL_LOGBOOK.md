@@ -3571,3 +3571,126 @@ marginal est nul *ici*, ce qui n'en fait pas un détail *ailleurs*.
 **Restauration du bras @25 vérifiée sur le fil, pas sur le fichier.** `r25a`,
 `r25b` et `r25c` portent tous 25 outils et 4 327 caractères de système au
 premier appel. Le patch avait bien été déposé.
+
+---
+
+## 26/08 20:47 — Douze tirages, même serveur : le rapport dsh/pi est établi, et c'est du volume
+
+Le bras qui manquait a tourné. **pi et dsh sur le même 4090, le même exercice,
+le même enregistreur, le même plafond de 16 384 jetons**, trois tirages chacun,
+trois compositions de dsh. Douze tirages, tous publiés.
+
+| bras | outils | système | appels | jetons | paroi (s) | décodage | cache | pensée/appel | plafond |
+|---|---|---|---|---|---|---|---|---|---|
+| dsh @25 | 25 | 4 327 | 5 | 16 769 | 404,9 | 43,0 | 56,3 % | 71 | **mort** |
+| dsh @25 | 25 | 4 327 | 28 | 22 373 | 546,9 | 43,2 | 93,6 % | 1 711 | |
+| dsh @25 | 25 | 4 327 | 34 | 19 268 | 485,5 | 42,8 | 94,3 % | 1 051 | |
+| dsh @10 | 10 | 1 765 | 26 | 21 942 | 534,9 | 43,4 | 93,0 % | — | |
+| dsh @10 | 10 | 1 765 | 28 | 11 101 | 269,3 | 44,5 | 94,0 % | 564 | |
+| dsh @10 | 10 | 1 755 | 34 | 27 330 | 664,2 | 43,1 | 95,1 % | 1 847 | |
+| dsh min | **2** | **357** | 5 | 16 848 | 387,1 | 44,4 | 69,0 % | 54 | **mort** |
+| dsh min | **2** | **357** | 5 | 16 866 | 387,4 | 44,5 | 61,9 % | 10 118 | **mort** |
+| dsh min | **2** | **357** | 24 | 14 830 | 352,7 | 44,4 | 92,8 % | 1 076 | |
+| **pi** | 4 | 2 681 | 15 | **5 491** | **127,9** | 45,7 | 89,9 % | 337 | |
+| **pi** | 4 | 2 681 | 23 | **6 163** | **144,4** | 45,6 | 93,9 % | 314 | |
+| **pi** | 4 | 2 681 | 15 | **4 028** | **94,7** | 45,8 | 90,8 % | 311 | |
+
+### 1. L'écart est réel : les deux nuages ne se touchent pas
+
+| | dsh (9 tirages) | pi (3 tirages) | recouvrement |
+|---|---|---|---|
+| paroi (s) | 269 – 664 | 95 – 144 | **aucun** |
+| jetons produits | 11 101 – 27 330 | 4 028 – 6 163 | **aucun** |
+
+C'est la première différence d'agent de toute la campagne qui **survit à la
+dispersion**. Toutes les précédentes étaient dedans.
+
+**Médianes : 405 s contre 128 s, soit 3,16× ; 16 866 jetons contre 5 491, soit
+3,07×.** Le 3,2× mesuré chez AkashML sur six exercices se reproduit à l'identique
+sur le 4090, sur un seul exercice et avec des répliques. Deux amonts, deux
+protocoles, même facteur.
+
+### 2. Et c'est du volume, entièrement — le débit et le cache sont innocents
+
+| grandeur | dsh | pi | écart |
+|---|---|---|---|
+| décodage (j/s) | 42,8 – 44,5 | 45,6 – 45,8 | 3 % en faveur de pi |
+| **cache d'invite** | **92,8 – 95,1 %** | **89,9 – 93,9 %** | **en faveur de dsh** |
+| jetons produits | 11 101 – 27 330 | 4 028 – 6 163 | **3,07×** |
+
+Le rapport de paroi (3,16×) et le rapport de jetons (3,07×) coïncident à 3 %.
+**dsh est 3× plus lent parce qu'il génère 3× plus, point.**
+
+Et il faut le dire dans ce sens-là : **dsh cache MIEUX que pi** (93–95 % contre
+90–94 %) et reste 3× plus lent. L'hypothèse « le surcoût de dsh vient de son
+cache d'invite », qui a porté le plan du 26/08 §7.1 et qui faisait de la
+correction du cache une priorité, est **morte**. Elle n'était pas approximative,
+elle était à l'envers.
+
+### 3. pi est stable là où dsh ne l'est pas
+
+| | dsh @10 | pi |
+|---|---|---|
+| paroi | ×2,47 | ×1,52 |
+| jetons | ×2,46 | ×1,53 |
+| **pensée par appel** | **×3,3** (564 → 1 847) | **×1,08** (311 → 337) |
+
+La pensée par appel de pi tient à **8 %** sur trois tirages. Celle de dsh varie
+d'un facteur 3,3 *à configuration identique*. Ce n'est pas seulement que dsh
+pense plus : sa quantité de pensée n'est pas déterminée par sa configuration.
+
+### 4. La composition de l'invite n'y est pour rien — trois points, aucun effet
+
+| bras | outils | système | paroi médiane |
+|---|---|---|---|
+| dsh standard | 25 | 4 327 | 486 s |
+| dsh réduit | 10 | 1 765 | 535 s |
+| dsh **minimal** | **2** | **357** | 387 s |
+| pi | 4 | 2 681 | **128 s** |
+
+Un facteur **12,5 sur le nombre d'outils** et **12 sur la taille du prompt
+système** déplacent la médiane de 486 à 387 s — dans la dispersion, et toujours
+**2,7× au-dessus de pi**. Et le bras minimal, qui offre *moins* d'outils et
+*moins* de système que pi, reste 3× plus lent que lui.
+
+**La piste « un réglage de composition rendra dsh aussi rapide que pi » est
+fermée sur ces trois points.** Ce qui reste et qui n'a pas été isolé : la
+formulation du prompt système, la structure des messages, et la boucle d'agent
+elle-même. Ces trois-là varient ensemble entre les deux agents, et aucun des
+deux ponts d'écosystème publiés (`pi-dsh`, `pi2dsh`) ne les sépare — le premier
+laisse dsh posséder prompt et boucle, le second dit explicitement ne toucher ni
+l'un ni l'autre.
+
+### 5. La fugue au plafond est de dsh, et elle empire quand on allège
+
+**Quatre tirages de dsh sur neuf** meurent en `finish_reason: length`, 16 384
+jetons pile, en **un seul appel** de ~370 s. Le bras minimal en meurt **2 fois
+sur 3** — le plus léger des trois est le plus atteint. Aucun tirage de pi n'en
+meurt.
+
+Forme invariante : quatre appels courts, puis la fugue. Les deux canaux peuvent
+fuguer, ce qui interdit une explication simple :
+
+| tirage | jetons | pensée (car.) | visible (car.) |
+|---|---|---|---|
+| `m1` | 16 384 | **0** | **54 334** |
+| `m2` | 16 384 | **50 225** | 138 |
+
+`m1` ne pense pas du tout et déverse 54 000 caractères de contenu ; `m2` pense
+50 000 caractères et ne rend rien. Même mort, même plafond, canaux opposés.
+
+Ce mode avait été attribué à Venice le 26/08 18:55 sur un tirage unique. **C'est
+faux** : il est de dsh, sur le serveur local, et le fournisseur n'y est pour
+rien.
+
+### 6. Ce que ces douze tirages ne disent pas
+
+- **Un seul exercice.** `go/beer-song` est précisément celui que dsh n'a jamais
+  rendu au banc des cas durs (mur des 1 800 s) et que pi rend en 211 s. C'est
+  le **pire cas de dsh**, choisi pour ça. Le 3,07× ne se généralise pas depuis
+  ici — il se *confirme* ici, parce que le 3,2× venait d'un autre corpus.
+- **Aucune qualité.** 12 tirages, 12 FAIL. Sur la qualité, ce qui tient reste le
+  banc des cas durs : **verdict identique exercice par exercice, 5 fois sur 5**,
+  dsh 2/5 et pi 2/5. Les échecs sont ceux du modèle.
+- **Le mécanisme reste ouvert.** On sait *que* dsh génère 3× plus. On ne sait pas
+  *pourquoi*.

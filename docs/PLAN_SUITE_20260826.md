@@ -192,3 +192,163 @@ présentée comme un point ; il ne doit pas reparaître.
 5. Le refus de la proposition pi (§7). Y a-t-il une lecture de cette proposition
    sous laquelle j'ai tort ?
 6. L'ordre des étapes. Est-ce que je mesure la bonne chose en premier ?
+
+---
+
+# Révision du 26/08/2026, 21:00 — ce que la soirée a cassé dans ce plan
+
+Ce bloc est **ajouté**, pas substitué : le plan ci-dessus reste lisible tel
+qu'il a été soumis au red team à 16:22. Ce qui suit dit lesquelles de ses
+affirmations ne survivent pas à la mesure, et pourquoi.
+
+## R1. §7.1 est FAUX — le cache n'est pas le levier
+
+Le plan écrivait : « L'avantage mesuré de pi sur dsh (3,2× en temps) était du
+**cache d'invite** sur des contextes de 20 à 40 k jetons chez un fournisseur
+distant. »
+
+**Mesuré le 26/08 au soir, sur le fil, serveur local.** Le préremplissage ne
+pèse que **6 % de la paroi** d'un exercice local ; le cache local tourne à
+**93–95 %** contre 19,4 % chez AkashML, et cet écart de taux ne peut pas
+déplacer plus de 6 % du mur. Un cache parfait ferait gagner moins de 1,4×, pas
+3,2×.
+
+**Confirmé le soir même par le bras qui manquait** — pi et dsh sur le MÊME
+serveur, trois tirages chacun :
+
+| | dsh (9 tirages) | pi (3 tirages) |
+|---|---|---|
+| **cache d'invite** | **92,8 – 95,1 %** | **89,9 – 93,9 %** |
+| décodage (j/s) | 42,8 – 44,5 | 45,6 – 45,8 |
+| jetons produits | 11 101 – 27 330 | 4 028 – 6 163 |
+| paroi (s) | 269 – 664 | 95 – 144 |
+
+**dsh cache MIEUX que pi et reste 3× plus lent.** L'hypothèse du plan n'était
+pas approximative, elle était **à l'envers**. La correction du cache, que le plan
+qualifiait de « prioritaire et non cosmétique », est **retirée** du chemin
+critique.
+
+**Le 3,2× est un écart de VOLUME.** Rapport de paroi 3,16×, rapport de jetons
+3,07× : ils coïncident à 3 %, et le débit est identique des deux côtés. dsh est
+3× plus lent parce qu'il génère 3× plus. Le 3,2× d'AkashML sur six exercices se
+reproduit à 3,1× sur le 4090 sur un exercice répliqué — deux amonts, deux
+protocoles, même facteur.
+
+## R2. Ce que la soirée a établi et qui n'était dans aucun plan — la partition
+
+Sur **neuf tirages** de dsh (trois compositions × trois tirages) du même exercice,
+même serveur :
+
+| grandeur | dispersion mesurée | verdict |
+|---|---|---|
+| débit de décodage | 42,8 – 44,5 j/s (**±1,9 %**) | reproductible |
+| taux de cache (5 tirages entiers) | 92,8 – 95,1 % | reproductible |
+| jetons produits | 11 101 – 27 330 (**×2,46**) | **non** reproductible |
+| paroi | 269 – 664 s (**×2,47**) | **non** reproductible |
+| pensée par appel (bras @10) | 564 – 1 847 car. (**×3,3**) | **non** reproductible |
+
+Le taux de cache est donné hors tirages morts au plafond : une fugue tue le
+tirage avant qu'il ait fini de construire son cache (56,3 % à 69,0 %), ce qui
+est une conséquence de la mort, pas une mesure du cache.
+
+**Règle qui en découle, et qui vaut pour toute la suite du plan** : une grandeur
+qui agrège des centaines d'événements *à l'intérieur* d'un tirage se reproduit ;
+une grandeur qui est une décision d'agent propagée sur le tirage ne se reproduit
+pas. **Aucun facteur sous ~1,5× ne sera lisible à un tirage.** Toute comparaison
+d'agents publiée sans réplique est à refaire ou à retirer.
+
+**pi, lui, se réplique** : paroi ×1,52, jetons ×1,53, pensée par appel ×1,08
+(311 → 337 caractères) contre ×3,3 chez dsh. La dispersion mesurée n'est donc pas
+une propriété de la tâche à température 1,0 — c'est une propriété de dsh.
+
+Trois affirmations publiées plus tôt tombent sous cette règle et sont
+**abandonnées** : « retirer 15 outils fait monter la pensée de +39 % »,
+« Venice pense 3,2× plus », et la *magnitude* (non la direction) de « le local
+génère 2,54× moins de jetons ».
+
+## R3. §8 « où dsh casse son préfixe » — la question était mal posée
+
+La sonde de préfixe a tourné. Elle ne trouve pas de rupture de préfixe à
+réparer : **le cache local tient à 93–95 %**. dsh ne casse pas son préfixe sur
+ce serveur. L'étape 6 est donc **close sans correctif** — ce qu'elle cherchait
+n'existe pas ici.
+
+## R4. Trois compositions de dsh essayées, aucune ne déplace rien
+
+| bras | outils | système (car.) | paroi des 3 tirages (s) |
+|---|---|---|---|
+| standard | 25 | 4 327 | 405\* / 547 / 486 |
+| réduit | 10 | 1 765 | 535 / 269 / 664 |
+| minimal | 2 | 357 | 387\* / 387\* / 353 |
+
+\* mort au plafond (`finish_reason: length`, 16 384 jetons pile).
+
+Un facteur **12 sur la taille du prompt système** et un facteur **12,5 sur le
+nombre d'outils** ne sortent pas de la dispersion, et le bras minimal — qui offre
+**moins** d'outils et **moins** de système que pi — reste **3× plus lent que
+lui**. La piste « un réglage de composition d'invite rendra dsh aussi rapide que
+pi » est **fermée** sur ces trois points.
+
+Ce qui reste et n'a pas été isolé : la formulation du prompt système, la
+structure des messages, la boucle d'agent. Ces trois-là varient ensemble entre
+les deux agents. Les deux ponts d'écosystème publiés ne les séparent pas :
+`pi-dsh` laisse dsh posséder prompt, mémoire et boucle (et démarre en
+`danger-full-access`, épinglé à dsh 0.1.0-rc.6) ; `pi2dsh` dit explicitement ne
+remplacer ni la boucle ni le prompt système de dsh. **Aucun des deux n'est un
+instrument de décomposition**, et aucun ne sera installé sans décision humaine —
+installer l'un ou l'autre modifierait l'agent sous test au milieu de la
+campagne.
+
+## R5. Un mode d'échec nouveau, et il est de dsh — la fugue au plafond
+
+**Quatre tirages de dsh sur neuf** meurent en `finish_reason: length`, 16 384
+jetons pile, en **un seul appel** de ~370 s. Le bras minimal en meurt **2 fois
+sur 3** — le plus léger des trois est le plus atteint. **Aucun tirage de pi n'en
+meurt.** Forme invariante : quatre appels courts, puis la fugue. Elle survient à
+25 outils comme à 2 : **la composition de l'invite ne la cause pas**.
+
+Les deux canaux peuvent fuguer, ce qui interdit une explication simple :
+
+| tirage | jetons | pensée (car.) | visible (car.) |
+|---|---|---|---|
+| `m1` | 16 384 | 0 | 54 334 |
+| `m2` | 16 384 | 50 225 | 138 |
+
+Ce mode avait été attribué à Venice le 26/08 18:55 sur un tirage unique. **C'est
+faux** : il est de dsh, sur le serveur local, et il n'a rien à voir avec le
+fournisseur.
+
+## R6. Ce qui reste vrai dans le plan, et ne bouge pas
+
+- §1, §3, §4, §5, §6 — la campagne GPQA, ses règles de coupure, le rattrapage
+  32768. Rien de la soirée ne les touche.
+- §2 / B4 — **tranché par l'opérateur** : `--parallel 8` n'est pas finançable en
+  VRAM (107 MiB libres sur 24 564 avec le brouillon dflash2, un contexte de
+  brouillon par slot). La cellule C2/C3 sort du plan.
+- §7 — la décision « pas de GPQA via pi comme mesure brute » tient. Le repli
+  « GPQA agentique étiqueté » reste abandonné.
+- « Aucun redémarrage du serveur sans autorisation humaine, à chaque fois. »
+  **B3** (KV q8/q4 contre f16) en dépend et reste donc **en attente**, pas
+  oublié.
+- **B1 n'est plus en attente : il est FAIT, et la réponse est NON.** 12 questions,
+  `temperature 0`, `top_k 1`, graine fixe, même binaire des deux côtés — plain
+  contre dflash2 divergent **12/12**, premier octet différent entre 58 et 1113,
+  les deux témoins muets (plain/plain 12/12 identiques sur deux processus,
+  dflash2/dflash2 12/12 identiques). **Le décodage spéculatif avec le brouillon
+  dflash2 n'est pas sans perte**, et le bras de production tourne donc sans lui
+  (46,9 j/s au lieu de 103,6). Statut reporté dans `SPECDEC_4090_BENCH.md`, qui
+  le listait encore en NOT-RUN.
+
+## R7. L'ordre pour la nuit du 26 au 27
+
+| # | quoi | carte | état |
+|---|---|---|---|
+| 1 | bras GPQA de production, 198 tournants, plafond 32768 | oui, ~4,4 h | **en cours** |
+| 2 | dépouillement `--premier` du bras, deux calculs publiés | non | après 1 |
+| 3 | **B2** rattrapage 32768 des bras gelés (5 + 7 appels) | oui, ~1,5 h | après 1 |
+| 4 | **B3** KV q8/q4 contre f16 | redémarrage | **bloqué, autorisation** |
+| 5 | **B6** polyglot agentique complet | oui, longue | après 3 |
+
+**B1 est sorti de la file : fait le 26/08 à 17:43, réponse NON** (voir R6).
+
+Rien ne sera lancé cette nuit qui demande un redémarrage du serveur.
