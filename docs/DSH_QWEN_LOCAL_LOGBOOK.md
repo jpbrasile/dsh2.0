@@ -2542,3 +2542,54 @@ dans l'entrée précédente.
   hasard ; le chiffre agrégé demande de savoir POURQUOI le préfixe casse.
 - **Non mesuré** : la cause de la casse du préfixe. C'est la prochaine question,
   et elle est dans le code de dsh, plus dans le journal de fil.
+
+---
+
+## 26/08/2026 — Sonde cache : le marqueur n'était pas la cause, je m'étais avancé
+
+**Ce que j'avais annoncé et qui est faux.** Après recherche web, j'ai écrit
+« le web donne la cause, et le code la confirme » : Qwen figure chez OpenRouter
+dans les fournisseurs à cache **explicite** (`cache_control: {"type":
+"ephemeral"}` sur les blocs), le cache automatique ne couvrant qu'OpenAI, Grok,
+Moonshot, Groq, DeepSeek, Z.AI et Gemini — et `cache_control` n'apparaît nulle
+part dans le dépôt. La déduction était propre et elle est fausse.
+
+**Le test direct la réfute.** `sonde_cache_openrouter.py`, trois conditions,
+même préfixe stable de 37 763 jetons, hors proxy pour ne pas polluer la fenêtre
+de mesure du run pi en cours :
+
+| cas | 2ᵉ appel, entrée servie par le cache | fournisseur |
+|---|---|---|
+| **A — sans aucun marqueur** | **86,9 %** | Phala |
+| B — `cache_control` sur bloc | 99,8 % | Phala |
+| C — `cache_control` racine | 99,8 % | Phala |
+
+**Le cache est automatique sur cette route.** Un préfixe stable revient caché à
+86,9 % sans que le client demande quoi que ce soit.
+
+Deux réserves sur ce tableau, pour qu'il ne soit pas sur-lu :
+- B et C sont **confondus par l'ordre** : ils réutilisent le préfixe déjà écrit
+  en cache par A. Leur 99,8 % ne mesure pas le gain d'un marqueur.
+- Le premier appel de A rend 64 jetons cachés, le second 32 832 : la
+  construction du cache prend quelques secondes, conformément à la doc.
+
+**Pourquoi la doc ne s'appliquait pas.** Le modèle est servi par **Phala**, pas
+par Alibaba. La règle « Alibaba exige des points explicites » vise le
+fournisseur, pas le modèle, et le routage OpenRouter décide du fournisseur à
+chaque requête. Le journal de fil n'enregistre PAS le fournisseur (`servi` ne
+porte que le nom du modèle) : rien ne garantit à ce stade que dsh et pi aient
+été servis par le même. C'est un confondant ouvert, pas une hypothèse écartée.
+
+**Ce qui reste établi.** Le cache étant automatique et disponible, les 24,7 %
+de dsh contre 78,3 % de pi ne s'expliquent pas par un marqueur manquant :
+**dsh casse son propre préfixe.** La séquence de rôles étend bien la précédente
+(185/189), donc la structure est en ajout — c'est le CONTENU réémis en tête qui
+bouge. Le prompt système varie (4364 / 4367 / 4368 / 4369 caractères) et
+donne 0 % de cache à coup sûr quand il change, mais ne couvre que 20 appels
+sur 189.
+
+**Prochain pas, décidé** : instrumenter le proxy 8009 pour journaliser une
+empreinte du début de requête sérialisée et la position du premier octet qui
+diffère de l'appel précédent. À poser **après** la fin du run pi. Cette sonde
+doit aussi enregistrer le **fournisseur servant**, qui manque et qui est un
+confondant de tout ce qui précède.
