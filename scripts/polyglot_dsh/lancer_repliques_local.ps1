@@ -27,7 +27,7 @@
 # rejouer un bras « parce qu'il est bizarre ». Les six tirages sont joues, tous
 # publies, y compris ceux qui derangent.
 #
-# NOMS NEUFS A CHAQUE FOIS. Le bras @25 de 20:30 est mort en `FileNotFoundError`
+# NOMS NEUFS A CHAQUE FOIS. Le bras @25 de 19:27 est mort en `FileNotFoundError`
 # a 0,0 s : son espace de travail avait ete laisse a moitie copie par une
 # tentative interrompue, et `pilote.py` ne recopie pas un repertoire existant.
 # Chaque tirage a donc son propre nom.

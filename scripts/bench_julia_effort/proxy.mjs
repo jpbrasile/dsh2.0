@@ -278,7 +278,7 @@ const server = http.createServer((req, res) => {
               if (c0 && c0.finish_reason) rec.fin_raison = c0.finish_reason;
             }
           }
-          // PENSEE CONTRE VISIBLE, MESUREE ICI ET PAS DEDUITE (26/08 20:05).
+          // PENSEE CONTRE VISIBLE, MESUREE ICI ET PAS DEDUITE (26/08 19:22).
           // J'ai ecrit dans le carnet que la separation pensee/visible
           // « n'existe pas en local ». FAUX. `--reasoning-format none` ne
           // supprime rien -- l'aide du binaire le dit : « leaves thoughts
@@ -294,7 +294,7 @@ const server = http.createServer((req, res) => {
           //
           // `reasoning_content` est lu AUSSI : si un amont separe deja la
           // pensee, elle ne doit pas compter pour zero.
-          // EN FLUX, `message` N'EXISTE PAS. Constate le 26/08 a 20:10 : dsh
+          // EN FLUX, `message` N'EXISTE PAS. Constate le 26/08 a 19:28 : dsh
           // appelle avec `stream: true`, le contenu arrive en `delta` fragment
           // par fragment, et le dernier fragment ne porte que `usage`. Une
           // premiere version de ce compteur lisait `choices[0].message` et ne

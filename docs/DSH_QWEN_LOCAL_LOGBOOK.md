@@ -3002,7 +3002,7 @@ varient tous ensemble entre les deux agents. La mesure dit « c'est l'invite »,
 pas « c'est le nombre d'outils ». Isoler demanderait un bras où l'on ne change
 que la liste d'outils — faisable, non fait.
 
-## 26/08 19:00 — Le fournisseur déplace la paroi de 42 %, et le rapport de 0,4 %
+## 26/08 18:49 — Le fournisseur déplace la paroi de 42 %, et le rapport de 0,4 %
 
 ### La question, et l'erreur qu'elle corrige
 
@@ -3078,7 +3078,7 @@ la décision de jouer le polyglot complet en local, prise sur le coût.
 
 ---
 
-## 26/08 19:05 — Bras à outils réduits : la machinerie n'est pas la cause
+## 26/08 18:52 — Bras à outils réduits : la machinerie n'est pas la cause
 
 ### Ce qui a été fait varier
 
@@ -3134,7 +3134,7 @@ effet de la machinerie d'outils (ce bras), ni un effet du cache (mesure apparié
 du 26/08), ni un effet du fournisseur (invariance ci-dessus). Restent la
 **formulation de la consigne** et la **structure des messages** — non isolées.
 
-## 26/08 19:10 — Venice : le débit est confirmé, la paroi ne veut rien dire
+## 26/08 18:55 — Venice : le débit est confirmé, la paroi ne veut rien dire
 
 ### Le montage
 
@@ -3205,7 +3205,7 @@ directement en classement de coût ou de temps d'exercice, et je ne l'utiliserai
 pas comme tel. Il fallait un exercice réel pour le voir : la sonde à 0,0187 $ ne
 pouvait pas le montrer, elle imposait la longueur.
 
-## 26/08 19:30 — Trois amonts, un seul exercice : le local gagne par le volume, pas par la vitesse
+## 26/08 19:15 — Trois amonts, un seul exercice : le local gagne par le volume, pas par la vitesse
 
 ### Le montage
 
@@ -3315,7 +3315,7 @@ maintenant prise aussi sur le **temps** — 3,3× plus rapide qu'AkashML sur un 
 complet, et au-dessus de tous les fournisseurs sauf Venice au débit brut, sans
 le mur de jetons de Venice.
 
-### Correction, 20:05 : la pensée n'est pas perdue en local, c'est mon proxy qui ne la comptait pas
+### Correction, 19:22 : la pensée n'est pas perdue en local, c'est mon proxy qui ne la comptait pas
 
 Dans l'entrée ci-dessus j'ai écrit, en gras, que la séparation pensée / visible
 « **n'existe pas en local** », et je l'ai présentée comme « une vraie perte » de
@@ -3382,7 +3382,7 @@ au plafond passerait sinon pour un bras fini. Les quatre appels du bras avorté
 ont été retirés plutôt que gardés à côté d'appels instrumentés : un journal qui
 mélange deux instruments ne se dépouille pas.
 
-## 26/08 20:40 — Un réplicat, et la moitié des conclusions du soir tombe
+## 26/08 19:38 — Un réplicat, et la moitié des conclusions du soir tombe
 
 ### Ce qui s'est passé
 
@@ -3392,8 +3392,8 @@ configuration, à une demi-heure d'intervalle :
 
 | local @10 outils | appels | jetons de sortie | paroi LLM |
 |---|---|---|---|
-| tirage 1, 19:20 | 26 | **21 942** | 535 s |
-| tirage 2, 20:35 | 28 | **11 101** | 269 s |
+| tirage 1, 19:01–19:10 | 26 | **21 942** | 535 s |
+| tirage 2, 19:29–19:34 | 28 | **11 101** | 269 s |
 
 **Facteur 2,0 entre deux tirages identiques.** Les deux FAIL.
 
