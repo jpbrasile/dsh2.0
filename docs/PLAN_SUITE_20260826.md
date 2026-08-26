@@ -352,3 +352,95 @@ fournisseur.
 **B1 est sorti de la file : fait le 26/08 à 17:43, réponse NON** (voir R6).
 
 Rien ne sera lancé cette nuit qui demande un redémarrage du serveur.
+
+---
+
+# Révision du 26/08/2026, 21:20 — B3 retiré, et le livrable 1 change de bras
+
+## R8. B3 (KV q8/q4 contre f16) est RETIRÉ, pas reporté
+
+Le plan le gardait au motif du constat #2 du red team (« profondeur × KV »).
+Il est **déjà répondu, et par un instrument plus fin**. Quatre configurations KV,
+même binaire, mesurées le 25/08 — chiffres relus dans les fichiers de sortie,
+pas dans les messages de commit :
+
+| config KV | ARC-Challenge (299 tâches) | PPL wikitext-2 | needle |
+|---|---|---|---|
+| f16 | 52,17 ± 2,89 | 6,9551 ± 0,045 | 5/5 @60k |
+| q8/q8 | 51,84 ± 2,89 | **6,9551** (identique) | 5/5 @60k, 120k |
+| **q8-K/q4-V** ← production | **51,84 ± 2,89** | 6,9628 (**+0,11 %**) | 5/5 @60k, 120k, 150k |
+| q4/q4 | 52,17 ± 2,89 | 6,9686 (+0,19 %) | 5/5 jusqu'à **190k** |
+
+Fichiers : `reports/specdec_20260825_ctxsweep_dflash2/stage2_{arc,ppl}_*.txt`,
+sonde `scripts/bench_kv_quality.py`.
+
+**Quatre raisons de le retirer.**
+
+1. L'effet est borné et nul : la config de production est à **0,33 pt** de f16
+   sur ARC, barre ±2,89 ; +0,11 % en perplexité.
+2. B3 serait **strictement plus faible** : 40 questions appariées contre 299
+   tâches. Résoudre 0,33 pt demanderait de l'ordre de 10⁴ questions — GPQA
+   Diamond en contient 198 en tout.
+3. **Sa raison d'être ne s'applique pas à GPQA** : l'invite fait 245 jetons, il
+   n'y a aucune profondeur d'entrée à faire interagir avec le KV ; et le needle
+   tient 5/5 jusqu'à 190k, très au-delà du plafond de 32 768.
+4. Il coûte un redémarrage du serveur (donc une autorisation) et
+   l'interruption du bras de production.
+
+**Réserve déclarée** : ARC et PPL ne sont pas GPQA, et un effet spécifique à une
+tâche n'est pas logiquement exclu. Il devrait être invisible sur trois
+instruments et visible sur un quatrième à n = 40. Ce n'est pas un risque qu'on
+achète avec un redémarrage.
+
+## R9. Livrable 1 — le polyglot agentique se fera avec **pi**, pas avec dsh
+
+Tranché par l'opérateur le 26/08 à 21:10, sur la mesure des douze tirages : à
+verdicts identiques, dsh coûte 3,07× les jetons de pi et 3,16× la paroi, et il
+meurt au plafond 4 fois sur 9 là où pi n'y meurt jamais. Le corpus fait
+**225 exercices** — cpp 26, go 39, java 47, javascript 49, python 34, rust 30 —
+et le facteur 3 s'y multiplie par 225.
+
+### Protocole, et la lecture qui a été écartée
+
+« L'agent doit créer le src ET ses tests, et tourner jusqu'à ce que ça passe. »
+
+| | ce que ça donne | statut |
+|---|---|---|
+| `--tests-maison --tours 1`, laisse 1800 s | l'agent écrit source et tests et **itère dans son tour** jusqu'à ce que SES tests passent ; la suite officielle juge une fois, à la fin | **RETENU** |
+| `--tests-maison --tours 4+` | après chaque échec, le pilote renvoie à l'agent la **sortie de la suite officielle** comme consigne du tour suivant (`texte = erreurs + TEST_FAILURES`) | **écarté** |
+
+La seconde n'est pas écartée par goût : en variante D elle ferait **fuir la
+suite cachée par ses messages d'erreur dès le tour 2**, et « l'agent ne voit
+jamais le script de test » deviendrait faux. Le pilote sort déjà de la boucle
+dès que la suite officielle passe (`if erreurs is None: break`) : monter
+`--tours` n'ajoute rien à un exercice réussi, seulement une relance informée aux
+échecs.
+
+### Dimensionnement obligatoire avant les 225
+
+Les deux seules durées connues de pi en variante D encadrent trop large :
+
+| source | durée |
+|---|---|
+| `go/beer-song`, local, 3 tirages ce soir | 95 – 144 s (3 FAIL) |
+| 12 exercices, OpenRouter, cet après-midi | **14,2 min/exercice** (3 PASS sur 12) |
+
+**×225 = entre 8 h et 53 h.** Aucune décision ne se prend sur cet intervalle.
+`dimensionner_pi_polyglot.ps1` joue donc 5 exercices (`--pas 45 --decalage 10`,
+disjoints de l'échantillon de l'après-midi) dans la variante exacte, et rendra
+la durée réelle. Il ne rendra **aucun taux** : 5 exercices ne font pas un
+`pass_rate`.
+
+### Ordre de carte, tranché
+
+**GPQA d'abord** (25/198 au moment de la décision, ~4 h), puis le
+dimensionnement, puis les 225. Les deux ne tiennent pas dans la même nuit.
+
+### Trace d'un run abandonné
+
+`pi_dim_testsdonnes` existe sous `tmp.benchmarks` avec 2 exercices joués
+(cpp/gigasecond PASS 68,5 s ; go/kindergarten-garden PASS 420,7 s) en variante
+« tests donnés, corrigés masqués » — variante lancée sur une mauvaise lecture de
+la consigne, arrêtée dès la correction. Ces deux mesures ne sont **pas** du
+dimensionnement de la variante D et ne doivent pas y être mélangées. Le
+répertoire est laissé en place : rien n'est supprimé sans autorisation.
