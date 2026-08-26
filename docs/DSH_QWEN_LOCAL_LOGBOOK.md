@@ -3694,3 +3694,97 @@ rien.
   dsh 2/5 et pi 2/5. Les échecs sont ceux du modèle.
 - **Le mécanisme reste ouvert.** On sait *que* dsh génère 3× plus. On ne sait pas
   *pourquoi*.
+
+---
+
+## 26/08 23:50 — Correction : le bras GPQA n'est pas à 4 h, il est à 12 h. Et 44 % de sa paroi n'achète rien.
+
+J'ai annoncé « ~4 h » pour ce bras, et l'ordre de carte a été tranché sur ce
+chiffre. **Il est faux, et ce n'est pas une dérive : je l'ai pris sur le mauvais
+bras.** Les 80 s par question et les 4,41 h du plan (§B5) sont celles du bras
+**budget 8192**. Celui qui tourne est le bras à **pensée libre**
+(`--reasoning-budget -1`) au plafond 32 768. C'est la coupure du budget qui
+bornait le temps ; sans elle il n'y a plus de borne.
+
+Tout ce qui suit est relu ce soir dans le fichier et dans le journal client,
+pas repris d'un message antérieur.
+
+### L'allure réelle, à l'horloge
+
+Le journal client porte sa propre colonne d'écoulé — c'est le témoin le plus
+propre, il inclut les frais de bout en bout, pas seulement le temps d'appel :
+
+    30/179 ... [70.0 % | 2.5 h ecoulees]      ->  12,0 appels/h
+
+| | bras 8192 (plan §B5) | bras libre (celui qui tourne) |
+|---|---|---|
+| secondes médiane | 80,1 | **164,5** |
+| secondes moyenne | 73,6 | **262,8** |
+| secondes max | 137,6 | **746,9** |
+| jetons sortie médiane | 6 018 | **7 518** |
+| jetons sortie moyenne | 5 090 | **11 856** |
+
+**51/198 faits. 147 restants à 12,0 appels/h = 12,2 h.** Fin vers **midi le
+27/08**, pas vers 1 h du matin. La moyenne écrase la médiane parce que la
+distribution a une queue lourde — précisément ce que la coupure supprimait.
+
+### Le vrai problème : le plafond mange 44 % de la carte et ne rend rien
+
+**8 appels sur 51 (15,7 %) sortent à 32 768 jetons pile.** Ils rendent
+`finish_reason: length` et, au journal client, `donne NON-PARSE` : aucune lettre
+analysable. Et ce sont les plus chers :
+
+| population | n | coût moyen | part de la paroi |
+|---|---|---|---|
+| libres | 43 | 175 s | 56,0 % |
+| **tronqués au plafond** | **8** | **737 s** | **44,0 %** (5 897 s sur 13 400) |
+
+**44 % du temps de carte de ce bras est dépensé à produire des réponses qui ne
+contiennent pas de réponse.** Un tronqué coûte 4,2× un libre. C'est le fait
+dimensionnant de ce bras, et il ne figure nulle part dans le plan.
+
+### Ce que le chiffre vaut aujourd'hui, et pourquoi 90,7 % ne doit pas être publié
+
+    exactitude sur les 43 LIBRES        : 90,7 %  +/- 8,7 pt
+    encadrement sur les 8 tronqués      : [76,5 % ; 92,2 %]   largeur 15,7 pt
+
+**90,7 % est trop beau, et la raison en est structurelle, pas anecdotique.** La
+population « libre » n'est pas un échantillon : c'est le sous-ensemble des
+questions sur lesquelles le modèle a **fini de penser tout seul**. Il tronque
+précisément là où il peine. Conditionner sur « a fini » sélectionne donc les
+questions résolues. Le 90,7 % ne mesure pas GPQA Diamond, il mesure la partie de
+GPQA Diamond que ce modèle trouve facile — et un 27B Q4 au-dessus des modèles de
+frontière publiés est le signal que ce biais est gros, pas petit.
+
+La largeur de 15,7 pt est donc le fait, et `depouiller_gpqa.py` le dit déjà de
+lui-même : *« LARGEUR > 5 pt : ce bras N'A PAS de chiffre d'exactitude
+publiable »*. J'ai vérifié que le harnais n'y est pour rien : `rotations()`
+mélange les distracteurs sur une graine dérivée de l'id puis insère la bonne
+réponse à la position visée (`gpqa_diamond.py:142-157`) — aucune fuite ;
+`extraire()` retire `<think>`, ne lit que les 2 000 derniers caractères et garde
+la **dernière** occurrence (`:160-169`). Le biais est dans la sélection, pas dans
+le code.
+
+### Et le rattrapage prévu ne sauve pas ce bras
+
+L'étape **B2** du plan prévoyait un « rattrapage à plafond 32768 » des appels
+tronqués. Ce bras **est déjà à 32 768** et tronque quand même à 15,7 %. B2 est
+donc **sans objet pour lui** : il faudrait un plafond plus haut, donc en nommer
+un, donc changer de protocole — ce n'est plus un rattrapage. À reformuler avant
+toute publication.
+
+### Ce que je fais, et ce que je ne fais pas
+
+- **Je laisse le bras tourner.** L'ordre de carte a été tranché explicitement ;
+  je ne le renverse pas seul, même si la prémisse que j'avais fournie était
+  fausse. La correction se publie, la décision reste à l'opérateur.
+- **Je ne touche pas au plafond d'un bras en cours** : deux régimes dans un même
+  fichier, c'est exactement ce que le plan interdit.
+- **Je ne publie pas 90,7 %**, ni comme chiffre ni comme ordre de grandeur.
+
+### La leçon
+
+J'ai repris un chiffre du plan sans vérifier qu'il portait sur le bras dont je
+parlais. Les deux bras ont le même modèle, le même serveur, le même nom de
+famille — et un facteur 3 sur la paroi. **Un chiffre n'appartient pas à une
+campagne, il appartient à une configuration.**

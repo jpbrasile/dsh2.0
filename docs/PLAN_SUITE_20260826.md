@@ -444,3 +444,82 @@ dimensionnement, puis les 225. Les deux ne tiennent pas dans la même nuit.
 la consigne, arrêtée dès la correction. Ces deux mesures ne sont **pas** du
 dimensionnement de la variante D et ne doivent pas y être mélangées. Le
 répertoire est laissé en place : rien n'est supprimé sans autorisation.
+
+---
+
+# Révision du 26/08/2026, 23:55 — le bras GPQA coûte 3× l'annoncé, et B2 est sans objet
+
+Les révisions précédentes sont laissées en place : la cible du red team doit
+rester lisible. Celle-ci corrige un chiffre que **j'ai fourni faux** et sur
+lequel un ordre de carte a été tranché.
+
+## R10. « ~4 h » était le chiffre d'un autre bras. Le vrai est 12 h
+
+Les 80 s par question et les 4,41 h du **§B5** décrivent le bras **budget
+8192**. Le bras en cours est à **pensée libre** (`--reasoning-budget -1`),
+plafond 32 768 : c'est la coupure du budget qui bornait le temps.
+
+| | bras 8192 (§B5) | bras libre (en cours) |
+|---|---|---|
+| secondes médiane | 80,1 | **164,5** |
+| secondes moyenne | 73,6 | **262,8** |
+| secondes max | 137,6 | **746,9** |
+| jetons sortie médiane | 6 018 | **7 518** |
+| jetons sortie moyenne | 5 090 | **11 856** |
+
+Allure à l'horloge, lue dans la colonne d'écoulé du journal client (elle inclut
+les frais de bout en bout, pas seulement le temps d'appel) : `30/179 … [2.5 h
+ecoulees]` → **12,0 appels/h**.
+
+**51/198 faits ; 147 restants = 12,2 h ; fin vers midi le 27/08.**
+
+## R11. Le plafond consomme 44 % de la carte et ne rend aucune mesure
+
+| population | n | coût moyen | part de la paroi |
+|---|---|---|---|
+| libres | 43 | 175 s | 56,0 % |
+| **tronqués à 32 768** | **8 (15,7 %)** | **737 s** | **44,0 %** |
+
+Un tronqué coûte **4,2×** un libre, rend `finish_reason: length` et
+`donne NON-PARSE` : pas de lettre analysable. **44 % du temps de carte de ce
+bras produit des réponses sans réponse.** Fait dimensionnant, absent du plan
+jusqu'ici.
+
+## R12. B2 (« rattrapage 32768 ») est SANS OBJET pour ce bras — à reformuler
+
+B2 rattrapait les tronqués « à plafond 32 768 ». Ce bras **est déjà à 32 768** et
+tronque à 15,7 %. Le rattrapage n'a donc pas d'objet : il faudrait un plafond
+**plus haut**, donc en nommer un et le justifier — changement de protocole, pas
+rattrapage. **B2 reste ouvert, mais sa rédaction est caduque.** Rien ne se publie
+avant qu'il soit refait.
+
+## R13. 90,7 % ne se publie pas, et le biais est structurel
+
+    exactitude sur les 43 libres   : 90,7 %  +/- 8,7 pt
+    encadrement sur les 8 tronqués : [76,5 % ; 92,2 %]   largeur 15,7 pt
+
+La population « libre » n'est pas un échantillon : c'est l'ensemble des
+questions où le modèle **a fini de penser seul**, et il tronque là où il peine.
+Conditionner sur « a fini » sélectionne les questions résolues — un 27B Q4
+au-dessus des modèles de frontière publiés mesure l'ampleur du biais, pas le
+modèle. La règle 3b du pré-enregistrement tient donc pour la bonne raison, et
+`depouiller_gpqa.py` refuse déjà de lui-même : *« LARGEUR > 5 pt : ce bras N'A
+PAS de chiffre d'exactitude publiable »*.
+
+**Le harnais est hors de cause, vérifié ce soir** : `rotations()` mélange les
+distracteurs sur une graine dérivée de l'id puis insère la bonne réponse à la
+position visée (`gpqa_diamond.py:142-157`) — aucune fuite ; `extraire()` retire
+`<think>`, ne lit que les 2 000 derniers caractères et garde la **dernière**
+occurrence (`:160-169`). Le biais est dans la sélection.
+
+## R14. Conséquence sur l'ordre de carte — la décision revient à l'opérateur
+
+L'ordre « GPQA d'abord » a été tranché sur « ~4 h ». À 12,2 h, GPQA occupe la
+carte jusqu'à midi et **le dimensionnement pi n'a pas lieu cette nuit**. Je ne
+renverse pas seul une décision explicite : le bras continue, la correction est
+publiée, l'arbitrage est rendu à l'opérateur. Les deux issues, chiffrées :
+
+| | ce que ça coûte | ce que ça rend au réveil |
+|---|---|---|
+| laisser finir (**en cours**) | carte prise jusqu'à ~12 h | GPQA complet, mais encadrement probablement encore trop large (R12/R13) |
+| fenêtre de ~45 min pour `dimensionner_pi_polyglot.ps1` | ~9 appels GPQA différés, rien de perdu (la reprise saute les couples déjà faits) | la durée réelle de la variante D, qui débloque les 225 |
