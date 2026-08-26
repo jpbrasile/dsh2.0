@@ -2382,3 +2382,91 @@ mesurée : **le mur des 1800 s est atteint** (`go/beer-song`, 1800,3 s,
 1 tour, délai 1800**. Un seul facteur changerait alors par rapport à
 aujourd'hui, et l'écart deviendrait attribuable. Coût ~2 $ sur les 13,33 $
 restants. **Non lancé** — hors de la demande, et la file est occupée par pi.
+
+
+---
+
+## 26/08/2026 — « pi est plus rapide, on a un problème de harnais dsh » : oui, mais pas celui-là
+
+Hypothèse à tester : la lenteur de dsh vient de la plomberie. Le journal de fil
+du proxy 8009 (`wire_fumee_durs.jsonl`) permet de trancher, parce qu'il porte
+`t0` et `ms` par appel : la somme des `ms` est le temps LLM, l'empan est le
+temps total, la différence est tout le reste.
+
+### Où passe le temps — `scripts/polyglot_dsh/ou_passe_le_temps.py`
+
+| | dsh (6 exercices, terminé) | pi (partiel) |
+|---|---|---|
+| appels | 189 | 24 |
+| empan 1er→dernier | 7541 s | — |
+| **temps DANS le LLM** | **6404 s = 85 %** | — |
+| temps HORS LLM | 1137 s = 15 % (borne inf.) | — |
+| durée d'appel | méd 15,4 s, p90 68,8 s, max 511,3 s | méd 3,2 s |
+| messages/appel | méd 32, max 91 | méd 10 |
+| jetons | 4 919 856 entrée / 149 075 sortie | — |
+| coût | 1,8723 $ | — |
+
+**85 % du temps de dsh est passé à attendre le modèle.** L'hypothèse « plomberie »
+est réfutée : il n'y a pas 6000 s d'entrées-sorties à récupérer. La fraction
+hors-LLM est en outre une **borne inférieure** — l'empan démarre au premier
+appel, donc le démarrage du conteneur n'y est pas.
+
+### Ce que la régression a REFUSÉ de dire — `cout_du_prefixe.py`
+
+Régression `ms ~ entrée non cachée + entrée cachée + sortie + constante` :
+R² = 0,86, et un coefficient de **−0,42 s / 1000 jetons** sur l'entrée cachée.
+Du temps négatif n'existe pas. Un R² élevé n'est pas un permis d'interpréter :
+les régresseurs sont colinéaires, le terme dominant (la génération) capte tout,
+les autres absorbent du bruit de signe libre.
+
+**L'imputation et la contrefactuelle ont été refusées par garde-fou de signe**,
+ajouté au script. La version qui aurait été publiée sans ce garde-fou annonçait
+« 1270 s économisables grâce au cache » — un nombre inventé, bâti sur un
+préfill négatif.
+
+### Mesure directe, sans modèle — `vitesse_par_contexte.py`
+
+Vitesse apparente = jetons de sortie / durée, par tranche de contexte, appels de
+moins de 200 jetons de sortie écartés (la constante par appel les écrase).
+
+| contexte | dsh n | dsh jet/s | pi n | pi jet/s |
+|---|---|---|---|---|
+| 8–20k | 24 | 43,8 | — | — |
+| 20–40k | 71 | **20,2** | 6 | **53,3** |
+| 40–80k | 25 | 25,1 | 2 | 77,1 |
+| toutes | 121 | **22,7** | 8 | **58,1** |
+
+dsh ralentit bien avec le contexte (43,8 → 20,2 de 8–20k à 20–40k). Mais **à
+tranche de contexte égale (20–40k), pi décode 2,6× plus vite.** La longueur de
+conversation n'explique donc pas tout. Confondants non levés : n = 6 côté pi,
+routage amont OpenRouter non enregistré (`servi` ne porte que le nom du modèle,
+pas le fournisseur — c'est la faille que le red team relève par ailleurs).
+
+### Le défaut de harnais, lui, est net et sans confondant
+
+Paramètres réellement émis sur le fil, mêmes modèle / fournisseur / effort :
+
+| | dsh | pi |
+|---|---|---|
+| `n_tools` | **25** | **4** |
+| `sys_chars` | 4367 | 2718 |
+| plancher d'entrée observé | **8113 jetons** | **1580 jetons** |
+| jetons en cache | **24,7 %** | 78,3 % (66,9 % à 24 appels) |
+
+**dsh paie 8113 jetons d'entrée avant d'avoir commencé à travailler, pi 1580 —
+5,1×.** Vingt-cinq définitions d'outils contre quatre, un prompt système 1,6×
+plus long. Ça, c'est du harnais, c'est mesuré, et c'est réparable sans toucher
+au modèle.
+
+### Conclusion, en séparant ce qui est établi de ce qui ne l'est pas
+
+- **Établi** : le temps de dsh est dans le LLM (85 %), pas dans la plomberie.
+- **Établi** : dsh envoie 25 outils et 8113 jetons de socle contre 4 et 1580.
+- **Établi** : dsh ne récupère que 24,7 % de son entrée en cache contre ~67–78 %.
+  Effet certain sur le **coût** (3 704 032 jetons repayés plein tarif).
+- **NON établi** : que ce déficit de cache coûte du *temps*. La régression qui
+  devait le chiffrer a rendu un signe faux ; rien n'a été publié à la place.
+- **NON établi** : les 2,6× de vitesse de décodage à contexte égal — n = 6 côté
+  pi, et le fournisseur amont n'est pas enregistré.
+- **Non mesuré** : pi n'a pas fini. Toute comparaison de bout en bout attend
+  son run complet sur les six mêmes exercices.

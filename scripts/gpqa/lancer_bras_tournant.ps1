@@ -32,7 +32,12 @@ try {
 # indistinguable d'une reussite depuis /props.
 $argv = (Get-CimInstance Win32_Process -Filter "Name='llama-server.exe'" |
          Select-Object -First 1).CommandLine
-if ($argv -notmatch ("--reasoning-budget\s+" + [regex]::Escape("$Budget"))) {
+# ANCRE A DROITE, sinon la garde est un simple prefixe : « 2048 » se retrouve
+# dans « 20480 », « 8192 » dans « 81920 », et un serveur au mauvais budget
+# passe la garde qui existe precisement pour l'arreter. Verifie le 26/08 par
+# test direct : le motif non ancre ACCEPTE un serveur a 20480 pour -Budget 2048.
+$motifBudget = '--reasoning-budget\s+{0}(\s|$)' -f [regex]::Escape("$Budget")
+if ($argv -notmatch $motifBudget) {
     Write-Output "REFUS : le serveur vivant ne porte PAS --reasoning-budget $Budget."
     Write-Output "  argv : $argv"
     exit 3
