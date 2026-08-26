@@ -20,5 +20,11 @@ harness/_cout/
 # donc locaux. Le CODE de mesure, lui, est versionne.
 scripts/gpqa/*.csv
 scripts/gpqa/*.jsonl
+# Le motif ci-dessus ne couvre PAS un fichier renomme en suffixe :
+# `x.jsonl.avorte` sort de la regle et redevient committable. Constate le
+# 26/08 en mettant de cote un bras mal etiquete. Depot PUBLIC, GPQA sous
+# acces restreint : la regle large est la seule qui tienne a la renomination.
+scripts/gpqa/*.jsonl.*
+scripts/gpqa/*.csv.*
 reports/specdec_20260825_ctxsweep_dflash2/*.log
 *.log.err
