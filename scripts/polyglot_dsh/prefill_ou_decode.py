@@ -47,8 +47,14 @@ import json
 from collections import defaultdict
 
 
-def lire(chemin, min_outils):
-    """Les appels de l'agent, en (entree_froide, sortie, secondes, fournisseur)."""
+def lire(chemin, min_outils, depuis=0, jusqu=0):
+    """Les appels de l'agent, en (entree_froide, sortie, secondes, fournisseur).
+
+    depuis/jusqu (t0 en ms) decoupent une FENETRE : un meme proxy journalise
+    plusieurs runs a la suite, et deux agents compares doivent l'etre sur leurs
+    propres appels, pas sur l'union. La borne se lit sur le journal, jamais sur
+    une horloge de tete.
+    """
     out = []
     for ligne in io.open(chemin, encoding="utf-8", errors="replace"):
         ligne = ligne.strip()
@@ -59,6 +65,11 @@ def lire(chemin, min_outils):
         except ValueError:
             continue
         if d.get("kind") != "call" or d.get("status") != 200:
+            continue
+        t0 = d.get("t0") or 0
+        if depuis and t0 <= depuis:
+            continue
+        if jusqu and t0 > jusqu:
             continue
         s = d.get("sent") or {}
         if (s.get("n_tools") or 0) < min_outils:
@@ -73,8 +84,10 @@ def lire(chemin, min_outils):
         ms = d.get("ms") or 0
         if not entree or not ms:
             continue
+        pensee = (u.get("completion_tokens_details") or {}).get("reasoning_tokens")
         out.append((entree - cache, sortie, ms / 1000.0, cache, entree,
-                    d.get("fournisseur") or "?"))
+                    d.get("fournisseur") or "?", pensee,
+                    s.get("n_tools") or 0, s.get("sys_chars") or 0))
     return out
 
 
@@ -85,11 +98,11 @@ def ajuster(pts):
     latence reseau ET une part du prefill, et rendrait `a` ininterpretable sur
     un echantillon ou l'entree ne descend jamais pres de zero.
     """
-    Saa = sum(x * x for x, y, t, _, _, _ in pts)
-    Sab = sum(x * y for x, y, t, _, _, _ in pts)
-    Sbb = sum(y * y for x, y, t, _, _, _ in pts)
-    Sat = sum(x * t for x, y, t, _, _, _ in pts)
-    Sbt = sum(y * t for x, y, t, _, _, _ in pts)
+    Saa = sum(x * x for x, y, t in ((q[0], q[1], q[2]) for q in pts))
+    Sab = sum(x * y for x, y, t in ((q[0], q[1], q[2]) for q in pts))
+    Sbb = sum(y * y for x, y, t in ((q[0], q[1], q[2]) for q in pts))
+    Sat = sum(x * t for x, y, t in ((q[0], q[1], q[2]) for q in pts))
+    Sbt = sum(y * t for x, y, t in ((q[0], q[1], q[2]) for q in pts))
     det = Saa * Sbb - Sab * Sab
     if abs(det) < 1e-9:
         raise SystemExit("systeme degenere : entree et sortie varient ensemble.\n"
@@ -104,21 +117,25 @@ def main():
                    help="en dessous, l'appel n'est pas celui de l'agent")
     p.add_argument("--part-reutilisable", type=float, default=None,
                    help="fraction du prefixe reutilisable (ou_casse_le_prefixe.py)")
+    p.add_argument("--depuis", type=int, default=0,
+                   help="t0 en ms : n'utiliser que les appels POSTERIEURS")
+    p.add_argument("--jusqu-a", type=int, default=0, dest="jusqu",
+                   help="t0 en ms : n'utiliser que les appels ANTERIEURS ou egaux")
     args = p.parse_args()
 
-    pts = lire(args.journal, args.min_outils)
+    pts = lire(args.journal, args.min_outils, args.depuis, args.jusqu)
     if len(pts) < 4:
         raise SystemExit("%d appels de l'agent : trop peu pour ajuster deux "
                          "pentes." % len(pts))
 
     a, b = ajuster(pts)
-    tt = sum(t for _, _, t, _, _, _ in pts)
-    tp = sum(a * x for x, _, _, _, _, _ in pts)
-    td = sum(b * y for _, y, _, _, _, _ in pts)
-    froid = sum(x for x, _, _, _, _, _ in pts)
-    cache = sum(c for _, _, _, c, _, _ in pts)
-    entree = sum(e for _, _, _, _, e, _ in pts)
-    sortie = sum(y for _, y, _, _, _, _ in pts)
+    tt = sum(q[2] for q in pts)
+    tp = sum(a * q[0] for q in pts)
+    td = sum(b * q[1] for q in pts)
+    froid = sum(q[0] for q in pts)
+    cache = sum(q[3] for q in pts)
+    entree = sum(q[4] for q in pts)
+    sortie = sum(q[1] for q in pts)
 
     print("AJUSTEMENT  ms = a*(entree non cachee) + b*(sortie)   %d appels"
           % len(pts))
@@ -143,6 +160,27 @@ def main():
     print()
     print("  entree %d jetons dont %d caches (%.1f %%)   sortie %d jetons"
           % (entree, cache, 100.0 * cache / entree if entree else 0, sortie))
+
+    # LA PENSEE EST UNE SORTIE COMME UNE AUTRE -- elle se decode au meme prix.
+    # Si elle domine, ni le cache ni le routage n'y peuvent quoi que ce soit :
+    # c'est le REGLAGE D'EFFORT et l'agent qui decident, pas l'infrastructure.
+    avec = [q for q in pts if q[6] is not None]
+    if avec:
+        pen = sum(q[6] for q in avec)
+        gen = sum(q[1] for q in avec)
+        print()
+        print("PENSEE CONTRE TEXTE  (%d appels ou l'amont le declare)" % len(avec))
+        print("  jetons generes %d   dont PENSEE %d (%.1f %%)   visible %d"
+              % (gen, pen, 100.0 * pen / gen if gen else 0, gen - pen))
+        print("  pensee par appel : %.0f jetons   cout au debit ajuste : %.0f s (%.1f %% de la paroi)"
+              % (pen / len(avec), b * pen, 100.0 * b * pen / tt))
+    outils = sorted(set(q[7] for q in pts))
+    syss = sorted(set(q[8] for q in pts))
+    print()
+    print("PREFIXE FIXE  outils %s   systeme %s caracteres"
+          % ("/".join(str(o) for o in outils), "/".join(str(x) for x in syss)))
+    print("  Il est paye a CHAQUE appel non cache. Un agent qui offre 25 outils")
+    print("  la ou un autre en offre 4 ne paie pas la meme addition au depart.")
 
     # Ce que le cache peut rendre, au mieux. Le calcul se fait sur le prefill
     # RESTANT (part froide) : ce qui est deja cache est deja gagne.
@@ -173,7 +211,7 @@ def main():
     # Le detail par fournisseur : c'est lui qui dit si le cache est une
     # propriete du fournisseur ou du hasard de routage a l'interieur d'un seul.
     agg = defaultdict(lambda: [0, 0, 0, 0])
-    for x, y, t, c, e, f in pts:
+    for x, y, t, c, e, f in ((q[0], q[1], q[2], q[3], q[4], q[5]) for q in pts):
         g = agg[f]
         g[0] += 1
         g[1] += e

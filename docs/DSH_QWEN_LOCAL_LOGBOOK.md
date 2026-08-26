@@ -2850,3 +2850,109 @@ Bras de production GPQA en vol : `local_q4_t1_libre_tournant.jsonl`,
 `specdec-q38-plain`, budget −1, plafond 32768, 198 questions en position
 tournante, un appel par question. Limites déclarées et non levées : Q4_K_M,
 KV q8_0/q4_0, et pas de comparaison au BF16 publié.
+
+
+## 26/08/2026 — Le rapport dsh/pi est élucidé : c'est la pensée, pas le cache
+
+Mesure appariée, enfin. **Même exercice** (`go/beer-song`), même modèle
+(`qwen/qwen3.8-27b`), même fournisseur, même variante D, `--tours 1`, même
+effort nominal (`medium` des deux côtés), même proxy instrumenté.
+
+| | dsh | pi | rapport |
+|---|---|---|---|
+| **paroi de l'exercice** | **1383,0 s** | **282,5 s** | **4,9×** |
+| paroi dans les appels LLM | 1366 s (98,8 %) | 270 s (95,6 %) | 5,1× |
+| verdict | FAIL | FAIL | — |
+
+Verdict identique des deux côtés : **le surcoût de dsh n'achète toujours
+rien.** C'est la troisième fois que ce constat tombe, et cette fois il est
+apparié à l'exercice près.
+
+### Ce qui n'est PAS la cause : le cache
+
+C'était l'hypothèse de travail depuis ce matin. Elle est fausse.
+
+| | dsh | pi |
+|---|---|---|
+| taux de cache servi | **8,0 %** | **7,3 %** |
+| part prefill de la paroi LLM | **34,9 %** | **35,0 %** |
+| part décode de la paroi LLM | **65,8 %** | **66,6 %** |
+
+Les deux agents subissent le **même** mauvais cache chez le même fournisseur, et
+répartissent leur temps entre prefill et décode à 0,1 point près. Le cache ne
+peut donc pas expliquer un écart entre eux — il est commun aux deux.
+
+Le contrefactuel le confirme côté dsh : avec la part réutilisable de 80,8 %
+mesurée par `ou_casse_le_prefixe.py`, un cache **parfait** ne rendrait que
+385 s sur 1366, soit **1,39×**. Pas 5, encore moins 7.
+
+Fausse piste fermée au passage : AkashML sert 29 appels sur 29 pour dsh et n'en
+cache que 2 — mais quand il cache, il cache à **97,7 %** et **99,4 %**. Notre
+préfixe est parfaitement réutilisable ; c'est la réplique atteinte qui varie.
+Rien de corrigeable côté client.
+
+### Ce qui EST la cause : le volume généré, et surtout la pensée
+
+| | dsh | pi | rapport |
+|---|---|---|---|
+| appels | 29 | 14 | 2,1× |
+| entrée cumulée | 1 074 288 | 106 931 | 10,0× |
+| **sortie générée** | **29 632** | **4 813** | **6,2×** |
+| dont **pensée** | **17 722 (59,8 %)** | **1 336 (27,8 %)** | **13,3×** |
+| dont texte visible | 11 910 | 3 477 | 3,4× |
+| pensée par appel | **611 jetons** | **95 jetons** | **6,4×** |
+| coût de la pensée au débit ajusté | **537 s** | **50 s** | — |
+
+**487 s d'écart sur la seule pensée, pour un écart total de 1096 s : la pensée
+porte 45 % du surcoût de dsh à elle seule.** Le reste vient du nombre d'appels
+et du poids de chacun.
+
+Et cela au **même effort nominal**. Ce qui n'est pas établi : si dsh pense
+6,4× plus par appel parce que son invite l'y pousse (25 outils, 4335 caractères
+de système) ou parce que `medium` ne se traduit pas par la même valeur sur le
+fil. Le proxy ne journalise pas encore le champ de raisonnement ; je ne l'ai pas
+modifié, le processus en cours n'ayant pas été lancé par moi.
+
+### Le préfixe fixe, mesuré des deux côtés
+
+| | dsh | pi |
+|---|---|---|
+| outils offerts | **25** | **4** |
+| prompt système | 4 335 car. | 2 686 car. |
+| entrée du 1er appel | **8 196 jetons** | **1 695 jetons** |
+
+dsh porte `subagent`, `subagent_fork`, `workflow`, `ralph`, `send_message`,
+`list_agents`, `interrupt_agent`, `job_kill/list/output`,
+`create_goal/get_goal/update_goal`, `skill` — de la machinerie multi-agents dont
+un kata exercism n'a aucun usage. **4,8× l'addition d'entrée avant le premier
+mot**, payée à chaque appel non caché, c'est-à-dire 90 % du temps.
+
+C'est un levier réel, mais borné : le prefill ne pèse que 34,9 % de la paroi.
+
+### Ce que ça change pour la suite
+
+Le livrable 3 (comparaison pi/dsh) était conditionné à l'élucidation du rapport.
+**Il est élucidé** : mécanisme nommé (volume de décode, dominé par la pensée),
+cause du cache écartée par mesure appariée, borne haute du gain par cache
+chiffrée à 1,39×. Le livrable 3 s'ouvre.
+
+La voie A change de cible : ce n'est plus « réparer le cache », c'est **réduire
+ce que dsh génère** — moins d'outils offerts, et comprendre pourquoi son
+`medium` vaut 6,4 fois celui de pi.
+
+### Réserve de taille
+
+**Un exercice.** Le rapport 4,9× ici, 3,2× sur cinq exercices ce matin, ~7×
+contre un agent Claude : ces trois chiffres ne sont pas le même et ne se
+moyennent pas. Ce qui est solide n'est pas le facteur, c'est la **décomposition**
+— elle est appariée, le résidu de l'ajustement est de −0,7 % côté dsh et −1,6 %
+côté pi, et les deux parts prefill/décode coïncident à 0,1 point, ce qu'un
+artefact n'aurait aucune raison de produire.
+
+### Note de harnais
+
+`pilote.py --agent pi` demande **deux** drapeaux que le run dsh n'exige pas :
+`--accueil-pi` (sinon pi lit sa config personnelle, qui ignore la route du
+proxy) et `--dotenv` (sinon `$OPENROUTER_API_KEY` ne s'interpole pas et pi
+refuse au pré-vol). Les deux échecs sont explicites et le pré-vol les attrape
+avant de jouer — c'est exactement ce à quoi il sert.
