@@ -3459,3 +3459,115 @@ pensée mesurée et pas déduite — et j'ai publié des comparaisons **à un ti
 sans jamais mesurer la dispersion. L'instrument était bon ; l'échantillon
 valait 1. Les réserves étaient écrites (« un seul tirage à température 1,0 »)
 mais elles étaient en bas de page, et les facteurs étaient en gras.
+
+---
+
+## 26/08 20:16 — Les six tirages sont rentrés : le tableau de dispersion
+
+Six tirages du même exercice (`go/beer-song`, variante D, un tour, plafond
+16 384) sur le même serveur local, à deux configurations d'outils. Tous
+publiés, y compris celui qui est mort au plafond.
+
+| tirage | outils | systeme | appels | jetons sortis | paroi (s) | décodage (j/s) | cache | arrêt |
+|---|---|---|---|---|---|---|---|---|
+| `local_mesure` | 10 | 1 765 | 26 | 21 942 | 534,9 | 43,4 | 93,0 % | — (compteur absent) |
+| `local_10` | 10 | 1 765 | 28 | 11 101 | 269,3 | 44,5 | 94,0 % | stop |
+| `r10c` | 10 | 1 755 | 34 | 27 330 | 664,2 | 43,1 | 95,1 % | stop |
+| `r25a` | 25 | 4 327 | 5 | 16 769 | 404,9 | 43,0 | 56,3 % | **length** |
+| `r25b` | 25 | 4 327 | 28 | 22 373 | 546,9 | 43,2 | 93,6 % | stop |
+| `r25c` | 25 | 4 327 | 34 | 19 268 | 485,5 | 42,8 | 94,3 % | stop |
+
+**La partition tient, et elle est maintenant chiffrée sur six tirages.**
+
+- **Taux — reproductibles.** Le décodage tient dans **42,8 à 44,5 j/s** sur les
+  six, soit **±1,9 %** autour de 43,7. Le cache tient dans 93,0 à 95,1 % sur les
+  cinq tirages qui ont vécu. Ce sont des grandeurs qui agrègent des centaines
+  d'événements *à l'intérieur* d'un tirage.
+- **Volumes — non reproductibles.** Les jetons sortis vont de **11 101 à
+  27 330** à configuration identique (**×2,46**), la paroi de **269 à 664 s**
+  (**×2,47**). Ce sont des décisions d'agent propagées sur tout le tirage.
+
+**Ce que ça tue, définitivement.** Les intervalles @10 et @25 se recouvrent
+entièrement sur toutes les grandeurs de volume :
+
+| grandeur | @10 outils | @25 outils | verdict |
+|---|---|---|---|
+| jetons sortis | 11 101 – 27 330 | 19 268 – 22 373 | recouvrement total |
+| paroi (s) | 269 – 664 | 485 – 547 | recouvrement total |
+| pensée (car/appel) | 564 – 1 847 | 1 051 – 1 711 | recouvrement total |
+
+L'affirmation « retirer 15 outils fait monter la pensée de +39 % » est
+**abandonnée** : à 10 outils la pensée par appel vaut 564 puis 1 847 selon le
+tirage — un facteur 3,3 *à l'intérieur d'une même configuration*, contre le
+1,39 qu'on prétendait mesurer entre configurations.
+
+**Un tirage sur trois meurt au plafond, et c'est du local.** `r25a` porte
+`finish_reason: length` au 5ᵉ appel, 16 384 jetons pile, et son cache tombe à
+56,3 % — il n'a pas eu le temps d'en construire. Ce mode d'échec avait été
+attribué à Venice le 26/08 18:55 ; il est de dsh, pas du fournisseur.
+
+---
+
+## 26/08 20:20 — Le bras « minimal » : témoin pris sans toucher la carte
+
+Question posée : dsh a-t-il une version *minimale*, et que donne-t-elle ?
+
+**Oui, et c'est le bras qui manquait.** dsh livre un preset d'agent `minimal`,
+lu dans le source installé et non sur une page
+(`…/@deepseek-ai/dsh/config/agent-presets/minimal/agent.cordis.yml`) : persona
+d'**une phrase** avec `complete: true` et `includeRuntimeContext: false`, plus
+exactement **deux outils** — le shell persistant et `str_replace_editor`. La
+compaction est absente.
+
+**Reproduction, pas invocation, et la raison est écrite.** `--dump-config` le
+montre : ce profil headless ne monte pas `@deepseek-ai/dsh-agent-presets` —
+déploiement sans roster, les outils viennent des bundles — et l'application
+headless n'expose aucun drapeau de preset. Y greffer le roster changerait le
+*montage* en plus de la *composition*. On reproduit donc la composition par
+`cordis.patch.yml`, et le témoin est le même que pour tous les bras du soir :
+`n_tools` et `sys_chars` **sur le fil**.
+
+**Témoin pris contre le serveur témoin du port 8007, carte intacte.** Le bras
+GPQA gardait le 4090 ; l'enregistreur 8013 a été pointé sur
+`temoin_echantillonnage.py`, qui répond lui-même sans charger de modèle. dsh
+compose sa requête entière, le fil la journalise, le témoin répond une phrase.
+
+|  | outils | système (car.) |
+|---|---|---|
+| dsh standard | 25 | 4 327 |
+| dsh @10 (bras d'isolement) | 10 | 1 765 |
+| **dsh minimal** | **2** | **357** |
+| pi (pour référence) | 4 | 2 686 |
+
+Outils restants : `pwsh`, `str_replace_editor`. C'est le premier bras qui passe
+**sous pi sur les deux axes à la fois**.
+
+**Ce témoin n'a pas confirmé, il a attrapé.** Premier essai : rc=1, aucun appel.
+
+    dsh: plugin tree failed to load: 1 entry did not activate
+    @deepseek-ai/dsh-command-compact: pending (waiting for service: compaction)
+
+Désactiver `compaction-basic` sans désactiver `command-compact` laisse ce
+dernier en attente d'un service qui n'existe plus, et dsh ne démarre pas. Sur la
+carte, ça aurait coûté **trois tirages morts** et la fenêtre de pause du bras
+GPQA avec. Le chargeur a aussi refusé une rangée que j'avais copiée depuis
+l'autre accueil (`patch: entry "tool-subagent-vision" not found`) — ligne
+retirée : une rangée qui n'existe pas n'est pas désactivée, elle est ignorée.
+
+**Ce qui n'est pas reproduit, et il faut le dire.** `complete: true` appartient
+au greffon `dsh-persona`, que ce profil ne monte pas : ici on écrase le texte de
+`system-prompt`, ce qui n'empêche pas d'autres rangées d'ajouter leur section.
+Les 357 caractères restants le disent — la persona en fait 46. Et le preset
+utilise le shell **persistant** là où ce profil monte le tir unique : l'état ne
+survit pas entre appels.
+
+**Le bord tranchant, signalé plutôt que supposé.** Le preset minimal d'amont
+monte `dsh-fs-local` à la place du fournisseur en bac à sable : son éditeur
+adresse n'importe quel chemin absolu. **On ne l'a pas monté** — le bras garde
+`fs-sandbox`. Le noter quand même, parce que quiconque invoquerait le vrai
+preset l'aurait, et parce que ce banc donne déjà `pwsh` sur l'hôte : le risque
+marginal est nul *ici*, ce qui n'en fait pas un détail *ailleurs*.
+
+**Restauration du bras @25 vérifiée sur le fil, pas sur le fichier.** `r25a`,
+`r25b` et `r25c` portent tous 25 outils et 4 327 caractères de système au
+premier appel. Le patch avait bien été déposé.

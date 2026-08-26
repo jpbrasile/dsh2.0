@@ -1,0 +1,109 @@
+# BRAS « MINIMAL » : reproduire la composition du preset minimal de dsh.
+#
+# D'OU IL VIENT. dsh livre un preset d'agent `minimal`, lu dans le source
+# installe et pas sur une page :
+#   ~/.dsh/runtime/dsh-0.1.1-rc.2/.../dsh/config/agent-presets/minimal/agent.cordis.yml
+#
+#   - id: persona
+#     config: { text: You are a helpful software engineer assistant.,
+#               complete: true, includeRuntimeContext: false }
+#   ... plus le shell persistant (pwsh sur win32) et str_replace_editor.
+#   « Context compaction is absent. »
+#
+# Deux outils, un prompt systeme d'une phrase que rien ne peut completer. C'est
+# le bras qui manquait : il passe SOUS pi sur les deux axes (pi offre 4 outils
+# et 2 686 caracteres de systeme), la ou tous les bras precedents restaient
+# au-dessus.
+#
+# POURQUOI UNE REPRODUCTION ET PAS LE PRESET LUI-MEME. `--dump-config` le
+# montre : le profil headless de ce banc ne monte PAS `@deepseek-ai/
+# dsh-agent-presets`. C'est un deploiement sans roster -- les outils viennent
+# des bundles, et l'application headless n'expose aucun drapeau de preset. Y
+# greffer le roster changerait le montage de l'agent en plus de sa composition,
+# donc ferait varier deux choses a la fois.
+#
+# On reproduit donc la COMPOSITION par le meme mecanisme que les autres bras du
+# soir, et le temoin est le meme : `n_tools` et `sys_chars` sur le fil. Si
+# n_tools tombe a 2 et sys_chars a une centaine de caracteres, la composition
+# EST minimale, quel que soit le chemin qui y a mene. Si ce n'est pas le cas, il
+# faudra l'ecrire.
+#
+# CE QUI N'EST PAS REPRODUIT, ET IL FAUT LE DIRE.
+#   - `complete: true` appartient a `dsh-persona`, que ce profil ne monte pas.
+#     Ici on ECRASE le texte de `system-prompt`, ce qui n'empeche pas d'autres
+#     rangees d'ajouter des sections. sys_chars dira ce qui reste.
+#   - le preset utilise le shell PERSISTANT (`tool-pwsh-persistent`) ; ce profil
+#     monte `tool-pwsh`, le tir unique. L'etat ne survit pas entre appels.
+#   - la compaction est desactivee ici comme dans le preset, mais sur un seul
+#     exercice d'un tour elle n'aurait de toute facon pas eu le temps d'agir.
+#
+# LE BORD TRANCHANT, RELEVE PAR LA DOC AMONT ET CONFIRME DANS LE SOURCE. Le
+# preset minimal monte `dsh-fs-local` la ou le profil monte `dsh-fs-sandbox` :
+# son editeur adresse n'importe quel chemin absolu, quelle que soit la politique
+# de bac a sable. Ici la question ne se pose pas dans les memes termes -- ce
+# banc donne deja `tool-pwsh` sur l'hote a tous ses bras, donc le risque
+# marginal de ce bras-ci est nul par rapport a ceux deja joues. On ne monte PAS
+# `dsh-fs-local` : on garde le fournisseur du profil.
+#
+# POSE / DEPOSE : comme `bras_outils_reduits.yml`. Ce patch ne doit pas
+# survivre a la mesure.
+
+# --- le prompt systeme, reduit a la phrase du preset ----------------------
+- id: system-prompt
+  config:
+    persona: You are a helpful software engineer assistant.
+
+# --- ce qui ajoute du texte systeme sans etre un outil --------------------
+- id: agent-instructions
+  disabled: true
+- id: skill
+  disabled: true
+- id: skill-filesystem
+  disabled: true
+- id: plan-mode
+  disabled: true
+- id: compaction-basic
+  disabled: true
+# `command-compact` ATTEND le service `compaction` : le desactiver seul
+# empeche dsh de demarrer -- « 1 entry did not activate ... pending
+# (waiting for service: compaction) », rc=1, aucun appel. Constate au
+# temoin le 26/08 20:19, AVANT de prendre la carte : c'est exactement ce
+# qu'un temoin sans GPU doit attraper.
+- id: command-compact
+  disabled: true
+
+# --- tous les outils sauf pwsh et str_replace_editor ----------------------
+- id: tool-bash
+  disabled: true
+- id: tool-jobs
+  disabled: true
+- id: tool-fs
+  disabled: true
+- id: tool-fs-search
+  disabled: true
+- id: tool-skill
+  disabled: true
+- id: tool-todo
+  disabled: true
+- id: tool-goal
+  disabled: true
+- id: tool-ralph
+  disabled: true
+- id: tool-web
+  disabled: true
+- id: tool-workflow
+  disabled: true
+- id: tool-subagent
+  disabled: true
+- id: tool-subagent-fork
+  disabled: true
+- id: tool-subagent-control
+  disabled: true
+- id: tool-subagent-list-agents
+  disabled: true
+- id: tool-subagent-report
+  disabled: true
+# `tool-subagent-vision` n'existe PAS dans l'accueil du banc (il n'est pose
+# que dans ~/.dsh). Le chargeur le dit : « patch: entry ... not found ». Ligne
+# retiree apres ce constat -- une rangee qui n'existe pas n'est pas desactivee,
+# elle est ignoree, et le message serait reste dans chaque journal.
