@@ -126,6 +126,24 @@ const server = http.createServer((req, res) => {
           if (!Object.keys(ecrase).length) ecrase = null;
           corpsSortant = Buffer.from(JSON.stringify(p), 'utf8');
         }
+    // --- sonde de prefixe (26/08) : ou le cache meurt-il ? -------------
+    // Empreinte FNV-1a 32 bits, cumulee message par message. On ne stocke
+    // AUCUN contenu, seulement des longueurs et des empreintes.
+    const _fnv = (s) => {
+      let h = 0x811c9dc5;
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+      }
+      return h.toString(16).padStart(8, '0');
+    };
+    const _texte = (m) => {
+      if (!m) return '';
+      const c = m.content;
+      if (typeof c === 'string') return c;
+      if (Array.isArray(c)) return c.map((b) => (b && b.text) || '').join('');
+      return '';
+    };
         sent = {
           model: p.model,
           n_messages: Array.isArray(p.messages) ? p.messages.length : null,
@@ -152,7 +170,21 @@ const server = http.createServer((req, res) => {
                 .reduce((n, m) => n + (typeof m.content === 'string' ? m.content.length
                   : Array.isArray(m.content) ? m.content.reduce((k, b) => k + ((b && b.text) ? b.text.length : 0), 0) : 0), 0)
             : null,
-          roles: Array.isArray(p.messages) ? p.messages.slice(0, 3).map((m) => (m && m.role) || '?') : null,
+          roles: Array.isArray(p.messages) ? p.messages.slice(0, 300).map((m) => (m && m.role) || '?') : null,
+          msg_chars: Array.isArray(p.messages) ? p.messages.slice(0, 300).map((m) => _texte(m).length) : null,
+          // Empreinte du prefixe APRES chaque message : le premier indice ou
+          // deux appels successifs divergent est l'endroit ou le cache meurt.
+          // On seme avec le prompt systeme ET la liste d'outils, qui precedent
+          // les messages dans le prompt reellement servi.
+          prefix_h: Array.isArray(p.messages) ? (() => {
+            let acc = _fnv(JSON.stringify(p.tools || []));
+            const out = [acc];
+            for (const m of p.messages.slice(0, 300)) {
+              acc = _fnv(acc + '|' + ((m && m.role) || '?') + '|' + _texte(m));
+              out.push(acc);
+            }
+            return out;
+          })() : null,
         };
       } catch (e) { sent = { parse_error: String(e) }; }
     }
@@ -204,6 +236,7 @@ const server = http.createServer((req, res) => {
           for (const l of raw.split(String.fromCharCode(10))) {
             if (!l.startsWith('data: ') || l.includes('[DONE]')) continue;
             let o = null; try { o = JSON.parse(l.slice(6)); } catch (e) { o = null; }
+            if (o && o.provider && !rec.fournisseur) rec.fournisseur = o.provider;
             if (o && o.model) { rec.servi = o.model; break; }
           }
         }
@@ -220,6 +253,7 @@ const server = http.createServer((req, res) => {
           }
         }
         if (last) {
+          if (last.provider) rec.fournisseur = last.provider;
           if (last.model) rec.servi = last.model;
           if (last.usage) rec.usage = last.usage;
           if (last.timings) rec.timings = last.timings;

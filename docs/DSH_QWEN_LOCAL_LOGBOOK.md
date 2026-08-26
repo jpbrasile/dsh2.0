@@ -2635,3 +2635,60 @@ journalisée en `proxy.mjs:149`), et le prompt système bouge sur 20 appels sur
 
 **Non posé pour l'instant** : le run pi est en cours (3 exercices sur 6) et
 `proxy.mjs` le sert. On ne modifie pas un instrument pendant la mesure.
+
+---
+
+## 26/08/2026 — Bilan des deux côtés : verdicts identiques, temps 3,2× — le surcoût de dsh n'achète rien
+
+Fumée « cas durs », variante D (`--tests-maison --tours 1`), même modèle
+`qwen/qwen3.8-27b`, même fournisseur, même proxy, configurations identiques à
+`--agent` et `--conteneur` près.
+
+| exercice | dsh | s | pi | s |
+|---|---|---|---|---|
+| cpp/binary-search-tree | FAIL | 1370,7 | FAIL | 182,3 |
+| cpp/dnd-character | FAIL | 1101,8 | FAIL | 159,5 |
+| go/beer-song | **NON-MESURE** (mur) | 1800,9 | FAIL | 211,0 |
+| go/crypto-square | PASS | 1306,3 | PASS | 1084,6 |
+| java/book-store | PASS | 1434,0 | PASS | 586,0 |
+| java/custom-set | FAIL | 495,9 | FAIL | 132,3 |
+
+**Sur les 5 exercices mesurés des deux côtés : dsh 2/5, pi 2/5.** Et pas
+seulement le même score — **le même verdict, exercice par exercice, 5 fois sur
+5**. Les deux agents réussissent crypto-square et book-store, échouent sur
+binary-search-tree, dnd-character et custom-set.
+
+### Ce que cette concordance dit
+
+Les échecs sont ceux du **modèle**, pas du harnais. Deux pilotes différents, une
+même liste de succès et d'échecs : ce qui décide, c'est
+`qwen/qwen3.8-27b` en variante D à un tour, pas la façon dont on l'appelle.
+
+Ça recadre définitivement le « 50 % » d'hier, que j'avais déjà signalé comme
+sans étalon : il ne mesurait aucune faiblesse propre à dsh.
+
+### Ce qui sépare vraiment les deux
+
+Le temps, et lui seul : **7510 s pour dsh contre 2356 s pour pi, soit 3,2×**
+(médianes 1371 s contre 211 s). Le seul écart de résultat va dans le même sens :
+`go/beer-song`, que dsh ne rend jamais parce qu'il tape le mur des 1800 s, pi le
+rend en 211 s — pour un échec, mais un échec **mesuré**.
+
+**Le surcoût de temps de dsh n'achète donc aucune qualité.** C'est le point
+qui rend la correction du cache prioritaire et non cosmétique : à qualité
+strictement égale, dsh paie 3,2× le temps, et ce surcoût lui coûte en plus un
+exercice entier en non-mesure.
+
+### Réserve de taille
+
+Cinq exercices. Un écart de moins d'un exercice ne veut rien dire, et cette
+fumée sert à trouver des pannes, pas à classer deux agents. Ce qui est solide
+ici n'est pas le 2/5 — c'est la **concordance exercice par exercice**, qui ne
+tient pas au hasard de la même façon qu'un taux.
+
+### État de la sonde
+
+Sonde de préfixe **posée** dans `proxy.mjs` (`node --check` ok, sauvegarde en
+`proxy.mjs.avant-sonde`). Elle n'est PAS active : un node ne relit pas son
+fichier, et le processus proxy en cours n'a pas été lancé par moi — il sera pris
+au prochain démarrage du proxy.
