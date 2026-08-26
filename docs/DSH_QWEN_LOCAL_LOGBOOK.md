@@ -2314,3 +2314,71 @@ réponse est une mesure ; une troncature n'en est pas une.
 Le rattrapage symétrique à 32768 sur les appels tronqués reste **dû** sur les
 deux bras gelés : règle de lecture pré-enregistrée, un appel tronqué est exclu
 **et compté**.
+
+
+---
+
+## 26/08/2026 — Correction : les « cas durs » n'étaient PAS des échecs
+
+**Ma formulation était fausse et elle rendait le chiffre flatteur.** J'ai décrit
+les six exercices de la fumée comme des exercices « précédemment en échec ou
+tronqués ». Le second terme est juste, le premier ne l'est pas.
+
+**Le critère réel**, `cas_durs.py:16` :
+
+```python
+dur = coupes > 0 or not ok or art > 0
+```
+
+Tour coupé **OU** échec **OU** artefact effacé. Relevé sur disque, l'état
+d'avant côté dsh :
+
+| exercice | dsh AVANT | pi AVANT |
+|---|---|---|
+| java/book-store | **PASS**, 1 tour coupé, 910,4 s | FAIL, 2 tours coupés, 1847,9 s |
+| go/beer-song | **PASS**, 1 tour coupé, 901,1 s | PASS, 119,1 s |
+| go/crypto-square | **PASS**, 1 tour coupé, 903,1 s | PASS, 190,1 s |
+| cpp/binary-search-tree | **PASS**, 869,8 s | PASS, 451,7 s |
+| cpp/dnd-character | **PASS**, 240,4 s | PASS, 159,0 s |
+| java/custom-set | **PASS**, 537,0 s | PASS, 141,4 s |
+
+**dsh passait les six.** Trois avaient un tour coupé au ras du plafond de 900 s ;
+d'autres un artefact effacé. Aucun n'échouait.
+
+### Ce que ça fait au 50 %
+
+Le 2/4 de la fumée est donc **une chute depuis 6/6, pas une remontée depuis 0**.
+
+Mais ce n'est pas la même tâche. Le run d'avant, `_run_dev_or_fils.ps1` :
+
+```
+python pilote.py dsh-dev-or --tours 2 --pas 6 --decalage 3 --par-langue 2
+       --effort medium --fournisseur openrouter --modele "qwen/qwen3.8-27b"
+```
+
+Variante **standard**, suite officielle visible, **deux tours** pour corriger.
+Aujourd'hui : `--tests-maison --tours 1` — l'agent écrit ses propres tests, ne
+voit jamais la suite officielle ni la solution de référence, et n'a pas de
+second tour. Le tour unique n'est pas une économie : le tour 2 réinjecte la
+sortie de la suite officielle, qui en variante D **est** la recette
+d'acceptation cachée.
+
+Trois facteurs ont changé d'un coup, et c'est assumé : une fumée cherche une
+panne, pas un effet.
+
+### La conclusion, qui n'est pas confortable
+
+**50 % n'a aucune référence à laquelle se comparer.** Ce n'est ni bon ni
+mauvais : c'est un nombre sans étalon, et le publier seul serait trompeur dans
+les deux sens — flatteur si on sous-entend une remontée, accablant si on
+sous-entend une régression du modèle.
+
+Ce que la fumée a réellement produit tient en une ligne, et celle-là est
+mesurée : **le mur des 1800 s est atteint** (`go/beer-song`, 1800,3 s,
+`coupe: True`, sortie agent vide), donc la sur-délibération est passée du stade
+« lent » au stade « détruit l'exercice ».
+
+**Ce qui rendrait le 50 % lisible** : rejouer les six en variante **standard,
+1 tour, délai 1800**. Un seul facteur changerait alors par rapport à
+aujourd'hui, et l'écart deviendrait attribuable. Coût ~2 $ sur les 13,33 $
+restants. **Non lancé** — hors de la demande, et la file est occupée par pi.
