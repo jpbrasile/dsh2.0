@@ -3381,3 +3381,81 @@ raison — le fragment qui porte `usage` a souvent `choices: []`, et un bras cou
 au plafond passerait sinon pour un bras fini. Les quatre appels du bras avorté
 ont été retirés plutôt que gardés à côté d'appels instrumentés : un journal qui
 mélange deux instruments ne se dépouille pas.
+
+## 26/08 20:40 — Un réplicat, et la moitié des conclusions du soir tombe
+
+### Ce qui s'est passé
+
+Le bras local @10 outils a été rejoué, uniquement pour récupérer la mesure de
+pensée que mon proxy ne prenait pas. Même exercice, même serveur, même
+configuration, à une demi-heure d'intervalle :
+
+| local @10 outils | appels | jetons de sortie | paroi LLM |
+|---|---|---|---|
+| tirage 1, 19:20 | 26 | **21 942** | 535 s |
+| tirage 2, 20:35 | 28 | **11 101** | 269 s |
+
+**Facteur 2,0 entre deux tirages identiques.** Les deux FAIL.
+
+Ce n'est pas surprenant après coup — température 1,0, tâche agentique où chaque
+tour dépend du précédent, donc un choix précoce se propage sur tout le run. Mais
+je ne l'avais pas mesuré, et j'ai publié des facteurs plus petits que ça.
+
+### La partition, qui est le vrai résultat
+
+Sur les deux mêmes tirages :
+
+| grandeur | tirage 1 | tirage 2 | écart |
+|---|---|---|---|
+| **débit de décode** | 43,4 j/s | 44,5 j/s | **2,5 %** |
+| **taux de cache** | 93,0 % | 94,0 % | **1 point** |
+| jetons de sortie | 21 942 | 11 101 | **×2,0** |
+| paroi LLM | 535 s | 269 s | **×2,0** |
+
+**Ce qui se mesure en un tirage : les TAUX.** Débit, part de cache, part de
+prefill — ils agrègent des centaines d'événements à l'intérieur d'un même run,
+et deux runs les retrouvent à quelques pour cent.
+
+**Ce qui ne se mesure pas en un tirage : les VOLUMES et les PAROIS.** Le nombre
+de jetons générés est une décision de l'agent, prise une fois, propagée partout.
+Un run en donne un échantillon de taille 1.
+
+### Ce qui tombe
+
+| affirmation publiée ce soir | statut |
+|---|---|
+| « retirer 15 outils fait monter la pensée de 611 à 851 jetons/appel » (+39 %) | **NON ÉTABLI** — un tirage par bras, effet plus petit que la dispersion |
+| « le local génère 2,54× moins de jetons qu'AkashML » | **magnitude non établie**. Direction plausible : les deux tirages locaux (21 942 et 11 101) sont sous AkashML (55 637), mais AkashML n'a lui aussi qu'un tirage |
+| « le local joue l'exercice 3,3× plus vite » | **magnitude non établie** — 3,3× ou 6,6× selon le tirage local retenu |
+| « Venice pense 3,2× plus qu'AkashML » | **NON ÉTABLI** — un tirage chacun |
+
+### Ce qui tient
+
+| affirmation | pourquoi elle tient |
+|---|---|
+| débits de décode par fournisseur (33,9 / 94,0 / 43,5 j/s) | mesurés sur des centaines de jetons par appel, retrouvés à 2–3 % par deux méthodes indépendantes et par deux tirages |
+| l'ajustement à deux pentes lit bien le débit du fournisseur | trois validations croisées, 2,5 à 3,0 % |
+| le cache local vaut 93–94 % contre 19,4 % chez AkashML | taux, stable au point près entre tirages |
+| le cache n'est pas le levier | il ne pèse que 6 % de la paroi locale — c'est un rapport de taux, pas de volumes |
+| le bras Venice s'est arrêté au plafond au 8ᵉ appel | fait déclaré par `finish_reason`, pas une comparaison |
+| dsh et pi envoient des paramètres identiques champ pour champ | lecture directe du fil, pas une moyenne |
+
+### Ce que ça coûte, et ce que ça change à la suite
+
+Trois tirages par configuration sont lancés — @25 ×3, @10 ×1 de plus pour en
+avoir trois — soit ~30 minutes de carte prises au bras GPQA, une seule fenêtre
+de pause. Le nombre est fixé **avant** de voir les résultats et ne sera pas
+révisé après ; les six tirages seront publiés, y compris ceux qui dérangent.
+
+Trois tirages ne donnent pas une précision, ils donnent un ordre de grandeur de
+la dispersion. Avec une dispersion à ×2, **aucun facteur sous ~1,5 ne sera
+lisible**, et il faudra le dire plutôt que de le publier.
+
+### La leçon, qui n'est pas nouvelle
+
+J'ai passé la soirée à vérifier des instruments — l'épinglage sur la réponse et
+pas sur la requête, le plafond sur `finish_reason` et pas sur une égalité, la
+pensée mesurée et pas déduite — et j'ai publié des comparaisons **à un tirage**
+sans jamais mesurer la dispersion. L'instrument était bon ; l'échantillon
+valait 1. Les réserves étaient écrites (« un seul tirage à température 1,0 »)
+mais elles étaient en bas de page, et les facteurs étaient en gras.
