@@ -73,12 +73,29 @@ if ($argv -match '--ctx-size\s+(\d+)') {
     }
     Write-Output "ctx $ctx finance un plafond de $MaxTokens jetons."
 }
+# LE NOM DU MODELE EST UNE DONNEE, PAS UNE DECORATION. Il est recopie dans
+# CHAQUE enregistrement et c'est la seule trace de la config qui a produit le
+# chiffre. Sans --modele explicite, gpqa_diamond.py ecrit son defaut : un bras
+# joue sur le serveur plain sort etiquete « dflash2 ». llama-server sert la
+# requete quel que soit le champ `model`, donc l'erreur ne leve rien a
+# l'execution -- elle n'apparait qu'au depouillement, quand le bras est fini.
+# Constate le 26/08 a 17:43, apres une question jouee. On lit donc l'alias sur
+# le PROCESSUS VIVANT, et on refuse s'il n'y en a pas : mieux vaut pas de bras
+# qu'un bras mal etiquete.
+if ($argv -notmatch '--alias\s+(\S+)') {
+    Write-Output "REFUS : le serveur vivant ne porte pas d'--alias."
+    Write-Output "  Le bras sortirait etiquete au defaut du script, pas a la config reelle."
+    exit 6
+}
+$aliasServeur = $Matches[1]
 Write-Output "verifie sur le processus vivant : budget -1, aucun message."
+Write-Output "modele ecrit dans chaque enregistrement : $aliasServeur (lu sur le serveur)."
 
 $fils = Join-Path $banc ("_run_" + [IO.Path]::GetFileNameWithoutExtension($Sortie) + "_fils.ps1")
 $corps = @"
 Set-Location "$banc"
 python gpqa_diamond.py $Sortie ``
+    --modele $aliasServeur ``
     --rotation-tournante --max-tokens $MaxTokens --parallele 1 ``
     --temperature 1.0 --top-p 0.95 --delai 1800 ``
     --extra-fichier extra_local.json
