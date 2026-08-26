@@ -246,3 +246,78 @@ reste à trancher, si le cas se présente, est le seuil de perte.
 
 Le rattrapage symétrique à 32768 des appels tronqués des bras gelés reste **dû
 et non lancé** — la carte est occupée.
+
+---
+
+## Révision 3 — 26/08/2026 : la règle 6 abandonne les 792 appels
+
+**Statut : aucune donnée de mesure finale n'existe.** La règle 6 n'a jamais été
+exécutée ; cet amendement précède entièrement les données qu'il régit.
+
+### Ce que disait la règle 6, et pourquoi elle tombe
+
+> 6. Le budget retenu est ensuite mesuré sur le jeu complet (198 questions,
+>    792 appels).
+
+Et la règle 8 justifiait la rotation tournante en réservant explicitement son
+usage : « Ce choix est fait **pour la comparaison appariée**, et il serait
+mauvais pour une mesure absolue. » J'ai d'abord opposé cette phrase à la
+demande de diviser le jeu final. **Mesuré, l'argument ne tient pas.**
+
+### La mesure, sur les données à 4 rotations déjà gelées
+
+`cout_de_diviser.py` sur `local_q4_t1_budget512.jsonl`, 67 questions complètes
+à 4 rotations. Décomposition de la variance des moyennes par question par
+méthode des moments :
+
+```
+Var(moyennes observees)        0,12220
+E[p(1-p)]  bruit de generation 0,10821
+Var(p)     dispersion vraie    0,09515   = 78 % de la variance
+```
+
+**78 % de la variance est la dispersion des difficultés entre questions.** Elle
+est incompressible : aucun appel supplémentaire ne l'achète, parce qu'elle ne
+vient pas du bruit de génération mais du fait que les questions ne se valent
+pas. Seuls les 22 % restants se divisent par le nombre de rotations.
+
+| protocole | appels | ± 1 σ |
+|---|---|---|
+| 198 q × 4 rotations (ancienne règle 6) | 792 | 2,5 pt |
+| 198 q × 2 rotations | 396 | 2,7 pt |
+| 198 q × 1 rotation (tournante) | **198** | **3,2 pt** |
+
+**Quadrupler les appels achète 0,7 point.** À ~4,1 h par tranche de 198 appels
+mesurées le 26/08, c'est ~12 h de 4090 pour 0,7 point.
+
+### Le point qui tranche vraiment
+
+À budget d'appels **égal** (792), le partage optimal serait 1 rotation × 792
+questions : ± 1,6 pt. Impossible — Diamond n'a que 198 questions. Les rotations
+supplémentaires ne sont donc pas un investissement, ce sont **les miettes d'un
+budget qu'on ne peut pas réaffecter**. C'est le plus mauvais emploi disponible,
+et la seule raison de le faire serait de ne pas savoir qu'il l'est.
+
+### Règle 6 (Révision 3)
+
+> **6. Le budget retenu est mesuré sur les 198 questions en rotation
+> tournante, un appel par question, 198 appels.** La barre publiée est
+> l'erreur-type groupée par question, attendue autour de ± 3,2 pt d'après la
+> décomposition ci-dessus. Cette barre est publiée **avec** la mention que
+> 78 % de la variance est de la dispersion de difficulté et ne se réduit pas
+> par plus d'appels : une barre de ± 3,2 pt sur ce jeu n'est pas un défaut de
+> protocole, c'est la taille de GPQA Diamond.
+
+### Ce que ça retire à la règle 8
+
+La phrase « serait mauvais pour une mesure absolue » est **remplacée** par :
+la rotation tournante coûte × 1,29 sur l'erreur-type absolue, ce qui est le
+prix mesuré et non une objection de principe. La réserve d'origine était
+qualitative et n'avait jamais été chiffrée ; elle l'est maintenant.
+
+### Ce que ça ne change pas
+
+Le contrôle de stabilité (une question sue est-elle sue dans les 4 positions)
+demande les 4 rotations d'une même question. Il continue de tourner sur les
+partiels à 4 rotations déjà gelés, qui existent pour ça, et **pas** sur les
+bras tournants.
