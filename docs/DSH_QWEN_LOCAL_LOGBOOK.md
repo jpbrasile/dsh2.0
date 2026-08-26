@@ -3204,3 +3204,113 @@ génère trois fois plus. Le classement de débit du soir ne se traduit donc pas
 directement en classement de coût ou de temps d'exercice, et je ne l'utiliserai
 pas comme tel. Il fallait un exercice réel pour le voir : la sonde à 0,0187 $ ne
 pouvait pas le montrer, elle imposait la longueur.
+
+## 26/08 19:30 — Trois amonts, un seul exercice : le local gagne par le volume, pas par la vitesse
+
+### Le montage
+
+`go/beer-song`, variante D, `--tours 1`, effort `medium`, **10 outils des trois
+côtés**, **plafond de sortie 16 384 des trois côtés**. Seul l'amont change. Le
+bras GPQA a été mis en pause à 21/198 pour libérer la carte (reprise
+automatique par `deja_fait()`, rien perdu), et le local a donc tourné **seul sur
+le slot unique**.
+
+| | AkashML bf16 | Venice fp8 | **local Q4_K_M** |
+|---|---|---|---|
+| paroi de l'exercice | 1 805,9 s | 187,2 s | **547,0 s** |
+| paroi LLM | 1 775 s | 187 s | **535 s** |
+| appels | 45 | 8 | **29** |
+| jetons de sortie | 55 637 | 16 614 | **21 942** |
+| débit plancher (sortie / paroi) | 31,3 j/s | 89,0 j/s | **41,0 j/s** |
+| décode | 33,0 j/s *(ajusté)* | 91,5 j/s *(ajusté)* | **43,5 j/s *(mesuré serveur)*** |
+| cache servi | 19,4 % | 0,0 % | **93,0 %** |
+| troncature au plafond | non | **oui, 8ᵉ appel** | non |
+| coût | 0,5731 $ | 0,0695 $ | **0,0000 $** |
+| verdict | FAIL | FAIL | FAIL |
+
+**Le bras Venice ne compte pas comme comparaison de paroi** : son 8ᵉ appel rend
+16 384 jetons — le plafond exact — et le tour meurt dessus. Restent deux runs
+complets : AkashML et le local.
+
+### Le résultat
+
+**Le local joue le même exercice 3,3× plus vite qu'AkashML** (1 775 s → 535 s),
+et **gratuitement**. Mais pas pour la raison qu'on attendrait :
+
+| facteur | valeur |
+|---|---|
+| il décode plus vite | **1,32×** (43,5 contre 33,0 j/s) |
+| il génère moins | **2,54×** (21 942 contre 55 637 jetons) |
+| produit | **3,35×** — et la paroi observée donne 3,32× |
+
+**Les deux tiers du gain viennent du volume généré, pas du débit.** C'est
+exactement le mécanisme déjà identifié sur le rapport dsh/pi, retrouvé ici par
+un autre chemin : ce qui coûte, c'est le nombre de jetons qu'on décide
+d'écrire.
+
+Le cache est spectaculaire — **93,0 % contre 19,4 %** — mais il ne pèse que
+**6,0 %** de la paroi locale : une boucle agentique sur un slot unique recache
+presque tout, et cela ne rapporte presque rien parce que le prefill n'était déjà
+pas le problème. Troisième confirmation indépendante que **le cache n'est pas le
+levier**.
+
+### Ce que le local donne en plus — et ce qu'il donne en moins
+
+**En plus.** llama-server renvoie un bloc `timings` par requête. On lit
+*mesurés*, non ajustés : `prompt_n / prompt_ms / prompt_per_second` et
+`predicted_n / predicted_ms / predicted_per_second`. D'où, sur les 29 appels :
+prefill **50 635 jetons en 26 s = 1 962 j/s**, décode **22 078 jetons en 508 s =
+43,5 j/s**, décode = **95,2 %** de la paroi serveur. Le débit de décode tient
+entre 45,4 et 46,9 j/s appel par appel, soit **±1,6 %** — chez OpenRouter je
+n'avais qu'une pente moyenne, avec un résidu allant de 0,3 % à 11,9 % selon le
+bras.
+
+**Troisième validation croisée de l'instrument**, la première contre une vérité
+terrain plutôt que contre une autre estimation :
+
+| | ajustement à deux pentes | `timings` du serveur | écart |
+|---|---|---|---|
+| décode | 44,6 j/s | 43,5 j/s | **2,5 %** |
+| prefill | 1 576 j/s | 1 962 j/s | 20 % |
+
+Le décode, qui porte 92 % de la paroi, est retrouvé à 2,5 %. Le prefill l'est
+mal — attendu : il ne pèse que 6 % et la pente est donc mal identifiée. **À
+publier tel quel : l'ajustement est fiable là où il compte, et fragile
+ailleurs.**
+
+**En moins, et c'est une vraie perte.** Le serveur tourne en
+`--reasoning-format none` : les balises `<think>` restent dans le contenu et
+`usage` ne porte **aucun compte de jetons de raisonnement**. La séparation
+pensée / visible — celle qui a porté tout le diagnostic dsh contre pi (611
+contre 95 jetons par appel) — **n'existe pas en local**. Le local est meilleur
+sur le temps et le cache, aveugle sur la composition.
+
+Conséquence : la colonne « pensée par appel » du tableau ci-dessus est vide pour
+le local, et je ne l'estimerai pas par différence.
+
+### Les réserves, qui ne sont pas des détails
+
+**Un seul tirage par bras, à température 1,0.** Le facteur 2,54 sur le volume
+généré est mesuré une fois. Il autorise « le local a généré 2,5× moins sur cet
+exercice », pas « le local génère 2,5× moins ».
+
+**Trois quantifications différentes** : Q4_K_M en local, bf16 chez AkashML, fp8
+chez Venice. Ce tableau compare des **débits et des volumes**, pas des qualités.
+Les trois verdicts sont FAIL, ce qui n'autorise aucune conclusion de qualité
+dans un sens ou dans l'autre.
+
+**La part locale de la paroi est négligeable, et cela lève une réserve posée
+plus tôt.** J'avais écrit que la paroi du bras AkashML à 10 outils n'était pas
+lisible parce qu'un échantillon pi tournait en même temps. Vérification : la
+paroi LLM fait 1 775 s sur 1 805,9 s, soit **98,3 %** ; côté local, 535 s sur
+547,0 s, soit **97,8 %**. La contention CPU ne peut donc déplacer que ~2 % des
+chiffres. **La réserve tient, mais elle est petite** — j'avais été trop prudent
+en refusant la comparaison.
+
+### Ce que cela décide
+
+Le polyglot complet tournera **en local**. La décision était déjà prise sur le
+coût (225 exercices × 0,47 $ = 106 $ contre 11,28 $ de crédit) ; elle est
+maintenant prise aussi sur le **temps** — 3,3× plus rapide qu'AkashML sur un run
+complet, et au-dessus de tous les fournisseurs sauf Venice au débit brut, sans
+le mur de jetons de Venice.
