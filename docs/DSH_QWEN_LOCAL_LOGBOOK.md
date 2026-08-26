@@ -2956,3 +2956,48 @@ artefact n'aurait aucune raison de produire.
 proxy) et `--dotenv` (sinon `$OPENROUTER_API_KEY` ne s'interpole pas et pi
 refuse au pré-vol). Les deux échecs sont explicites et le pré-vol les attrape
 avant de jouer — c'est exactement ce à quoi il sert.
+
+### Correction, une heure plus tard : le proxy journalisait déjà le champ d'effort
+
+Dans l'entrée ci-dessus j'ai écrit que « le proxy ne journalise pas encore le
+champ de raisonnement ». **C'est faux.** `proxy.mjs` pose depuis le 23/08
+`reasoning_effort`, `enable_thinking`, `thinking` et `chat_template_kwargs`
+dans chaque enregistrement (l. 155-158). Je l'avais conclu de l'absence de ces
+clés dans un enregistrement — mais `JSON.stringify` **supprime les clés dont la
+valeur est `undefined`** : leur absence ne dit pas que le proxy ne les écrit
+pas, elle dit que **l'agent ne les a pas envoyées**. C'est une mesure, et je
+l'avais lue comme un trou d'instrument.
+
+La mesure était donc déjà sur le disque. La voici.
+
+| champ envoyé | dsh (29 appels) | pi (17 appels) |
+|---|---|---|
+| `reasoning_effort` | **`"medium"`** | **`"medium"`** |
+| `enable_thinking` | absent du corps | absent du corps |
+| `thinking` | absent du corps | absent du corps |
+| `chat_template_kwargs` | absent du corps | absent du corps |
+| `max_tokens` | 16384 | 16384 |
+| `temperature` / `top_p` / `top_k` / `min_p` | 1 / 0,95 / 20 / 0 | 1 / 0,95 / 20 / 0 |
+
+**Les deux agents envoient des paramètres identiques, champ par champ.** Le
+`medium` de dsh et celui de pi sont le même mot sur le fil, pas deux réglages
+qui se ressembleraient.
+
+### Ce que ça change au verdict
+
+L'écart de pensée — **611 jetons par appel contre 95, soit 6,4×** — n'est **pas
+un effet de réglage**. Il ne reste qu'une cause possible : **l'invite**. Même
+modèle, mêmes paramètres de décodage, même demande d'effort ; ce qui diffère est
+ce que l'agent met dans le contexte.
+
+Et cela rend le levier « 25 outils contre 4 » nettement plus intéressant qu'il
+ne paraissait. Je l'avais classé comme un coût de prefill, donc borné à 35 % de
+la paroi. S'il pousse aussi le modèle à penser plus longtemps, il agit sur les
+65 % restants — c'est-à-dire sur la part qui porte réellement l'écart.
+
+**Ce qui n'est pas établi, et ne doit pas être présenté comme tel :** *quelle*
+partie de l'invite produit l'effet. Le nombre d'outils, les 4 335 caractères de
+système contre 2 686, la structure des messages et la formulation de la tâche
+varient tous ensemble entre les deux agents. La mesure dit « c'est l'invite »,
+pas « c'est le nombre d'outils ». Isoler demanderait un bras où l'on ne change
+que la liste d'outils — faisable, non fait.

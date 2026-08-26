@@ -211,9 +211,14 @@ q38-plain`, **même binaire** (build `src-dflash2`) des deux côtés.
 
 ### Ce qui reste ouvert
 
-- **Pourquoi `medium` vaut 6,4× plus de pensée chez dsh que chez pi.** Le proxy
-  ne journalise pas le champ de raisonnement. Je ne l'ai pas modifié : le
-  processus en cours n'a pas été lancé par moi.
+- ~~Pourquoi `medium` vaut 6,4× plus de pensée chez dsh que chez pi.~~
+  **Mesuré, et ce n'est pas un réglage.** Le proxy journalisait déjà
+  `reasoning_effort` ; son absence dans un enregistrement signifie que l'agent
+  ne l'a pas envoyé, pas que l'instrument est aveugle. Les deux agents envoient
+  **exactement** `reasoning_effort: "medium"`, `max_tokens 16384`, `1 / 0,95 /
+  20 / 0`. L'écart vient donc de **l'invite**, seule chose qui diffère.
+  Reste ouvert : *quelle partie* de l'invite (outils, système, structure) —
+  isoler demanderait un bras qui ne fait varier que la liste d'outils.
 - **B2** (rattrapage 32768 sur les bras gelés), **B3** (KV q8/q4 contre f16) —
   les deux demandent la carte, donc après le bras de production.
 - Le levier « 25 outils contre 4 » côté dsh : réel, mais borné, le prefill ne
