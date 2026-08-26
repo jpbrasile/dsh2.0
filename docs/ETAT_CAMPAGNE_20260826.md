@@ -201,6 +201,23 @@ q38-plain`, **même binaire** (build `src-dflash2`) des deux côtés.
    pensée contre 1 336** (611 par appel contre 95, à effort nominal égal).
    Contrefactuel : un cache parfait ne rendrait que **1,39×**.
 
+### ATTENTION — un fichier de configuration est laisse MODIFIE
+
+`~/.dsh-bench-dflash2/profiles/headless/cordis.patch.yml` porte le patch
+`scripts/polyglot_dsh/bras_outils_reduits.yml` : **11 rangees d'outils
+desactivees**, dsh passe de 25 outils / 4 335 caracteres de systeme a 10 / 1 765.
+Sauvegarde de l'original (qui vaut `[]`) en `cordis.patch.yml.avant-bras-outils`.
+
+**Tout run dsh lance depuis cet accueil utilise donc la version allegee**, sans
+que rien ne le signale. Restaurer avant toute mesure qui n'est pas ce bras :
+
+```
+copy ~/.dsh-bench-dflash2/profiles/headless/cordis.patch.yml.avant-bras-outils ^
+     ~/.dsh-bench-dflash2/profiles/headless/cordis.patch.yml
+```
+
+Verifier la restauration sur le FIL (n_tools revenu a 25), pas sur le fichier.
+
 ### Livrables
 
 | | état |
