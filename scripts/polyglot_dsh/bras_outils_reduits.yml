@@ -1,0 +1,79 @@
+# BRAS D'ISOLEMENT : ne faire varier QUE la liste d'outils.
+#
+# CE QU'IL TESTE. Mesure du 26/08 : dsh et pi envoient des parametres de
+# decodage IDENTIQUES champ pour champ (`reasoning_effort: "medium"`,
+# max_tokens 16384, 1 / 0,95 / 20 / 0), et pourtant dsh depense 611 jetons de
+# pensee par appel contre 95. L'ecart vient donc de l'invite. Mais l'invite
+# differe sur tout a la fois : 25 outils contre 4, 4 335 caracteres de systeme
+# contre 2 686, structure des messages, formulation. On ne peut rien conclure
+# d'une comparaison entre deux agents.
+#
+# Ce bras change UNE chose : la liste d'outils de dsh, dsh restant dsh.
+#
+# LE TEMOIN EST DIRECT, ET C'EST TOUT L'INTERET. `DSH_EXTENSION_RECIPE.md` :30
+# insiste -- ne jamais deduire qu'une rangee agit du fait qu'elle est ecrite,
+# ni de l'absence d'erreur. Ici la preuve ne demande aucune annonce : le proxy
+# journalise `n_tools` et la liste des noms a chaque appel. 25 qui devient 11
+# EST la preuve ; 25 qui reste 25 veut dire que ce fichier n'a rien fait, et
+# c'est ce qu'il faudra ecrire.
+#
+# CE QUI EST RETIRE, ET POURQUOI. De la machinerie multi-agents dont un kata
+# exercism n'a aucun usage. Rien de ce qui sert a lire, ecrire et executer.
+#
+#   retire  tool-subagent, -fork, -control, -list-agents, -report, tool-workflow
+#           tool-ralph, tool-jobs, tool-goal, tool-skill, tool-web
+#   garde   tool-pwsh, tool-fs, tool-fs-search, tool-str-replace-editor,
+#           tool-todo
+#
+# CE QUE CE BRAS FAIT VARIER, MESURE APRES COUP ET PAS SUPPOSE. J'ai ecrit
+# plus haut « ne faire varier QUE la liste d'outils ». Le fil dit autre chose :
+# retirer ces rangees fait AUSSI tomber le prompt systeme de 4 335 a 1 765
+# caracteres -- les greffons y contribuent leur propre texte. Le bras isole
+# donc la MACHINERIE (outils + le systeme qu'elle apporte), pas la liste
+# d'outils seule. Constate au premier appel, 26/08 18:21.
+#
+#   25 outils, systeme 4 335 car.  ->  10 outils, systeme 1 765 car.
+#   outils restants : edit, exit_plan_mode, glob, grep, pwsh, read,
+#                     read_image, str_replace_editor, todo_write, write
+#
+# Pour reference : pi offre 4 outils et 2 686 caracteres de systeme. dsh
+# ainsi allege passe donc SOUS pi sur le prefixe fixe, ce qui rend la
+# comparaison lisible dans les deux sens.
+#
+# CE QUE CE BRAS NE POURRA PAS ETABLIR. Si la pensee baisse, on saura que la
+# machinerie y est pour quelque chose -- pas si c'est le NOMBRE d'outils,
+# leurs descriptions, ou le texte systeme qu'ils ajoutent. Et si elle ne
+# baisse pas, la cause est ailleurs dans l'invite : le resultat est informatif
+# dans les deux sens, ce qui est la seule raison de le jouer.
+#
+# POSE :
+#   copier ce fichier en ~/.dsh-bench-dflash2/profiles/headless/cordis.patch.yml
+#   (sauvegarder l'ancien -- il vaut `[]`)
+# VERIFIER :
+#   dsh --profile headless --dump-config | grep -A1 "id: tool-subagent"
+#   puis, sur le fil, n_tools au premier appel
+# DEPOSER :
+#   restaurer la sauvegarde. Ce patch ne doit PAS survivre a la mesure.
+
+- id: tool-subagent
+  disabled: true
+- id: tool-subagent-fork
+  disabled: true
+- id: tool-subagent-control
+  disabled: true
+- id: tool-subagent-list-agents
+  disabled: true
+- id: tool-subagent-report
+  disabled: true
+- id: tool-workflow
+  disabled: true
+- id: tool-ralph
+  disabled: true
+- id: tool-jobs
+  disabled: true
+- id: tool-goal
+  disabled: true
+- id: tool-skill
+  disabled: true
+- id: tool-web
+  disabled: true

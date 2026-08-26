@@ -47,7 +47,7 @@ import json
 from collections import defaultdict
 
 
-def lire(chemin, min_outils, depuis=0, jusqu=0):
+def lire(chemin, min_outils, depuis=0, jusqu=0, max_outils=0):
     """Les appels de l'agent, en (entree_froide, sortie, secondes, fournisseur).
 
     depuis/jusqu (t0 en ms) decoupent une FENETRE : un meme proxy journalise
@@ -73,6 +73,12 @@ def lire(chemin, min_outils, depuis=0, jusqu=0):
             continue
         s = d.get("sent") or {}
         if (s.get("n_tools") or 0) < min_outils:
+            continue
+        # Deux runs peuvent partager le journal EN MEME TEMPS : le 26/08 au
+        # soir, l'echantillon pi (4 outils) et le bras dsh allege (10 outils)
+        # ont tourne en parallele. La fenetre temporelle ne les separe pas ;
+        # le nombre d'outils, si.
+        if max_outils and (s.get("n_tools") or 0) > max_outils:
             continue
         u = d.get("usage") or {}
         det = u.get("prompt_tokens_details") or {}
@@ -121,9 +127,13 @@ def main():
                    help="t0 en ms : n'utiliser que les appels POSTERIEURS")
     p.add_argument("--jusqu-a", type=int, default=0, dest="jusqu",
                    help="t0 en ms : n'utiliser que les appels ANTERIEURS ou egaux")
+    p.add_argument("--max-outils", type=int, default=0,
+                   help="borne HAUTE du nombre d'outils : separe deux runs "
+                        "concurrents dans un meme journal")
     args = p.parse_args()
 
-    pts = lire(args.journal, args.min_outils, args.depuis, args.jusqu)
+    pts = lire(args.journal, args.min_outils, args.depuis, args.jusqu,
+               args.max_outils)
     if len(pts) < 4:
         raise SystemExit("%d appels de l'agent : trop peu pour ajuster deux "
                          "pentes." % len(pts))
