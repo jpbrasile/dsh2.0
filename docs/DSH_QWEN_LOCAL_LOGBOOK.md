@@ -2593,3 +2593,45 @@ empreinte du début de requête sérialisée et la position du premier octet qui
 diffère de l'appel précédent. À poser **après** la fin du run pi. Cette sonde
 doit aussi enregistrer le **fournisseur servant**, qui manque et qui est un
 confondant de tout ce qui précède.
+
+---
+
+## 26/08/2026 — Correction : mon test « la séquence de rôles étend la précédente » ne prouvait rien
+
+**Ce que j'ai écrit deux fois aujourd'hui, et qui est sans valeur** : « la
+séquence de rôles de dsh ÉTEND bien la précédente (185/189), donc la structure
+est en ajout et c'est le contenu réémis en tête qui bouge. »
+
+**Le défaut**, `proxy.mjs:155` :
+
+```js
+roles: Array.isArray(p.messages) ? p.messages.slice(0, 3).map(...) : null,
+```
+
+Le proxy ne journalise que les **trois premiers rôles**. Sur une conversation
+de 32 messages en médiane, comparer trois rôles entre deux appels successifs ne
+peut évidemment que rendre « extension » : les trois premiers messages d'une
+conversation ne changent pas de rôle. Le 185/189 mesurait cette tautologie, pas
+la structure de la requête.
+
+**Ce que ça retire, et ce que ça ne retire pas.** Retiré : l'affirmation que
+dsh construit son historique en ajout. Elle n'est ni infirmée ni confirmée —
+elle n'est **pas mesurée**. Conservé : les 25 outils sont stables (les 181
+appels outillés de dsh partagent une seule empreinte de la liste de noms
+journalisée en `proxy.mjs:149`), et le prompt système bouge sur 20 appels sur
+189 avec 0 % de cache à chaque fois qu'il bouge.
+
+**Ce que l'instrumentation doit donc porter**, en plus de ce qui était prévu :
+
+1. `roles` **complet**, plus `slice(0, 3)`.
+2. La longueur de contenu **par message**, pour voir lequel enfle ou change.
+3. Une empreinte du préfixe sérialisé **cumulée message par message** : deux
+   appels successifs se comparent alors par recherche du premier indice qui
+   diverge — c'est-à-dire l'endroit exact où le préfixe casse.
+4. Le **fournisseur servant**, absent du journal (`servi` ne porte que le nom
+   du modèle). Sans lui, tout écart dsh/pi reste confondu par le routage — la
+   sonde du jour a montré que ce modèle est servi par Phala, pas par Alibaba,
+   et que cette différence-là décide du comportement de cache.
+
+**Non posé pour l'instant** : le run pi est en cours (3 exercices sur 6) et
+`proxy.mjs` le sert. On ne modifie pas un instrument pendant la mesure.
