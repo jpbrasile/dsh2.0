@@ -519,3 +519,75 @@ enregistrement porte désormais `temperature`, `top_p`, `max_tokens` et `extra`.
   production.
 - **La qualité sous KV quantifié q8_0/q4_0 n'est pas mesurée**
   (`SPECDEC_4090_BENCH.md:640`). Limite déclarée, non levée ici.
+
+---
+
+## Révision 5 — la politique de plafond du bras de production, arrêtée pendant qu'il tourne
+
+**Ce que je sais en écrivant.** Le bras `local_q4_t1_libre_tournant.jsonl` a
+joué **8 questions**, dont **1 au plafond de 32768** (12,5 %, sans valeur
+prédictive à ce n). Le rythme est de 137 s/question.
+
+**Ce que je ne sais pas, et qui est précisément ce que cette révision arrête
+avant de le savoir.** Le taux de plafond final. Quelles questions tronquent.
+Leur exactitude. La largeur de l'encadrement qui en sortira.
+
+La révision 4 a arrêté le plafond à 32768 sans dire ce qu'on fait des appels qui
+l'atteignent. La règle 3b s'applique par héritage — tronqué = non-mesure, exclu,
+encadrement — mais deux points ne sont pas couverts et le seraient trop tard si
+j'attendais le dépouillement.
+
+### K1. Un rattrapage à plafond plus haut est un TIRAGE NEUF, pas une reprise
+
+Le bras échantillonne à température 1.0. On ne peut pas « finir » un appel
+tronqué : rejouer la même question à 65536 produit une **autre** chaîne de
+pensée, pas la suite de la première. Conséquence, à dire avant d'y avoir
+intérêt :
+
+**Aucun rattrapage ne peut FERMER l'encadrement.** Il peut seulement estimer
+l'exactitude de la population « questions qui tronquent à 32768 », sous
+l'hypothèse — déclarée, non vérifiable ici — qu'un nouveau tirage de la même
+question à plafond plus haut est représentatif du tirage tronqué. Tout chiffre
+issu d'un rattrapage sort donc avec cette hypothèse écrite à côté, et
+l'encadrement brut reste publié en regard.
+
+C'est une différence avec le rattrapage prévu pour les bras gelés (§ B2 du
+plan) : là-bas le plafond de 16 384 était atteint par des appels **coupés au
+budget**, et le budget est une propriété du serveur, pas du tirage. Ici la
+troncature est une propriété du tirage lui-même.
+
+### K2. Le seuil de déclenchement est celui qui existe déjà
+
+Pas de seuil neuf inventé pour l'occasion. `depouiller_gpqa.py` refuse déjà de
+publier un bras dont l'encadrement dépasse **5 points**, et la largeur de
+l'encadrement est mécaniquement le taux de plafond. Donc :
+
+| taux de plafond mesuré | ce qui se passe |
+|---|---|
+| ≤ 5 % | l'encadrement est publié tel quel, sans rattrapage |
+| > 5 % | rattrapage dû, à 65536, sur **exactement** les questions tronquées, même serveur, mêmes paramètres d'échantillonnage, fichier neuf |
+
+Le rattrapage ne rejoue **pas** les questions non tronquées : elles sont déjà
+mesurées, et les rejouer transformerait le bras en un tirage moyen sur deux
+plafonds, ce qui n'est plus le chiffre d'aucune configuration.
+
+### K3. Ce qui est publié, dans tous les cas
+
+Trois nombres, jamais un seul :
+
+1. **borne basse** — tous les tronqués comptés faux ;
+2. **borne haute** — tous les tronqués comptés justes ;
+3. si rattrapage il y a : **l'estimation par tirage neuf**, avec l'hypothèse de
+   K1 écrite à côté et le nombre de questions concernées.
+
+Le chiffre « tronqués exclus » que `depouiller_gpqa.py` affiche en tête n'est
+**pas** le chiffre du bras : c'est la borne haute conditionnée à ce que les
+tronqués se comportent comme les autres. Il ne doit pas circuler seul.
+
+### K4. Ce que cette révision n'amende pas
+
+Le plafond reste **32768**, le budget reste **−1**, la configuration serveur
+reste `specdec-q38-plain` (sans spéculation, cf. le verdict B1 du 26/08 au
+soir), et les 198 questions restent en position tournante. Aucun paramètre du
+bras en vol n'est touché : cette révision porte uniquement sur ce qu'on aura le
+droit de dire de ses résultats.
