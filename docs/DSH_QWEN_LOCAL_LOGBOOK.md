@@ -2692,3 +2692,161 @@ Sonde de préfixe **posée** dans `proxy.mjs` (`node --check` ok, sauvegarde en
 `proxy.mjs.avant-sonde`). Elle n'est PAS active : un node ne relit pas son
 fichier, et le processus proxy en cours n'a pas été lancé par moi — il sera pris
 au prochain démarrage du proxy.
+
+
+## 26/08/2026 — Soirée : la règle 4 était aveugle, le specdec n'est pas sans perte, et le cache ne vaut que 1,37×
+
+Quatre choses tranchées le même soir. Elles n'ont rien à voir entre elles sauf
+qu'aucune n'était mesurée jusqu'ici, et que trois des quatre contredisent ce que
+j'avais écrit plus tôt dans la journée.
+
+### 1. La règle 4 du pré-enregistrement classait à l'envers, pas approximativement
+
+J'avais écrit ce matin que « le bras 512 n'a jamais existé — c'est une copie
+renommée », parce qu'aucun de ses 293 enregistrements ne portait le marqueur de
+transition. **C'est faux.** Le carnet (l. 1855-1975) montre que le run est bien
+passé sous `--reasoning-budget 512` ; le marqueur manquait parce que **ce
+serveur-là n'avait pas de `--reasoning-budget-message`**. Un serveur lancé sans
+message n'injecte rien : le témoin par marqueur est alors muet par construction,
+pas parce que rien n'a été coupé.
+
+Le second témoin, lui, parle : **le mur de jetons**. Une coupure de budget tombe
+sur une frontière de jeton, donc une pensée coupée mesure `budget − 2` au moins
+(maximum constaté : 514 pour un budget de 512). Sur le bras 512 nu :
+
+| témoin | coupures détectées sur 293 appels |
+|---|---|
+| message de transition | **0** |
+| mur de jetons | **248** — soit 84,6 % |
+
+La règle 4 telle qu'écrite déclarait donc « 100 % libres, pensée courte » un
+bras coupé à 84,6 %. Ce n'est pas une imprécision, c'est une **inversion**. La
+règle 4 est réécrite en **disjonction des deux témoins**, aucun subordonné à
+l'autre, et `gpqa_diamond.py` porte le bloc « NÉCESSAIRE ET INSUFFISANT » qui
+dit pourquoi. Révision 4 du pré-enregistrement, commitée avant que le bras B
+existe.
+
+### 2. Le balayage de budget comparait deux guillotines, pas une pensée à une pensée
+
+`courbe_de_coupure.py`, écrit pour ça, rend P(pensée > t) sous **censure à
+droite** : pour t ≤ B la probabilité est exacte, au-dessus elle est
+inestimable et sort en encadrement, jamais en point.
+
+| budget t | P(pensée > t) sur 55 questions |
+|---|---|
+| 512 | 89,1 % |
+| 1024 | 78,2 % |
+| 2048 | **63,6 %** |
+| 4096 | 52,7 % |
+| 8192 | **45,5 %** |
+| ≥ 12288 | inestimable — [0,0 ; 45,5] |
+
+La calibration de 8192 sur **8 questions** est donc caduque : le vrai taux de
+coupure est 45,5 %, et le balayage 2048 contre 8192 opposait 63,6 % de coupure à
+45,5 %. Il ne mesurait pas « ce que la pensée apporte », il mesurait le coût de
+couper plus fort.
+
+**Où sont les erreurs**, par population :
+
+| population | exactitude |
+|---|---|
+| appels qui finissent de penser seuls | 30/30, 25/25, 34/38 (89,5 %) |
+| appels coupés par le budget | 16/25 (64,0 %) et 167/248 (67,3 %) |
+| appels qui butent sur le plafond de sortie | **0/12** |
+
+Le 0/12 est le chiffre qui a décidé du plafond 32768 : ce n'est pas une queue
+négligeable qu'on tronque, c'est une population entière perdue.
+
+Réserve explicite : cet écart est un effet de **sélection** (les questions
+faciles finissent de penser tôt), pas la preuve qu'une coupure abîme une
+réponse. La règle 5 gagne quand même son échelon manquant — un bras dont
+l'exactitude sur ses appels coupés est à plus de 15 points sous son exactitude
+sur ses appels libres, avec n ≥ 30 coupés, est écarté. **Les deux bras gelés
+sont éliminés par leur propre critère** (36 et 22 points d'écart).
+
+Le comparateur « pensée libre » qui manquait était déjà sur le disque : 55
+paires (id, rotation) communes au bras 512 nu et au bras 8192 + message,
+**34/55 = 61,8 % contre 46/55 = 83,6 %**, table 33/8/1/13, McNemar exact
+p = 0,0018. Confondu, et déclaré tel : le budget ET le message ont changé
+ensemble.
+
+### 3. B1 — le décodage spéculatif n'est pas sans perte en glouton
+
+La dette déclarée de la campagne (`SPECDEC_4090_BENCH.md` :18, :184, :672) est
+payée. En glouton la question devient binaire : une seule suite de jetons est
+correcte, donc l'égalité octet à octet est testable. 12 questions, `temperature
+0`, `top_k 1`, graine 1234, **même binaire des deux côtés** (build `src-dflash2`
+y compris en `q38-plain`).
+
+Le plan prévoyait deux jambes. Il en fallait **trois** : sans témoin, une
+divergence entre specdec et sans-specdec ne se distingue pas d'un serveur
+simplement non reproductible — même symptôme, cause opposée.
+
+| comparaison | ce qu'elle isole | résultat |
+|---|---|---|
+| A1 contre A2 — plain, deux **processus** | bruit de redémarrage | **12/12 identiques** |
+| B1 contre B2 — dflash2, **même** processus | bruit d'instrument | **12/12 identiques** |
+| A1 contre B1 — plain contre dflash2 | le spéculateur | **12/12 DIVERGENTS** |
+
+Les deux témoins sont muets, donc la troisième ligne accuse bien le
+spéculateur. Le premier octet qui diffère tombe entre 58 et 1113 : divergence
+**précoce**, pas une dérive numérique de queue.
+
+Conséquence actée : **le bras de production GPQA tourne sans spéculation.** Coût
+mesuré du choix — 46,9 t/s au lieu de 103,6 (2,2×), soit une nuit au lieu d'une
+demi-nuit. Un chiffre d'exactitude ne se paie pas d'un décodeur dont on vient de
+montrer qu'il change la sortie là où la sortie est décidable.
+
+### 4. Voie A — le cache ne peut pas rendre le rapport 7
+
+`ou_passe_le_temps.py` avait déjà tranché « harnais ou LLM » : sur l'exercice
+sondé, **1223 s d'appels LLM sur 1383 s de paroi, soit 88,4 %**. La plomberie
+est hors de cause. Restait à savoir, dans ces appels, si le temps part en
+prefill ou en décode — les deux corrections n'ont rien à voir.
+
+`prefill_ou_decode.py` ajuste `ms = a·(entrée non cachée) + b·sortie` par
+moindres carrés sans constante, sur 24 appels dont l'entrée va de 8 k à 50 k et
+la sortie de 72 à 13 435 jetons. Cette dispersion suffit à séparer les deux
+pentes.
+
+| | débit ajusté | temps | part |
+|---|---|---|---|
+| prefill | 1 825 jetons/s | 412 s | 33,7 % |
+| décode | 33,3 jetons/s | 825 s | 67,5 % |
+| **résidu** | | **−14 s** | **−1,2 %** |
+
+Deux paramètres expliquent la paroi à 1,2 % près. Le résidu est publié pour
+qu'on puisse juger l'ajustement plutôt que le croire.
+
+**Contrefactuel.** Avec la part réutilisable de 80,8 % mesurée par
+`ou_casse_le_prefixe.py`, un cache **parfait** rendrait 333 s sur 1223 s :
+**facteur 1,37×**. Pas 7. Pas même 2.
+
+Ce qui reste est du **décode** : 27 461 jetons de sortie sur un seul exercice,
+dont **13 435 en un seul appel** (388 s, 32 % de la paroi LLM à lui tout seul).
+Le levier est le volume que l'agent génère, pas le routage. **La voie A change
+de cible** : ce n'est plus « réparer le cache », c'est « pourquoi dsh écrit
+13 000 jetons d'affilée ».
+
+Fausse piste fermée au passage : AkashML sert 24 appels sur 24 et n'en cache que
+2. Ce n'est pas « AkashML ne cache pas » — quand il cache, il cache à **97,7 %**
+et **99,4 %**, ce qui prouve que notre préfixe est parfaitement réutilisable.
+C'est la réplique atteinte qui varie. Rien de corrigeable côté client.
+
+### 5. Un bras a failli sortir mal étiqueté
+
+Le lanceur de production ne passait pas `--modele` : `gpqa_diamond.py` écrivait
+son défaut, et le bras joué sur le serveur **plain** sortait étiqueté
+`specdec-q38-dflash2` dans chacun de ses 198 enregistrements. llama-server sert
+la requête quel que soit le champ `model`, donc **rien ne lève à l'exécution** —
+l'erreur n'apparaît qu'au dépouillement, quand le bras est fini. Constaté à
+17:43 après une question jouée ; sortie mise de côté en
+`.avorte-mauvais-nom-modele`, pas supprimée. Le lanceur lit désormais l'alias
+sur le **processus vivant** et refuse (exit 6) s'il n'y en a pas.
+
+### État à la fin de la soirée
+
+Bras de production GPQA en vol : `local_q4_t1_libre_tournant.jsonl`,
+`specdec-q38-plain`, budget −1, plafond 32768, 198 questions en position
+tournante, un appel par question. Limites déclarées et non levées : Q4_K_M,
+KV q8_0/q4_0, et pas de comparaison au BF16 publié.
