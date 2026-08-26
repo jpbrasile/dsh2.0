@@ -1,0 +1,1 @@
+{"horodatage": "2026-08-26T12:58:03", "chemin": "/v1/chat/completions", "cles_echantillonnage": ["min_p", "temperature", "top_k", "top_p"], "valeurs": {"temperature": 1, "top_p": 0.95, "top_k": 20, "min_p": 0}, "toutes_cles": ["messages", "min_p", "model", "temperature", "top_k", "top_p"], "modele_demande": "temoin", "nb_messages": 1}

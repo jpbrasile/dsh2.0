@@ -154,6 +154,25 @@ param(
     [string]$LogPath,
     [int]$SpecDraftNMax = 0,
     [double]$SpecDraftPMin = 0,
+    # Hard cap on thinking tokens. -1 = unrestricted (llama.cpp's own default);
+    # 0 = no thinking at all; N>0 = guillotine at N tokens.
+    #
+    # WAS HARD-CODED TO 512 UNTIL 2026-08-26, and that was a measured defect on
+    # any reasoning workload. The value was never chosen for this bench: it was
+    # copy-pasted from the start_llama_qwopus_27b_coder_* family, where the
+    # intent is stated in the original comment -- keep agentic thinking short
+    # and cheap. Carried into GPQA Diamond it does the opposite of what is
+    # wanted. Measured on the live run (275 calls, server /tokenize, 60-block
+    # sample): median think block 512 tokens, p90 512, max 514, 53/60 landing
+    # exactly on the budget -- a razor-sharp wall, not a distribution -- and
+    # 83 % of blocks ending mid-sentence, sometimes mid-word.
+    #
+    # llama.cpp cuts NAKED unless --reasoning-budget-message is also given.
+    # Published measurement: a naked cut on Qwen3 9B / HumanEval fell to 78 %
+    # against 94 % unrestricted and 88 % with no thinking at all -- i.e. WORSE
+    # than not thinking; a transition message at budget 1000 recovered 89 %.
+    # So: -1 here, and if a budget is ever wanted again, pair it with a message.
+    [int]$ReasoningBudget = -1,
     [switch]$CheckOnly,
     [switch]$AssumeDflash2Capable
 )
@@ -230,13 +249,31 @@ if (-not $smi) {
             else            { Write-Host "REFUS (exit 3): $msg"; exit 3 }
         } else {
             $busy = @($raw | Where-Object { $_ -and ($_.ToString().Trim() -ne "") })
-            if ($busy.Count -gt 0 -and -not $CheckOnly) {
-                Write-Host "REFUS (exit 2): GPU busy ($($busy.Count) CUDA process(es) listed by nvidia-smi)."
+            # 25/08 : sous WDDM la liste compute-apps inclut desormais les
+            # processus graphiques du bureau re-promus en VRAM (dwm, chrome,
+            # explorer... mesure : 8 residents a ~0,4 Go total, 13 W, P8).
+            # Le simple comptage donnait un faux REFUS. Trois signaux mesures
+            # le remplacent (fail closed conserve : erreur de lecture => exit 3
+            # via le catch) :
+            #  - VRAM totale > 1500 MiB : un calcul/serveur resident (llama
+            #    23 Go, julia) -- le bureau mesure 0,3-0,5 Go ;
+            #  - nom de processus calcul connu dans la liste ;
+            #  - puissance > 100 W : un kernel tourne (repos mesure ~13 W,
+            #    bench 350-450 W).
+            $memRaw = (& $smi --query-gpu=memory.used --format=csv,noheader,nounits)
+            $pwRaw  = (& $smi --query-gpu=power.draw  --format=csv,noheader,nounits)
+            $mem = [int]([double]"$memRaw".Trim())
+            $pw  = [double]"$pwRaw".Trim()
+            $names = & $smi --query-compute-apps=process_name --format=csv,noheader
+            $calc = @($names | Where-Object { $_ -match '(?i)julia|python|llama|vllm|ollama|torch|kobold|lmstudio|\.ninfer' })
+            $occupied = ($mem -gt 1500) -or ($calc.Count -gt 0) -or ($pw -gt 100)
+            if ($occupied -and -not $CheckOnly) {
+                Write-Host "REFUS (exit 2): GPU busy (mem=${mem} MiB, power=${pw} W, calc procs=$($calc.Count) : $($calc -join ', '))."
                 exit 2
-            } elseif ($busy.Count -gt 0) {
-                Write-Host "WARN (GPU): $($busy.Count) CUDA process(es) hold the GPU (CheckOnly: continuing)."
+            } elseif ($occupied) {
+                Write-Host "WARN (GPU): busy par signaux mesures (mem=${mem} MiB, pw=${pw} W, calc=$($calc.Count)) (CheckOnly: continuing)."
             } else {
-                Write-Host "GPU guard: no competing CUDA process. OK."
+                Write-Host "GPU guard: no compute occupant (mem=${mem} MiB, power=${pw} W, $($busy.Count) desktop-resident process(es)). OK."
             }
         }
     } catch {
@@ -385,7 +422,7 @@ $cmdArgs += @(
     "--parallel",     "1",
     "--jinja",
     "--reasoning-format", "none",
-    "--reasoning-budget", "512",
+    "--reasoning-budget", "$ReasoningBudget",
     "--temp",             "0.6",
     "--top-k",            "20",
     "--top-p",            "0.95",

@@ -29,6 +29,47 @@ const append = (rec) => fs.appendFileSync(LOG, JSON.stringify(rec) + '\n', 'utf8
 // est parti vers le fournisseur -- sans stocker le corps lui-meme.
 const GUETTE = (process.env.PROXY_GUETTE || '').split('|').filter(Boolean);
 
+// INJECTION D'ECHANTILLONNAGE (26/08, banc polyglot).
+//
+// POURQUOI. Mesure au serveur temoin : NI dsh NI pi n'envoient temperature,
+// top_p, top_k ou min_p. Les deux heritent du defaut de l'amont OpenRouter,
+// inconnu, non journalise, et susceptible de changer si le routeur bascule
+// d'amont. pi sait poser un `samplingParams` (verifie sur le fil) ; dsh n'a
+// AUCUNE voie de configuration -- sa doc amont le confirme, l'echantillonnage
+// arrive par `GenerateOptions` a l'appel, et aucun paquet dsh ne le remplit.
+// Regler pi seul casserait la seule propriete propre etablie : les deux agents
+// emettent aujourd'hui des corps identiques au champ pres, donc leur
+// comparaison est equitable. La correction doit etre EXTERIEURE aux deux et
+// identique pour eux : c'est ici.
+//
+// PROXY_INJECT = objet JSON des champs a POSER dans chaque corps
+// chat/completions. Absent ou vide : comportement inchange, octet pour octet.
+// Ce fichier sert aussi le banc julia -- l'injection ne doit rien lui changer.
+//
+// ON ECRASE, ET ON LE DIT. N'injecter que les champs manquants rendrait
+// l'echantillonnage dependant de l'agent (pi pose, dsh non) et recreerait
+// l'asymetrie qu'on ferme. Tout ecrasement est NOMME dans le journal, cle par
+// cle : jamais de correction silencieuse. C'est exactement le defaut qu'on
+// vient de trouver chez dsh, qui jette une cle de configuration inconnue sans
+// un mot -- un fichier qui a l'air regle et une requete qui ne l'est pas.
+//
+// UN JSON ILLISIBLE ARRETE LE PROXY. Demarrer sans injecter alors qu'on l'a
+// demandee produirait un run entier au mauvais reglage, avec un proxy qui a
+// l'air en place.
+const INJECT = (() => {
+  const s = (process.env.PROXY_INJECT || '').trim();
+  if (!s) return null;
+  let o;
+  try { o = JSON.parse(s); } catch (e) {
+    console.error(`PROXY_INJECT illisible, ARRET : ${e}`); process.exit(2);
+  }
+  if (!o || typeof o !== 'object' || Array.isArray(o) || !Object.keys(o).length) {
+    console.error('PROXY_INJECT doit etre un objet JSON non vide, ARRET.');
+    process.exit(2);
+  }
+  return o;
+})();
+
 // VOIES. En campagne parallele, N agents parlent au MEME routeur en meme
 // temps : les fenetres de temps se chevauchent, et attribuer un appel a un run
 // par son horodatage devient faux sans en avoir l'air. Chaque ouvrier appelle
@@ -63,15 +104,39 @@ const server = http.createServer((req, res) => {
     const body = Buffer.concat(chunks);
     const t0 = Date.now();
     let sent = null;
+    // Le corps SORTANT peut differer du corps recu (voir INJECT). `sent` est
+    // construit APRES l'injection : ce journal decrit ce qui PART, jamais ce
+    // qui est arrive -- c'est la raison d'etre de ce proxy. Ce que l'agent
+    // avait mis, quand ca differe, est dans `ecrase`.
+    let corpsSortant = body;
+    let injecte = null, ecrase = null;
     if (req.method === 'POST' && url.includes('chat/completions')) {
       try {
         const p = JSON.parse(body.toString('utf8'));
+        if (INJECT) {
+          injecte = {}; ecrase = {};
+          for (const [k, v] of Object.entries(INJECT)) {
+            // `k in p` et non `p[k] !== undefined` : un agent qui pose
+            // explicitement `temperature: null` a bien pose la cle, et
+            // l'ecraser doit se voir.
+            if (k in p && JSON.stringify(p[k]) !== JSON.stringify(v)) ecrase[k] = p[k];
+            p[k] = v;
+            injecte[k] = v;
+          }
+          if (!Object.keys(ecrase).length) ecrase = null;
+          corpsSortant = Buffer.from(JSON.stringify(p), 'utf8');
+        }
         sent = {
           model: p.model,
           n_messages: Array.isArray(p.messages) ? p.messages.length : null,
           n_tools: Array.isArray(p.tools) ? p.tools.length : 0,
           stream: !!p.stream,
           temperature: p.temperature,
+          // Les quatre champs d'echantillonnage sont journalises ENSEMBLE :
+          // une temperature seule ne decrit pas un decodage.
+          top_p: p.top_p,
+          top_k: p.top_k,
+          min_p: p.min_p,
           max_tokens: p.max_tokens ?? p.max_completion_tokens,
           reasoning_effort: p.reasoning_effort,
           enable_thinking: p.enable_thinking,
@@ -91,9 +156,20 @@ const server = http.createServer((req, res) => {
         };
       } catch (e) { sent = { parse_error: String(e) }; }
     }
+    const enTetes = { ...req.headers, host: UP_HOST };
+    // LE PIEGE DE L'INJECTION. Le corps a change de TAILLE ; le `content-length`
+    // recopie du client vaut alors pour l'ancien. Trop petit, l'amont lit un
+    // JSON tronque et rend 400 ; trop grand, il attend des octets qui ne
+    // viennent jamais et l'appel pend jusqu'au delai. On le recalcule, et on
+    // retire `transfer-encoding` : les deux ensemble sont invalides et
+    // certains amonts choisissent le mauvais.
+    if (corpsSortant !== body) {
+      delete enTetes['transfer-encoding'];
+      enTetes['content-length'] = String(corpsSortant.length);
+    }
     const opts = {
       host: UP_HOST, port: UP_PORT, path: url, method: req.method,
-      headers: { ...req.headers, host: UP_HOST },
+      headers: enTetes,
     };
     if (UP_TLS) opts.servername = UP_HOST;
     const up = (UP_TLS ? https : http).request(opts, (ur) => {
@@ -108,8 +184,13 @@ const server = http.createServer((req, res) => {
         // filtre par ouvrier rejetait tout et `servis` sortait vide alors que
         // le journal contenait bien les modeles. Mesure du 22/08.
         const rec = { kind: 'call', slot, t0, ms: Date.now() - t0, status: ur.statusCode, sent };
+        // `injecte` sur CHAQUE appel, pas seulement au demarrage : un run se
+        // relit par son journal, et « le proxy etait lance » n'est pas une
+        // preuve que la requete n° 812 portait le reglage.
+        if (injecte) rec.injecte = injecte;
+        if (ecrase) rec.ecrase = ecrase;
         if (GUETTE.length) {
-          const corps = body.toString('utf8');
+          const corps = corpsSortant.toString('utf8');
           rec.guette = GUETTE.filter((g) => corps.includes(g));
         }
         // `sent.model` est ce qu'on a DEMANDE ('auto') ; `servi` est ce qui a
@@ -154,7 +235,14 @@ const server = http.createServer((req, res) => {
       if (!res.headersSent) res.writeHead(502, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: String(e) }));
     });
-    up.end(body);
+    up.end(corpsSortant);
   });
 });
-server.listen(PORT, '127.0.0.1', () => console.error(`proxy ${PORT} -> ${UP_TLS ? 'https' : 'http'}://${UP_HOST}:${UP_PORT}, log=${LOG}`));
+server.listen(PORT, '127.0.0.1', () => {
+  console.error(`proxy ${PORT} -> ${UP_TLS ? 'https' : 'http'}://${UP_HOST}:${UP_PORT}, log=${LOG}`);
+  // La ligne d'injection est ECRITE AU DEMARRAGE : sans elle, deux runs
+  // separes par un redemarrage se ressemblent dans la console et pas sur le
+  // fil. Le journal reste la preuve appel par appel.
+  console.error(INJECT ? `injection : ${JSON.stringify(INJECT)}`
+                       : 'injection : AUCUNE (comportement d\'origine)');
+});

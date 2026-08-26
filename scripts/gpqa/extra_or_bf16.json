@@ -1,0 +1,8 @@
+{
+  "top_k": 20,
+  "min_p": 0,
+  "provider": {
+    "quantizations": ["bf16"],
+    "allow_fallbacks": false
+  }
+}

@@ -11,3 +11,14 @@ _wall_probe/
 _rt_scratch/
 harness/modeles.sqlite
 harness/_cout/
+
+# --- GPQA Diamond : jeu de donnees a acces restreint -------------------------
+# Le depot est PUBLIC. Les auteurs de GPQA demandent que les questions ne
+# soient pas exposees en clair sur le web ouvert, pour ne pas contaminer les
+# entrainements futurs. Le CSV EST le jeu de donnees ; les .jsonl portent les
+# blocs <think> du modele, qui reprennent longuement l'enonce. Les deux restent
+# donc locaux. Le CODE de mesure, lui, est versionne.
+scripts/gpqa/*.csv
+scripts/gpqa/*.jsonl
+reports/specdec_20260825_ctxsweep_dflash2/*.log
+*.log.err

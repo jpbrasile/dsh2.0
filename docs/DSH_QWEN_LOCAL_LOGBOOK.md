@@ -1680,3 +1680,491 @@ ou passe plus d'appels d'outils — c'est exactement ce que fait `medium` ici.
 Le banc lui-même vit dans `scripts/bench_julia_effort/` ; son `README.md` donne
 le mode d'emploi. Les fenêtres de mesure sur le serveur sont dans
 `docs/SPECDEC_4090_BENCH.md`.
+
+---
+
+## 2026-08-26 — Échantillonnage : ce que les agents envoyaient vraiment
+
+### Le trou, et sa mesure
+
+Un **serveur témoin** OpenAI-compatible (`scripts/polyglot_dsh/temoin_echantillonnage.py`)
+répond lui-même et journalise le corps de chaque requête : aucun modèle chargé,
+aucun crédit, aucun trafic vers le 4090 (occupé par le run GPQA). Accueils
+isolés des deux côtés — `PI_CODING_AGENT_DIR` pour pi,
+`~/.dsh-temoin-echantillonnage` pour dsh — parce que `pilote.py` réécrit
+`agent-default-model` sans le restaurer.
+
+Corps de requête réels, dsh et pi :
+
+| clé | dsh | pi |
+|---|---|---|
+| `max_completion_tokens` | 4096 | 4096 |
+| `reasoning_effort` | `"medium"` | `"medium"` |
+| `stream` / `stream_options` / `store` | oui | oui |
+| **`temperature`, `top_p`, `top_k`, `min_p`** | **absentes** | **absentes** |
+
+Deux conclusions opposées. **La comparaison dsh contre pi n'était pas biaisée
+par l'échantillonnage** — corps identiques au champ près, hypothèse tacite des
+runs `dsh-dev-or` / `pi-dev-or`, maintenant vérifiée. Mais **le réglage Qwen
+n'était appliqué nulle part** : les deux héritaient du défaut de l'amont
+OpenRouter, inconnu, non journalisé, et susceptible de changer si le routeur
+bascule d'amont.
+
+Vérification annexe : `reasoning_effort: "medium"` **part bien** des deux côtés.
+Un troisième appel dsh part avec `max_completion_tokens: 64` sans effort — c'est
+`@deepseek-ai/dsh-session-title-llm`, à exclure de tout comptage de jetons.
+
+### Le bouton : chez pi oui, chez dsh non
+
+- **pi** — `samplingParams` dans `models.json` fonctionne, vérifié sur le fil.
+- **dsh** — aucune voie. `samplingParams`, `temperature` au niveau du modèle,
+  `temperature` au niveau de la route : **les trois ignorées en silence**. La
+  construction du modèle (`dsh-llm-pi-ai/lib/index.js:639-657`) ne retient que
+  id, name, api, provider, baseUrl, input, cost, contextWindow, maxTokens,
+  reasoning, compat. Le transport existe (`index.js:1740`) et
+  `CallConfig.temperature` est déclaré, mais **aucun paquet dsh ne le remplit**.
+  Confirmé en amont : dsh est open source
+  (`github.com/deepseek-ai/deepseek-harness`), `docs/user/guide/providers.md` ne
+  liste aucun champ d'échantillonnage, et `packages/llm/llm-pi-ai/README.md` dit
+  que les *sampling fields* arrivent par `GenerateOptions` à l'appel.
+
+**PIÈGE À RETENIR : dsh ne rejette pas une clé de configuration inconnue, il la
+jette sans un mot.** `temperature: 1.0` dans `settings.yaml` donne un fichier
+qui a l'air réglé et une requête qui ne l'est pas.
+
+### La correction : proxy d'injection
+
+Régler pi seul aurait cassé le pied d'égalité. La correction est donc
+**extérieure aux deux agents** : `scripts/bench_julia_effort/proxy.mjs` étendu
+d'un `PROXY_INJECT` (objet JSON) qui pose les champs dans chaque corps
+`chat/completions`, écrase en le **nommant** dans le journal (`ecrase`), et
+refuse de démarrer sur un JSON illisible. Sans la variable, comportement
+inchangé octet pour octet — le banc julia utilise le même fichier.
+
+Piège traité : le corps change de taille, donc `content-length` est recalculé et
+`transfer-encoding` retiré.
+
+Câblage additif (`cabler_proxy_injection.py`) : route `openrouter-inject` à côté
+de `openrouter`, pour dsh comme pour pi, `baseURL` en **`/api/v1`** (OpenRouter
+ne sert pas `/v1` ; une baseURL en `/v1` rend un 404 HTML qu'on prend pour un
+refus de champ). Aucune clé dans un fichier : `apiKeyEnv` côté dsh,
+interpolation `"$OPENROUTER_API_KEY"` côté pi. Sauvegarde
+`settings.yaml.avant-injection` écrite avant modification.
+
+Vérifié bout en bout : les deux agents émettent les mêmes champs en flux, et
+**OpenRouter les accepte tous** pour `qwen/qwen3.8-27b` (HTTP 200).
+
+### Le réglage lui-même — et il aligne aussi sur aider
+
+Carte de modèle Qwen3.8-27B, **thinking** : `temperature 1.0, top_p 0.95,
+top_k 20, min_p 0.0, presence_penalty 0.0, repetition_penalty 1.0`.
+Non-thinking : `0.7 / 0.80 / 20 / 0.0 / 1.5 / 1.0`. **Aucune distinction
+codage / raisonnement** n'est publiée : la seule qui existe est thinking vs
+non-thinking, et nos deux bancs sont en thinking.
+
+Ma première injection oubliait `presence_penalty` et `repetition_penalty` —
+ajoutés, plutôt que supposés au défaut de l'amont.
+
+Découverte dans l'en-tête de `pilote.py` : **le run aider de référence force
+déjà ces valeurs** (`--read-model-settings`). L'injection n'harmonise donc pas
+seulement dsh et pi entre eux, **elle les aligne sur le bras aider**. La
+divergence n° 2 déclarée en tête de `pilote.py` est réécrite en conséquence.
+
+Qwen recommande par ailleurs jusqu'à **262 144 jetons de raisonnement et
+131 072 de réponse** pour l'agentique. Les agents envoyaient `4096`. À surveiller
+dans le journal du proxy : une troncature ressemble à un agent qui échoue.
+
+---
+
+## 2026-08-26 — GPQA local : ce qui n'explique PAS l'écart 89,2 → ~70
+
+État du run t=1,0, mesuré en cours : **227/792 appels**, 155/221 justes
+= 70,1 % (parses), **69,4 % ± 4,9 par question** (erreur groupée, n = 57),
+tronqués 5 (2,2 %). Le 74,6 % relevé à 128 appels était un mirage de début de
+run — retour à la moyenne.
+
+**Température : rien.** Comparaison appariée à 128 appels, même graine :
+t=1,0 74,6 % contre t=0,6 79,2 %, écart **−3,9 pt ± 3,7, z = −1,04**, et
+surtout **105 réponses identiques sur 128**. À ± 4,9 pt d'erreur groupée, rien
+sous ~10 pt ne sera séparable.
+
+**Deux hypothèses éliminées gratuitement, sur les données déjà acquises :**
+
+- *Biais de position* : r0 76,3 / r1 71,2 / r2 75,0 / r3 67,2 (t=0,6, n≈59 par
+  rotation, ±5,7 pt). Du bruit. La rotation ne pénalise pas le modèle.
+- *Vote majoritaire* : ≥3/4 donne **73,2 %** contre 74,6 % en moyenne simple —
+  *moins bien*. Un consensus ne sauve pas ce modèle. (≥2/4 monte à 80,4 %, mais
+  ce n'est plus une majorité.)
+
+Structure : **58,9 % des questions parfaites 4/4, 14,3 % nulles 0/4**, donc
+**27 % instables selon la position des options** — de l'incertitude réelle, pas
+un artefact de notation.
+
+**L'effort de raisonnement est déjà au maximum.** Le gabarit lu sur `/props`
+(aucune inférence, le serveur est occupé) porte
+`reasoning_effort|default('xhigh')`, la branche est active dès que
+`enable_thinking is undefined`, et l'instruction xhigh est bien émise dans notre
+forme de requête (sans outils, sans système) par la branche
+`elif reasoning_instructions`. Pourtant : **91 % des réponses contiennent
+`<think>`, et le bloc de pensée fait ~382 jetons de médiane** (p90 568, max 724),
+en style télégraphique. Justes 721 jetons contre faux 754 : le modèle ne
+réfléchit pas plus sur les questions dures.
+
+**Ce qui reste, non décomposé :** la quantification Q4_K_M, le protocole publié
+(inconnu : passe unique ? consensus ? quel budget ?), et le décodage spéculatif
+(`specdec-q38-dflash2` — censé préserver la distribution, ce qui est une
+propriété à vérifier, pas à supposer). **Le seul test décisif est un bras bf16
+sur le même harnais**, abandonné le 26/08 par décision explicite. L'écart reste
+donc attribué à « Q4 + protocole », sans partage mesuré.
+
+---
+
+## 2026-08-26 — Banc polyglot : variante D et cas durs
+
+**Variante D vérifiée** (fumée 2 exercices, pi, go + python) : `variante="D"`,
+`tests_maison=true`, `sans_tests=true`, `sans_corriges=true`, 2/2 PASS, les deux
+**au tour 1**, 5,8 min. La machinerie tient.
+
+**Un seul tour est une condition de validité.** `pilote.py:620` fait
+`texte = erreurs + TEST_FAILURES…` : au tour 2 l'agent reçoit la sortie d'échec
+de la suite officielle **mot pour mot**. En variante D cette suite est la
+recette d'acceptation cachée — un deuxième tour la fuite. Comparable côté
+aider : `pass_rate_1` = **16,9 %**, pas 52,0 %, en disant ce que « 1 tour »
+recouvre de chaque côté (aider : écriture aveugle, zéro exécution ; D : autant
+d'itérations internes que l'agent en veut).
+
+**Correction d'un chiffre porté à tort :** `dsh-dev-or` fait **8 exercices,
+8 passes**, pas 7.
+
+**Cas durs extraits des runs précédents** (`cas_durs.py`, pas choisis à la
+main) :
+
+| exercice | run | ce qui a cassé |
+|---|---|---|
+| java/book-store | pi **et** dsh | pi FAIL 1847,9 s, 2 tours coupés, artefact ; dsh coupé 910,4 s |
+| go/beer-song | dsh | coupé à 901,1 s |
+| go/crypto-square | dsh | coupé à 903,1 s |
+| cpp/binary-search-tree | dsh | 869,8 s au ras du plafond, artefact effacé |
+| cpp/dnd-character | dsh | artefact effacé |
+| java/custom-set | pi | artefact effacé |
+
+Trois coupures entre 901 et 910 s contre un plafond de 900 : **censure franche**,
+la durée est une borne inférieure et `sortie_queue` revient vide. Passer à
+`--tours 1` retire la moitié du temps d'horloge au moment où l'itération rentre
+à l'intérieur du tour : `--delai-tour` relevé à **1800 s**, sinon on mesure le
+chronomètre — et surtout chez dsh, le plus lent.
+
+Quatre des six cas durs sont en cpp ou java, précisément les langages où la
+variante D est déclarée structurellement plus dure (câbler un test maison
+demande de toucher `CMakeLists.txt` / Gradle, interdits — **73 exercices sur
+225**). La fumée teste donc D là où elle fait le plus mal.
+
+Nouvelle option `--exercices langage/exercice,...` : rejoue exactement les
+exercices nommés, court-circuite l'échantillonnage, et **arrête le run** si un
+nom est absent du corpus — un cas dur qui disparaît sans bruit est exactement ce
+qu'on essaie d'empêcher.
+
+Crédit OpenRouter restant au lancement : **14,42 $**.
+
+---
+
+## 2026-08-26 — La guillotine à 512 jetons : le harnais bridait le modèle
+
+### Ce qui a été trouvé
+
+Le llama-server qui sert GPQA depuis le 25/08 20:57 tournait avec
+`--reasoning-budget 512` et **sans** `--reasoning-budget-message`. Vérifié sur
+la ligne de commande du processus vivant (PID 18812), pas sur un script.
+
+**Ce n'était pas une décision de ce banc.** La valeur vient d'un copier-coller :
+une soixantaine d'occurrences dans une douzaine de projets
+(`af-improve`, `af-ci-verdict`, `agentic-flow-*`, `bench_llm.ps1`,
+`start_27b.ps1`…), toutes héritées de la famille
+`start_llama_qwopus_27b_coder_*.ps1`, dont l'un porte encore le commentaire
+d'origine : *« …makes red-team passes superficial »*. L'intention initiale était
+légitime — garder la pensée **agentique** courte et bon marché. Portée telle
+quelle dans un banc de **raisonnement**, elle fait exactement l'inverse.
+
+### La mesure, pas la lecture de code
+
+Sur les 294 appels du bras t=1,0 :
+
+| observable | valeur |
+|---|---|
+| blocs `<think>` analysables | 256 |
+| finissant **en pleine phrase** | **212 (83 %)**, parfois en plein mot |
+| `finish_reason: length` | 7 sur 294 (2,4 %) |
+
+Le `finish_reason` innocente le plafond à 16384 : ce n'est pas lui qui coupait.
+
+Puis le décisif — les blocs tokenisés par le **`/tokenize` du serveur lui-même**,
+échantillon de 60 :
+
+```
+   96- 127 | # 1
+  320- 351 | # 1
+  352- 383 | # 1
+  384- 415 | # 1
+  416- 447 | # 1
+  448- 479 | # 1
+  480- 511 | # 1
+  512- 543 | ##################################################### 53
+```
+
+Médiane 512, p75 512, p90 512, max 514. **53 blocs sur 60 tombent exactement sur
+le budget.** Un mur, pas une distribution.
+
+**CORRECTION D'UNE ERREUR À MOI.** J'avais écrit la veille que « l'histogramme ne
+montre pas de mur à 512 », ce qui affaiblissait l'hypothèse. C'était un artefact
+de ma propre approximation : je convertissais les caractères en jetons à
+4 car/jeton, alors que ce texte télégraphique en fait ~3. Le mur était masqué
+par l'estimation, pas absent. **Piège à retenir : ne jamais conclure sur une
+longueur en jetons estimée quand un tokenizer est joignable en une requête.**
+
+### Ce qu'en dit la littérature
+
+Une coupure **nue** est pire que pas de raisonnement du tout. Sur Qwen3 9B /
+HumanEval : 94 % sans bride, 88 % en mode non-thinking, **78 % avec coupure
+forcée**. Un message de transition à budget 1000 remonte à 89 %. Si un budget
+redevient souhaitable, il devra être **apparié** à
+`--reasoning-budget-message`.
+
+### Ce qui a été fait
+
+- `scripts/start_llama_qwen38_27b_specdec.ps1` : le `512` codé en dur devient le
+  paramètre `-ReasoningBudget`, **défaut `-1`** (le défaut de llama.cpp), avec
+  le pourquoi écrit dans le fichier.
+- Argv vérifié par **diff ligne à ligne** entre l'ancien serveur et le nouveau :
+  **une seule ligne change**, `512` → `-1`. Même binaire (`src-dflash2/build-faq`,
+  `b1-f7aadef`), même modèle, même draft, même ctx 163840, même KV q8_0/q4_0,
+  mêmes six paramètres d'échantillonnage.
+- Bras 512 **gelé** dans `local_q4_t1_budget512.jsonl` : 294 appels, 74 questions
+  dont 72 complètes 4/4, **68,7 % ± 4,2** (erreur groupée). Ce n'est pas un
+  déchet : c'est le bras qui chiffrera ce que la guillotine coûte.
+- Bras illimité lancé dans un **fichier neuf**,
+  `local_q4_t1_illimite.jsonl` — obligatoire, parce que `gpqa_diamond.py`
+  reprend en sautant les couples `(Record ID, rotation)` déjà présents : écrire
+  dans l'ancien fichier aurait sauté les 294 appels sous guillotine et mélangé
+  deux régimes de serveur sans que rien ne le signale.
+
+### Deux pièges rencontrés en chemin, tous deux silencieux
+
+1. **La première relance n'a rien fait, et ça ressemblait à une réussite.** Le
+   lanceur a refusé sur son propre garde-fou « GPU occupé » (il refuse *avant*
+   sa section d'arrêt de port), l'ancien serveur a survécu, et `/props`
+   répondait normalement. Je n'avais pas capturé la sortie du processus
+   détaché. **Corrigé deux fois** : sortie redirigée, et
+   `lancer_local_t1_illimite.ps1` refuse désormais de partir si le serveur
+   vivant ne porte pas `--reasoning-budget -1` sur sa ligne de commande.
+2. Le lanceur tee en **foreground** et meurt avec son terminal (déjà constaté le
+   25/08) : relance obligatoirement détachée.
+
+### Portée
+
+- **GPQA local** : les chiffres du 26/08 (70,1 %, 74,6 %, 68,7 %…) mesurent
+  « Q4 + guillotine à 512 », pas le modèle. La comparaison t=1,0 / t=0,6 reste
+  *interne* valide — même serveur, même handicap des deux côtés — mais le
+  **niveau absolu n'est pas opposable au 89,2 publié**.
+- **Toute campagne passée par la route `local-think` (8006 → 8005)**, dont
+  l'ancienne échelle d'effort — déjà invalidée pour une autre raison (`high`
+  aliasé sur `xhigh`), qui en a maintenant une seconde.
+- **Non affecté** : le banc polyglot dsh/pi, qui passe par OpenRouter et n'a
+  jamais touché ce serveur. La sonde de mémorisation non plus.
+
+---
+
+## 2026-08-26 — Fumée sur les cas durs : le pire des six passe
+
+`fumee-durs-dsh`, variante D, `--tours 1`, `--delai-tour 1800`,
+échantillonnage injecté par le proxy 8009.
+
+**java/book-store : PASS, 1434,0 s, 1 tour, aucune coupure.** C'était le pire
+des six : pi avait **échoué** en 1847,9 s avec 2 tours coupés et un artefact ;
+dsh avait été **coupé à 910,4 s**. Il passe maintenant, en variante D — où
+l'agent écrit lui-même ses tests, sans voir la suite officielle — et du premier
+tour.
+
+Les 1434 s valident au passage `--delai-tour 1800` : sous l'ancien plafond de
+900 s cet exercice aurait été censuré une troisième fois, et la durée publiée
+aurait encore été une borne inférieure.
+
+Injection vérifiée sur le fil : **32 enregistrements, tous injectés, 0 écrasé**,
+`max_tokens` 16384 sur le travail réel (les valeurs 1 et 64 sont la sonde de
+route et le `dsh-session-title-llm`, à exclure de tout comptage de jetons).
+
+Cinq exercices restants au moment d'écrire.
+
+
+---
+
+## 2026-08-26 — Où passent les 1434 s d'un exercice, et à quel débit
+
+### Le budget-temps de java/book-store, mesuré sur le fil
+
+Le proxy d'injection horodate chaque appel et sa durée. Fenêtre 13:11:42 →
+13:35:36 :
+
+| poste | temps | part |
+|---|---|---|
+| dans le LLM (25 appels de travail) | 1028,1 s | **72 %** |
+| hors LLM (Gradle, docker, git, agent) | 396,4 s | 28 % |
+| appels de service (sonde de route, titreur) | 9,5 s | <1 % |
+
+**Un seul appel a mangé 511,3 s — 36 % de l'exercice entier.** Douzième message,
+**13 667 jetons de sortie dont 10 095 de raisonnement**, à 26,7 jetons/s. Les
+24 autres appels de travail totalisent 517 s à eux tous.
+
+Le hors-LLM n'est pas du bruit non plus : trou franc de **5 minutes sans aucun
+appel** entre 13:24:22 et 13:29:24 — Gradle qui compile et teste du Java dans le
+conteneur.
+
+**La cause est de mon fait, et il faut l'écrire.** J'ai monté `max_tokens` de
+4096 à 16384 en câblant l'injection. Sous 4096, cet appel aurait été **coupé** —
+exactement la troncature qu'on cherchait à supprimer. Les 24 minutes ne sont pas
+une panne : c'est le prix d'un agent qu'on ne tronque plus.
+
+### Le coût, et ce qui le porte
+
+| | valeur |
+|---|---|
+| coût de java/book-store seul | **0,2837 $** |
+| jetons d'entrée cumulés (43 appels) | 1 074 947 |
+| dont mis en cache | **10,6 %** seulement |
+| part du coût due à l'**entrée** | **76 %** |
+| part due à la sortie | 24 % |
+
+L'entrée gonfle parce que la conversation se ré-envoie entière à chaque tour :
+3 → 51 messages, 8 196 → 38 645 jetons d'entrée sur un seul exercice.
+
+**Extrapolation, à traiter comme une estimation et pas comme une mesure :**
+un run complet 225 exercices coûterait ~64 $ et ~90 h. Crédit restant :
+**13,95 $**. Un run complet est **hors de portée** en argent comme en temps
+tant que le cache de prompt ne mord pas mieux.
+
+### Débit : les 24,6 t/s ne sont pas notre carte
+
+Confusion à ne pas refaire : le banc polyglot passe par le proxy d'injection →
+**openrouter.ai**. Le 4090 n'y participe pas.
+
+Le bon point de comparaison dans le sweep synthétique n'est **pas** le
+123,4 t/s @32k mais la ligne à contexte court, nos prompts GPQA faisant
+~250 jetons :
+
+```
+~500   n_past=507   prefill=880,9 t/s   decode=109,61 t/s
+```
+
+| | débit médian | ce que le chiffre contient |
+|---|---|---|
+| sweep synthétique @~500 jetons | 109,6 t/s | décode pur, texte prévisible |
+| GPQA local, serveur âgé de 17 h | **66,1 t/s** | HTTP + prefill + décode |
+| GPQA local, **serveur relancé** | **84,2 t/s** | idem (n=2, faible) |
+| OpenRouter bf16 (GPQA) | 33,2 t/s | — |
+| OpenRouter qwen3.8-27b (polyglot) | 24,6 t/s | — |
+
+**TROUVAILLE : l'âge du serveur coûte ~27 % de débit.** 66,1 t/s sur un serveur
+en place depuis 17 h contre **84,2 t/s** après relance, sur des questions
+**appariées**. Gratuit à récupérer, non anticipé. Conséquence de protocole : un
+débit mesuré tard dans une session est **pessimiste**, et une table de vitesse
+doit porter l'âge du serveur au moment de la mesure.
+
+**Hypothèse éliminée : la température.** t=0,6 donne 70,2 t/s contre 66,1 à
+t=1,0 sur les sorties longues — **−6 %**. L'échantillonnage chaud ne détruit
+pas l'acceptation du brouillon dflash2. C'était plausible, c'est faux.
+
+Le reste de l'écart 109,6 → 84,2 est l'aller-retour HTTP et le prefill inclus
+dans notre chiffre, plus l'acceptation du brouillon sur du raisonnement
+imprévisible contre du texte de remplissage prévisible.
+
+**L'ancien effondrement KV est réglé et le reste.** C'était le KV quantifié sans
+`GGML_CUDA_FA_ALL_QUANTS` : `36,6 / 8,3 t/s` avant, `2 324 / 122,2 t/s` après
+rebuild. Le serveur vivant tourne bien sur `src-dflash2/build-faq`, vérifié sur
+son argv. Ce n'est pas une régression de ce banc.
+
+---
+
+## 2026-08-26 — Arène Claude : « et en combien de temps, toi ? »
+
+`arene_claude.py` monte un exercice en **variante D stricte**, à partir du
+corpus **vierge** et non de la copie où dsh a travaillé :
+
+- la suite officielle `src/test/java/BookStoreTest.java` **part**, `.meta/`
+  (corrigé de référence) **part** ;
+- `TASK.md` est copié **mot pour mot** du run dsh ;
+- l'agent ne voit que : `.docs/instructions.md`, `TASK.md`, `build.gradle`,
+  `gradle/wrapper/*`, `gradlew*`, `src/main/java/BookStore.java` ;
+- juge : `juge_claude.py` écarte les tests maison de l'agent, restaure la suite
+  officielle, exécute `./gradlew test` dans le conteneur, rend PASS/FAIL.
+
+**Deux réserves, à porter avec le chiffre :**
+
+1. **Cache Gradle froid.** Conteneur `claude-polyglot-tests` créé à l'instant :
+   son premier `./gradlew test` télécharge JUnit et AssertJ, que le conteneur de
+   dsh avait déjà depuis la veille. Handicap réel pour Claude, en secondes.
+   Conteneur séparé obligatoire : les caches gradle vivent DANS le conteneur et
+   deux `./gradlew test` simultanés se disputent les verrous de `~/.gradle`.
+2. **Piles différentes.** dsh appelle un 27B via OpenRouter à 24,6 t/s ; Claude
+   tourne sur son propre modèle. La comparaison répond à **« combien de
+   temps »** et **« passe / ne passe pas »**, pas à « qui est le meilleur agent
+   à modèle égal ».
+
+
+---
+
+## 2026-08-26 — Claude sur java/book-store : 185,3 s contre 1434,0 s
+
+Même exercice, même consigne mot pour mot, même variante D, même juge.
+
+| | dsh (Qwen3.8-27B via OpenRouter) | Claude |
+|---|---|---|
+| temps de bout en bout | **1434,0 s** | **185,3 s** |
+| tours | 1 | 1 |
+| verdict suite officielle | PASS 18/18 | **PASS 18/18** |
+| tests maison écrits | oui | 21, tous verts au 1er jet |
+
+**7,7× plus rapide, même verdict.** Claude a résolu le problème par mémoïsation
+exhaustive sur le vecteur de comptes trié — pas de cas particulier « 5+3 → 4+4 »
+codé en dur — et a vérifié le panier 4,4,4,2,2 où quatre groupes de quatre à
+102,40 battent 5+5+3+3 à 103,20. Arithmétique en centimes entiers, division par
+100 seulement à la fin, donc pas de tolérance flottante nécessaire.
+
+**Réserves, à porter avec le chiffre :**
+
+- **Cache Gradle froid** côté Claude (conteneur créé à l'instant) contre cache
+  chaud côté dsh. Le handicap joue CONTRE Claude, il ne gonfle pas son score.
+- **Piles différentes** : dsh appelle un 27B distant à 24,6 t/s, Claude tourne
+  sur son propre modèle. La comparaison répond à « combien de temps » et
+  « passe / ne passe pas », **pas** à « quel agent est le meilleur à modèle
+  égal ». Un seul exercice, aussi.
+
+### LE PIÈGE ÉVITÉ DE JUSTESSE, ET IL AURAIT ÉTÉ GRAVE
+
+Mon premier juge a rendu **PASS** sur `BUILD SUCCESSFUL`. Le XML JUnit disait :
+
+```
+tests="18" skipped="17" failures="0" errors="0"
+```
+
+**Un seul test avait tourné, 17 étaient sautés.** Les suites Java d'Exercism
+portent `@Disabled` sur tout sauf le premier test — c'est la pratique normale du
+site, les élèves les activent un par un. Un juge qui ne les retire pas rend
+« réussi » pour n'importe quel code qui compile.
+
+`pilote.py` le fait depuis toujours (ligne 377,
+`re.sub(r"@Disabled\([^)]*\)\s*\n", "", t)`) et le run dsh montre bien
+`skipped="0"` sur ses 18 tests : **le PASS de dsh est authentique, il n'est pas
+touché par ce défaut.** C'est mon juge à moi qui était faux, pendant dix
+minutes.
+
+**Deux corrections, pas une :**
+1. retrait des `@Disabled`, même geste que `pilote.py` ;
+2. et surtout, **le verdict ne lit plus le code de retour**. Il lit le XML
+   JUnit, compte les `@Test` de la suite officielle, et rend **INVALIDE** —
+   ni PASS ni FAIL — si un seul test a été sauté ou si le nombre exécuté ne
+   correspond pas. `BUILD SUCCESSFUL` est vrai aussi quand rien n'a tourné.
+
+**Règle générale à retenir : un code de retour vert n'est pas une mesure.** Il
+faut compter ce qui a réellement été exécuté et comparer ce compte à ce qui
+était attendu. Un juge qui ne sait pas dire « INVALIDE » ne sait pas dire
+« PASS » non plus.
+
