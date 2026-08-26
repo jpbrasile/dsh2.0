@@ -164,3 +164,85 @@ Les règles 1 à 6 tiennent, avec deux ajouts :
 Le partiel à 4 rotations du bras 8192 (12 questions × 4) est **conservé**, gelé
 sous `local_q4_t1_b8192_4rot_partiel.jsonl`. Il n'est pas jeté : il sert au
 contrôle de stabilité, qui demande les 4 positions d'une même question.
+
+---
+
+## Révision 2 — 26/08/2026, bras A à 33/198, bras B sans aucune donnée
+
+**Statut : pré-enregistré au sens strict.** Le bras B (2048) n'a pas démarré ;
+le script de chaînage attend la fin du bras A. Cet amendement est écrit avant
+que la moindre donnée du bras B existe, et il est daté pour qu'on puisse le
+vérifier sur l'horodatage des fichiers.
+
+**Origine : red team externe (z.ai GLM-5.3), constats 1, 2 et 3.** Les deux
+affirmations mécaniques ont été vérifiées sur le code avant d'être retenues.
+
+### Le défaut : la règle 3 confond deux événements sous un seul mot
+
+La règle 3 dit « appel tronqué = non-mesure, exclu et compté ». Écrite avant
+que les bras à budget existent, elle ne visait qu'un seul accident. Il y en a
+deux, et ils n'ont rien de commun.
+
+**Coupure au budget.** Le budget de raisonnement est épuisé, le message de
+transition est injecté, **et le modèle rend une réponse.** Mesuré sur le bras
+8192 : 7 justes sur 10 appels coupés, contre 25 % attendus au hasard. Un appel
+coupé est donc une **mesure** — d'une réponse de qualité dégradée, ce qui est
+exactement le coût du budget, c'est-à-dire la chose que ce balayage mesure.
+L'exclure revient à retirer l'effet du traitement du bras traité.
+
+**Troncature au plafond de sortie.** `finish_reason == "length"` contre
+`--max-tokens 16384` : la réponse est coupée en cours d'écriture, il n'y a pas
+de réponse à lire. C'est une panne d'instrument, sans rapport avec le budget.
+Non-mesure, exclue et comptée — la règle 3 d'origine, qui reste juste ici.
+
+### Pourquoi ça ne pouvait pas attendre le dépouillement
+
+Sous `--rotation-tournante`, une question n'a **qu'un seul appel**. Exclure cet
+appel n'enlève pas une rotation sur quatre : ça retire **la question entière**
+du jeu apparié. Or la probabilité d'être coupé est une fonction de la question
+— les questions dures brûlent plus de pensée (bras illimité : médiane 1111,
+p90 2695, max sain 4371). La comparaison A contre B tournerait donc sur le
+sous-ensemble des questions que 2048 arrive à survivre.
+
+Direction du biais, et elle n'est pas neutre : elle **efface le coût de 2048**,
+mène à « non départagés », et la règle 5 tranche alors « le budget le plus bas
+gagne ». Le protocole aurait choisi 2048 par construction. C'est un biais de
+sélection sur le traitement, décidé par la variable même qu'on étudie.
+
+### Règle 3 (Révision 2)
+
+> **3a. Coupure au budget = MESURE.** Un appel portant le message de transition
+> (règle 4) est **conservé** et entre dans le score et dans l'appariement, avec
+> le verdict que sa réponse mérite. Son taux et son exactitude propre sont
+> publiés à part, jamais fondus dans le total sans être nommés.
+>
+> **3b. Troncature au plafond de sortie = NON-MESURE.** Un appel
+> `finish_reason == "length"` est **exclu et compté**, dans tous les bras.
+>
+> **3c. Les deux calculs sont publiés côte à côte** — coupées gardées et
+> coupées exclues. Aucun des deux n'est choisi après avoir vu lequel arrange.
+> Si les deux mènent à des décisions opposées, le balayage est déclaré non
+> concluant et le budget n'est pas réglé sur ces données.
+
+### Effet sur les chiffres déjà publiés
+
+Les 68,7 % (bras 512 nu) et 81,2 % (bras illimité) ont été calculés par
+`depouiller_gpqa.py`, dont `par_question()` ingère tous les enregistrements :
+un appel tronqué y compte comme **faux**. Vérifié sur le code, pas déduit. Ces
+deux chiffres sont donc des mélanges d'erreur du modèle et d'échec de mesure,
+en proportions inconnues. Ils sont **recalculés sous 3a/3b, les deux calculs
+publiés**, et l'ancien chiffre reste au carnet avec la mention de son défaut.
+
+### Ce qui est identifié et N'EST PAS amendé ici
+
+Le constat 3 du red team vise l'échelle de décision de la règle 5 : entre le
+hasard (25 %) et la récupération saine (~70 %) s'étend un régime que aucun
+échelon ne rattrape, si bien qu'un bras 2048 récupérant à 40 % passerait tout.
+**Non amendé**, et dit ici pour être sur le compte-rendu. La correction 3a le
+désamorce en grande partie sans le viser : les appels coupés entrant désormais
+dans la comparaison appariée, une récupération à 40 % produit une perte
+appariée réelle et visible, là où l'exclusion la rendait invisible. Ce qui
+reste à trancher, si le cas se présente, est le seuil de perte.
+
+Le rattrapage symétrique à 32768 des appels tronqués des bras gelés reste **dû
+et non lancé** — la carte est occupée.
