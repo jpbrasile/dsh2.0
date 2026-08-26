@@ -321,3 +321,201 @@ Le contrôle de stabilité (une question sue est-elle sue dans les 4 positions)
 demande les 4 rotations d'une même question. Il continue de tourner sur les
 partiels à 4 rotations déjà gelés, qui existent pour ça, et **pas** sur les
 bras tournants.
+
+---
+
+## Révision 4 — 26/08/2026 : le balayage ne mesurait pas ce qu'il croyait
+
+Écrite **avant** que `local_q4_t1_b2048_tournant.jsonl` existe, donc avant toute
+donnée du bras B. Déclenchée par le red team GLM-5.3 du 26/08
+(`redteam/plan_suite_20260826.md`, constat 1) puis par quatre mesures faites
+pour le vérifier, toutes sur des bras **déjà gelés**, zéro seconde de 4090.
+
+### A. La calibration de 8192 est caduque
+
+Le budget 8192 avait été posé à « 1,9× le pire appel sain » d'un échantillon
+illimité de 30 appels couvrant **8 questions**. Sur le bras tournant à 55
+questions distinctes, **45,5 % des appels touchent ce budget** (25 sur 55). Une
+valeur calibrée pour un événement rare en attrape la moitié.
+
+L'échantillon de calibration était cinq fois moins étalé que la population qu'il
+devait représenter :
+
+| échantillon | pensée mesurée, médiane | maximum |
+|---|---|---|
+| 30 appels / 8 questions (celui de la calibration) | 748 jetons | **1 320** |
+| 55 appels / 55 questions tournantes | 1 506 jetons | **6 789** |
+
+Huit questions ne peuvent pas porter une décision sur la dispersion : la
+décomposition de variance du 26/08 attribue **78 % de la variance à la
+dispersion de difficulté entre questions**, la part précisément absente d'un
+échantillon de 8.
+
+### B. La règle 4 est aveugle aux coupures nues — c'est le défaut le plus grave
+
+La règle 4 définit la population « coupée au budget » par **la présence du
+message de transition**, et relègue le seuil en jetons au rang de « filet de
+sécurité ». Or un serveur lancé **sans** `--reasoning-budget-message` coupe la
+pensée en pleine phrase et **n'injecte rien du tout**. Il n'y a alors aucun
+message à chercher : le témoin unique est le mur en jetons.
+
+Mesuré sur le bras 512 nu, 293 appels exploitables :
+
+| témoin | appels détectés coupés |
+|---|---|
+| message de transition (règle 4 actuelle) | **0 / 293** |
+| mur en jetons au budget (le « filet ») | **248 / 293 = 84,6 %** |
+
+La règle 4 telle qu'écrite classe donc un bras à **84,6 % de coupure** comme
+**100 % d'appels libres à pensée courte**. Ce n'est pas une imprécision, c'est
+une inversion. Le carnet avait déjà vu le mur sur un échantillon de 60 (53 sur
+60 exactement à 512, médiane 512, max 514) ; la mesure ci-dessus l'étend aux 293.
+
+**Règle 4 (Révision 4).** La population « coupée au budget » est définie par
+**la disjonction** de deux témoins, aucun n'étant subordonné à l'autre :
+
+1. présence du message de transition dans le bloc de pensée ;
+2. longueur du bloc de pensée, **tokenisée par le `/tokenize` du serveur**,
+   supérieure ou égale à `budget − 2` jetons.
+
+La tolérance de 2 jetons tient à ce que la coupure tombe sur une frontière de
+jeton (mesure : max 514 pour un budget de 512). Un bras dont le serveur n'a pas
+de message de transition ne peut être lu que par le témoin 2 ; **publier un tel
+bras sans avoir appliqué le témoin 2 est interdit.**
+
+Corollaire outil : le champ `marque` ajouté à `gpqa_diamond.py` ce jour est
+**nécessaire et insuffisant**. Il ne voit que le témoin 1. Le fichier le dit à
+l'endroit où il est écrit.
+
+### C. La courbe de coupure, mesurée sur 55 questions au lieu de 8
+
+`scripts/gpqa/courbe_de_coupure.py`, créé pour cette révision. Un bras à budget
+*B* est **censuré à droite** : d'un appel coupé on sait que sa pensée naturelle
+dépassait *B*, jamais de combien. La censure ne gêne pas en dessous de *B*, où
+un appel coupé dépasse le seuil avec certitude. Le script publie donc un
+**encadrement** — borne basse = appels connus au-dessus, borne haute = plus ceux
+que la censure empêche de trancher — et refuse d'estimer au-delà du budget du
+bras. Mesuré sur les 55 appels du bras 8192 :
+
+| budget candidat | coupure prédite | statut |
+|---|---|---|
+| 512 | 89,1 % | mesure |
+| 1024 | 78,2 % | mesure |
+| **2048** | **63,6 %** | mesure |
+| 4096 | 52,7 % | mesure |
+| **8192** | **45,5 %** | mesure |
+| 12288 et au-delà | [0,0 ; 45,5] % | **inestimable** |
+
+### D. Ce que le balayage mesure vraiment — requalification
+
+Le pré-enregistrement pose la question « combien de pensée faut-il ». Aux deux
+points retenus, le bras A coupe 45,5 % de ses appels et le bras B en couperait
+**63,6 %**. Le balayage ne compare donc pas une pensée libre à une pensée
+bridée : **il compare deux guillotines**, à 18 points de taux de coupure d'écart.
+Aucun des deux bras n'est le témoin « pensée libre » dont la question a besoin.
+
+### E. Le témoin « pensée libre » était déjà sur le disque
+
+`local_q4_t1_budget512.jsonl` (512 nu) et `local_q4_t1_b8192_tournant.jsonl`
+(8192 + message) partagent **55 couples (question, rotation) identiques** :
+même question, même permutation des réponses, même modèle, mêmes six paramètres
+d'échantillonnage. Appariés :
+
+| | exactitude sur les 55 couples |
+|---|---|
+| 512 nu | 34 / 55 = **61,8 %** |
+| 8192 + message | 46 / 55 = **83,6 %** |
+
+Table appariée : 33 justes des deux côtés, 8 faux des deux côtés, 1 juste
+seulement à 512, **13 justes seulement à 8192**. McNemar exact bilatéral
+**p = 0,0018** — la différence est établie.
+
+**Ce que cette mesure n'établit pas.** Deux variables ont changé ensemble entre
+les deux serveurs : la valeur du budget (512 → 8192) **et** la présence du
+message de transition (absent → présent). Les 22 points ne sont attribuables ni
+à l'une ni à l'autre séparément. La littérature citée au carnet fait porter au
+message une part non nulle (Qwen3 9B / HumanEval : coupure nue 78 %, message à
+budget 1000 → 89 %). C'est un écart mesuré entre deux **régimes**, pas un effet
+de budget.
+
+### F. Où sont les erreurs : dans l'interruption, pas dans le modèle
+
+Découpage de chaque bras gelé selon le sort de sa pensée, IC95 de Wilson :
+
+| bras | pensée finie seule | interrompue au budget | butée au plafond de sortie |
+|---|---|---|---|
+| 8192 + message (55) | **30/30 = 100 %** [88,6 ; 100] | 16/25 = 64,0 % [44,5 ; 79,8] | — |
+| 512 nu (293) | 34/38 = 89,5 % [75,9 ; 95,8] | 167/248 = 67,3 % [61,3 ; 72,9] | **0/7** |
+| illimité −1 (30) | **25/25 = 100 %** [86,7 ; 100] | — | **0/5** |
+
+Deux régularités tiennent sur les trois bras : un appel qui **finit de penser
+seul** est juste 89 à 100 fois sur 100 ; un appel **interrompu** tombe à 64–67 %,
+et un appel qui bute sur le plafond de 16 384 jetons de sortie est faux
+**12 fois sur 12**.
+
+**Ce que ça n'établit pas, et il faut le dire fort.** « Libre » et « coupé » ne
+sont pas deux traitements d'une même population : ce sont **deux populations de
+questions**, séparées par leur difficulté — une question facile finit sa pensée
+tôt, c'est ce qui la range du côté « libre ». L'écart de 36 points est donc
+**une sélection, pas un effet causal de la coupure**. Il ne prouve pas qu'ôter
+le budget rendrait justes les appels aujourd'hui coupés. Il indique seulement
+où chercher, et la seule expérience qui trancherait est de rejouer **les mêmes
+questions** sans budget.
+
+### G. Règle 5 — l'échelon manquant
+
+À 45,5 % et 63,6 % de coupure, la règle 5 sélectionne structurellement le budget
+le plus bas : « à exactitude non départagée, le budget le plus bas gagne »,
+alors que l'exactitude appariée sur 50 questions n'a pas la puissance de
+départager deux bras qui amputent l'un et l'autre la majorité de leurs appels.
+
+**Règle 5 (Révision 4), échelon inséré avant le départage par le coût.** Un bras
+dont l'exactitude sur ses **appels coupés** est à plus de **15 points** sous son
+exactitude sur ses **appels libres**, avec **n_coupés ≥ 30**, est écarté quel que
+soit son score global — il ne mesure plus le modèle, il mesure sa propre
+guillotine. Appliquée aux bras gelés : le bras 8192 affiche 100 % contre 64,0 %,
+soit **36 points**, et le bras 512 nu 89,5 % contre 67,3 %, soit **22 points**.
+**Les deux sont écartés par leur propre critère.**
+
+### H. Conséquence : le chiffre GPQA local ne passera pas par le balayage
+
+Le livrable demandé est *un chiffre GPQA Diamond sur le modèle local*. Un bras
+qui ampute 45 à 64 % de ses appels ne le fournit pas : il fournit le chiffre
+d'une configuration, sous un handicap qu'aucun comparable publié ne porte.
+
+**Bras de production arrêté ici, avant toute donnée :** `--reasoning-budget -1`
+(pas de guillotine), `--max-tokens 32768` (le plafond de 16 384 est faux
+**12 fois sur 12** quand il est atteint), **198 questions en position
+tournante**, un appel par question, fichier neuf. Coût attendu : ~4 h au rythme
+mesuré du bras 8192 (4,05 h extrapolées à 198), davantage si la queue est
+lourde — c'est précisément ce que ce bras mesurera.
+
+Le balayage de budget n'est pas abandonné : il devient une **courbe coût/qualité
+optionnelle**, à lire après le bras de production, et il n'est plus sur le
+chemin du livrable.
+
+### I. Température 1.0 — actée comme valeur constructeur
+
+`1.0 / top_p 0.95 / top_k 20 / min_p 0.0` est la valeur publiée par la carte
+Qwen3.8-27B en mode *thinking* (`DSH_QWEN_LOCAL_LOGBOOK.md:1757-1760`). Le 0,6
+concerne d'autres Qwen. Aucun bras mesuré n'est affecté : tous ont passé 1.0
+explicitement. Le défaut de `--temperature` dans `gpqa_diamond.py` passe de 0,6
+à **1.0** pour que l'invocation nue cesse d'être un piège, et chaque
+enregistrement porte désormais `temperature`, `top_p`, `max_tokens` et `extra`.
+
+### J. Ce qui est identifié et N'EST PAS amendé ici
+
+- **La queue de stockage décapitait 40 % des pensées.** 22 enregistrements sur
+  55 font exactement 24 000 caractères et portent `</think>` sans `<think>`.
+  Corrigé à 40 000 caractères et par les champs `reponse_car` / `pensee_car`
+  mesurés **avant** troncature, mais les bras déjà gelés gardent le défaut : les
+  longueurs de pensée qu'on en tire sont des **bornes basses**. Les taux du
+  tableau C n'en dépendent pas (un appel coupé reste au-dessus du seuil quelle
+  que soit la troncature du stockage).
+- **La losslessness du décodage spéculatif n'est toujours pas mesurée.** Dette
+  déclarée de la campagne (`SPECDEC_4090_BENCH.md:18`, `:184`, `:672`). Tant
+  qu'elle tient, tout chiffre d'exactitude est publié « sous décodage spéculatif
+  dflash2, égalité au glouton non vérifiée ». Sonde prévue avant le bras de
+  production.
+- **La qualité sous KV quantifié q8_0/q4_0 n'est pas mesurée**
+  (`SPECDEC_4090_BENCH.md:640`). Limite déclarée, non levée ici.

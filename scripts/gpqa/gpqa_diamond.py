@@ -41,6 +41,28 @@ import requests
 
 LETTRES = ("A", "B", "C", "D")
 
+# Temoin DIRECT d'une coupure au budget de pensee : llama.cpp injecte ce texte
+# juste avant la balise de fin quand --reasoning-budget est epuise. C'est le
+# debut du message pose par le lanceur (message_transition.txt) ; on n'en garde
+# qu'un fragment stable, pour que reformuler la fin du message ne casse pas le
+# temoin. Un seuil en jetons ne dit que « long » -- ceci dit « coupe ».
+#
+# NECESSAIRE ET INSUFFISANT -- ne jamais s'en contenter pour classer un bras.
+# Ce temoin n'existe que si le serveur a ete lance AVEC
+# --reasoning-budget-message. Un serveur lance sans lui coupe la pensee en
+# pleine phrase et n'injecte RIEN : le champ `marque` vaut alors False sur
+# 100 % des appels d'un bras pourtant coupe a 84,6 %. Mesure du 26/08 sur le
+# bras 512 nu, 293 appels : 0 detecte par ce marqueur, 248 par le mur en
+# jetons. Un bras ainsi lu se presente comme « libre a pensee courte » alors
+# qu'il est sous guillotine -- l'inversion exacte.
+#
+# Le second temoin, obligatoire des que le bras porte un budget : longueur du
+# bloc de pensee TOKENISEE par le /tokenize du serveur, >= budget - 2 jetons
+# (la coupure tombe sur une frontiere de jeton : max 514 mesure pour un budget
+# de 512). Implemente dans courbe_de_coupure.py ; regle 4 du
+# PRE_ENREGISTREMENT_BUDGET.md, revision 4.
+MARQUE_BUDGET = "thinking budget is now exhausted"
+
 # Gabarit simple-evals (OpenAI) : c'est le plus repandu dans les chiffres
 # publies. On le fige ici pour que les deux cotes de la comparaison le
 # partagent -- pas parce qu'il serait meilleur.
@@ -257,7 +279,15 @@ def main():
                         "reponse en A partout : un confondant systematique.")
     p.add_argument("--questions", type=int, default=0,
                    help="0 = toutes ; sinon les N premieres de l'ordre brasse")
-    p.add_argument("--temperature", type=float, default=0.6)
+    # 0.6 -> 1.0 le 26/08. Le 0.6 etait un piege : la carte de modele
+    # Qwen3.8-27B en mode THINKING donne temperature 1.0, top_p 0.95,
+    # top_k 20, min_p 0.0, presence_penalty 0.0, repetition_penalty 1.0
+    # (DSH_QWEN_LOCAL_LOGBOOK.md, section « Le reglage lui-meme »), et le run
+    # aider de reference force deja ces valeurs. Le 0.6 appartient a d'autres
+    # versions de Qwen. Les bras passaient --temperature 1.0 explicitement,
+    # donc AUCUNE mesure n'est touchee -- mais une invocation nue mesurait au
+    # mauvais reglage sans rien signaler. Le defaut dit maintenant la verite.
+    p.add_argument("--temperature", type=float, default=1.0)
     p.add_argument("--top-p", type=float, default=0.95)
     p.add_argument("--max-tokens", type=int, default=16384)
     p.add_argument("--delai", type=int, default=900)
@@ -363,8 +393,35 @@ def main():
                          enreg["erreur"][:90]))
             return
         donne = extraire(rep["texte"] or rep["raisonnement"])
+        # --- tailles calculees sur le texte COMPLET, avant toute troncature ---
+        # Le defaut corrige ici (constat 12 du red team du 26/08, verifie :
+        # 22 enregistrements sur 55 faisaient 24000 caracteres PILE et avaient
+        # perdu leur `<think>` ouvrant) ne se reparait pas en agrandissant la
+        # queue : une queue, si longue soit-elle, coupe toujours quelque part.
+        # On MESURE donc avant de tronquer, et le stockage n'est plus qu'une
+        # commodite de relecture. `pensee_car` vaut -1 quand aucun bloc de
+        # pensee n'est identifiable -- jamais 0, qui se confondrait avec une
+        # pensee vide.
+        _txt = rep["texte"] or ""
+        _i, _j = _txt.find("<think>"), _txt.find("</think>")
+        if _i >= 0 and _j > _i:
+            _pensee = _txt[_i + 7:_j]
+        elif _j >= 0:
+            _pensee = _txt[:_j]              # ouvrant absent, fin presente
+        else:
+            _pensee = None
         enreg.update({
             "donne": donne,
+            # Les parametres d'echantillonnage EFFECTIFS de cet appel. Sans
+            # eux, un bras relance a d'autres reglages est indetectable apres
+            # coup : l'enregistrement ne portait que `modele`.
+            "temperature": args.temperature,
+            "top_p": args.top_p,
+            "max_tokens": args.max_tokens,
+            "extra": extra,
+            "reponse_car": len(_txt),
+            "pensee_car": len(_pensee) if _pensee is not None else -1,
+            "marque": MARQUE_BUDGET in (_pensee or ""),
             "juste": bool(donne) and donne == rot["attendu"],
             "finish_reason": rep["finish_reason"],
             "tokens_sortie": rep["tokens_sortie"],
@@ -378,7 +435,17 @@ def main():
             # (`extraire` travaille sur rep["texte"] complet, avant stockage),
             # mais toute analyse du raisonnement l'etait. 24000 caracteres
             # couvrent ~8000 jetons, au-dela du budget de pensee pose.
-            "reponse": (rep["texte"] or "")[-24000:],
+            #
+            # 24000 -> 40000 le 26/08 : 24000 ne suffisait PAS. Un appel coupe
+            # au budget 8192 produit ~8228 jetons de pensee, soit ~24700
+            # caracteres -- la queue emportait donc le `<think>` ouvrant de
+            # tout appel coupe, c'est-a-dire de 45,5 % du bras. Mesure :
+            # 22/55 enregistrements a 24000 caracteres pile, `</think>` present
+            # sans `<think>`. 40000 couvre ~13000 jetons, au-dela de tout
+            # budget envisage. Les champs `reponse_car`, `pensee_car` et
+            # `marque` ci-dessus restent la source de verite sur les tailles :
+            # ils sont calcules avant cette coupe.
+            "reponse": (rep["texte"] or "")[-40000:],
         })
         with verrou:
             f.write(json.dumps(enreg, ensure_ascii=False) + "\n")

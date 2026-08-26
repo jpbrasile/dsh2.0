@@ -154,6 +154,39 @@ param(
     [string]$LogPath,
     [int]$SpecDraftNMax = 0,
     [double]$SpecDraftPMin = 0,
+    # Nombre de slots servis en concurrence. Etait CODE EN DUR a 1 jusqu'au
+    # 26/08/2026, et ce 1 n'a jamais ete mesure : il vient du meme copier-coller
+    # que le budget 512 ci-dessous.
+    #
+    # CE QUE CA COUTE EN VRAM, cote KV PRINCIPAL : rien. llama.cpp PARTAGE
+    # --ctx-size entre les slots, il ne le multiplie pas -- verifie sur le
+    # journal de ce binaire, 26/08 14:12 :
+    #   srv load_model: initializing, n_slots = 1, n_ctx_slot = 163840
+    # A -Parallel 8, ce n_ctx_slot vaut 20480 et le KV total est le meme.
+    #
+    # MAIS CE N'EST PAS TOUTE LA VRAM, et la carte n'a AUCUNE marge. Mesure du
+    # 26/08 16:30, serveur au repos, `nvidia-smi` :
+    #   24 032 MiB utilises sur 24 564 -- 107 MiB libres.
+    # Le decodage speculatif alloue un contexte de brouillon PAR SLOT. A
+    # -Parallel 8 il en faut 8, et ils n'entrent pas dans 107 MiB. Un
+    # -Parallel > 1 avec -Config q38-dflash2 ou q38-mtp doit donc etre precede
+    # d'une mesure de VRAM, pas d'une esperance : la voie sure est
+    # -Config q38-plain, qui libere en plus les 1,06 GiB du GGUF de brouillon.
+    #
+    # CE QUE CA PEUT RAPPORTER : le decodage a lot 1 d'un 27B Q4 est limite par
+    # la bande passante memoire, pas par le calcul -- 8 sequences concurrentes
+    # devraient donc coûter presque le meme temps qu'une seule. NON MESURE sur
+    # cette carte au 26/08 : c'est exactement ce que l'A/B de l'etape 1 du plan
+    # (docs/PLAN_SUITE_20260826.md) doit trancher, avec le decodage speculatif
+    # comme confondant a isoler (-Config q38-plain contre -Config q38-dflash2).
+    #
+    # CE QUE CA CASSE : la duree PAR APPEL cesse d'etre une latence, les appels
+    # se disputant la carte. Toute analyse qui lit `secondes` par appel doit
+    # etre refaite ou abandonnee des que -Parallel > 1.
+    #
+    # Defaut 1 : le comportement de tous les appelants existants est inchange.
+    [ValidateRange(1, 64)]
+    [int]$Parallel = 1,
     # Hard cap on thinking tokens. -1 = unrestricted (llama.cpp's own default);
     # 0 = no thinking at all; N>0 = guillotine at N tokens.
     #
@@ -423,6 +456,24 @@ if (($Ctk -and $Ctk -ne "f16") -or ($Ctv -and $Ctv -ne "f16")) {
     Write-Host "  this card: q8_0/q4_0 prefill collapses to 47 t/s at ~14k context (f16: 2801 t/s)"
     Write-Host "  and decode to 12.7 t/s (f16: 45.7 t/s), to save 674 MiB. Advisory only."
 }
+# --- contexte PAR SLOT ------------------------------------------------------
+# --ctx-size est PARTAGE entre les slots, pas alloue a chacun. Un -Parallel 8
+# sur --ctx-size 163840 laisse 20480 jetons par slot. Si ce quotient tombe sous
+# ce que le client demande (invite + --max-tokens), llama.cpp tronque ou refuse
+# l'appel SANS que le harnais s'en apercoive : on lirait une chute d'exactitude
+# la ou il n'y a qu'une fenetre trop petite. On l'affiche donc toujours.
+$ctxParSlot = [int][math]::Floor($CtxSize / $Parallel)
+Write-Host ("INFO (slots): -Parallel $Parallel sur --ctx-size $CtxSize " +
+            "=> $ctxParSlot jetons par slot (VRAM inchangee, le contexte est partage).")
+if ($ctxParSlot -lt 20480) {
+    Write-Host "WARN (slots): $ctxParSlot jetons par slot. Un client a --max-tokens 16384"
+    Write-Host "  plus son invite peut ne PAS tenir. Verifier avant de mesurer une exactitude."
+}
+if ($ctxParSlot -lt 2048) {
+    Write-Host "REFUS (exit 9): $ctxParSlot jetons par slot -- fenetre inutilisable."
+    exit 9
+}
+
 $cmdArgs += @(
     "--flash-attn",   "on",
     "--cache-type-k", $(if ($Ctk) { $Ctk } else { "f16" }),
@@ -430,7 +481,7 @@ $cmdArgs += @(
     "--batch-size",   "2048",
     "--ubatch-size",  $(if ($UbatchSize -gt 0) { "$UbatchSize" } else { "512" }),
     "--n-gpu-layers", "99",
-    "--parallel",     "1",
+    "--parallel",     "$Parallel",
     "--jinja",
     "--reasoning-format", "none",
     "--reasoning-budget", "$ReasoningBudget",
