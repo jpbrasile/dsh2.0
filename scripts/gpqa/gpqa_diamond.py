@@ -221,6 +221,14 @@ def main():
                    help="NOM de la variable d'environnement portant la cle "
                         "(jamais la cle elle-meme sur la ligne de commande)")
     p.add_argument("--rotations", type=int, default=4, choices=(1, 2, 3, 4))
+    p.add_argument("--rotation-tournante", action="store_true",
+                   help="UN appel par question, la position de la bonne "
+                        "reponse tournant ENTRE les questions (rang mod 4). "
+                        "Couvre tout le jeu au prix d'un quart des appels, en "
+                        "restant equilibre en position. Ignore --rotations. "
+                        "NE PAS confondre avec --rotations 1, qui prend la "
+                        "rotation 0 de CHAQUE question, c'est-a-dire la bonne "
+                        "reponse en A partout : un confondant systematique.")
     p.add_argument("--questions", type=int, default=0,
                    help="0 = toutes ; sinon les N premieres de l'ordre brasse")
     p.add_argument("--temperature", type=float, default=0.6)
@@ -264,9 +272,14 @@ def main():
         items = items[:args.questions]
 
     vus = deja_fait(args.sortie)
-    total = len(items) * args.rotations
-    print("GPQA Diamond -- %d questions x %d rotations = %d appels"
-          % (len(items), args.rotations, total))
+    if args.rotation_tournante:
+        total = len(items)
+        print("GPQA Diamond -- %d questions x 1 appel, position TOURNANTE "
+              "entre questions = %d appels" % (len(items), total))
+    else:
+        total = len(items) * args.rotations
+        print("GPQA Diamond -- %d questions x %d rotations = %d appels"
+              % (len(items), args.rotations, total))
     print("modele : %s   url : %s" % (args.modele, args.url))
     print("temperature %.2f  top_p %.2f  max_tokens %d  extra %s"
           % (args.temperature, args.top_p, args.max_tokens, extra))
@@ -279,9 +292,19 @@ def main():
     # concurrence n'y gagne rien et fausse les temps par appel. Le distant se
     # fait en parallele -- c'est la raison d'etre du reglage du harnais sur
     # OpenRouter : des minutes au lieu d'heures de carte.
+    # POSITION TOURNANTE. `rotations(item)[:1]` prendrait la rotation 0 de
+    # CHAQUE question, c'est-a-dire la bonne reponse en A pour les 198 -- on
+    # n'aurait pas supprime le controle de position, on l'aurait remplace par
+    # un confondant systematique. Ici la position tourne ENTRE les questions
+    # (rang mod 4), donc ~un quart du jeu par lettre, et l'assignation est
+    # deterministe (l'ordre vient d'un shuffle graine), donc IDENTIQUE d'un
+    # bras a l'autre : les bras restent apparies question par question.
     taches = []
-    for item in items:
-        for rot in rotations(item, args.graine)[:args.rotations]:
+    for i, item in enumerate(items):
+        rots = rotations(item, args.graine)
+        choisies = [rots[i % 4]] if args.rotation_tournante \
+            else rots[:args.rotations]
+        for rot in choisies:
             if (item["id"], rot["rotation"]) not in vus:
                 taches.append((item, rot))
 

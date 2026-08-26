@@ -17,7 +17,8 @@
 # La lecture d'un resultat d'agent est deportee dans lire_resultat_agent.py :
 # du python cite dans du shell cite ne survit pas au canal.
 
-G="C:/Users/test/Documents/dsh2.0/scripts/gpqa/local_q4_t1_budget8192.jsonl"
+# Suit le bras tournant EN COURS : A (8192) puis B (2048) quand la chaine bascule.
+GLOB="C:/Users/test/Documents/dsh2.0/scripts/gpqa/local_q4_t1_b*_tournant.jsonl"
 B="C:/Users/test/tools/aider-bench/aider/tmp.benchmarks/fumee-durs-dsh"
 P="C:/Users/test/tools/aider-bench/aider/tmp.benchmarks/fumee-durs-pi"
 LIRE="C:/Users/test/Documents/dsh2.0/scripts/gpqa/lire_resultat_agent.py"
@@ -26,6 +27,8 @@ prec_gpqa=-1
 prec_res=""
 
 while true; do
+    G=$(ls -1t $GLOB 2>/dev/null | head -1)
+    [ -n "$G" ] || G=/dev/null
     n=$(wc -l < "$G" 2>/dev/null; true)
     tr=$(grep -c '"finish_reason": "length"' "$G" 2>/dev/null; true)
     ok=$(grep -c '"juste": true' "$G" 2>/dev/null; true)
@@ -50,6 +53,6 @@ while true; do
     fi
     prec_res="$res"
 
-    echo "veille  GPQA $n/792 appels, $pct % justes, $ptr % tronques  |  resultats agents : $(echo $res | wc -w)"
+    echo "veille  GPQA $(basename "$G" .jsonl | sed "s/local_q4_t1_//") $n/198, $pct % justes, $ptr % tronques  |  resultats agents : $(echo $res | wc -w)"
     sleep 900
 done
