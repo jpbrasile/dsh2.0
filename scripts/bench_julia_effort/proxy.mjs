@@ -266,6 +266,63 @@ const server = http.createServer((req, res) => {
           // deux nombres -- une deduction, la ou une declaration existe.
           const ch = (last.choices || [])[0];
           if (ch && ch.finish_reason) rec.fin_raison = ch.finish_reason;
+          // En flux, le fragment qui porte `usage` a souvent `choices: []` :
+          // la raison d'arret est sur un fragment ANTERIEUR. La chercher a
+          // rebours, sinon un bras coupe au plafond passe pour un bras fini.
+          if (!rec.fin_raison && sent.stream) {
+            const lg = raw.split(String.fromCharCode(10));
+            for (let i = lg.length - 1; i >= 0 && !rec.fin_raison; i--) {
+              if (!lg[i].startsWith('data: ') || lg[i].includes('[DONE]')) continue;
+              let o = null; try { o = JSON.parse(lg[i].slice(6)); } catch (e) { continue; }
+              const c0 = (o.choices || [])[0];
+              if (c0 && c0.finish_reason) rec.fin_raison = c0.finish_reason;
+            }
+          }
+          // PENSEE CONTRE VISIBLE, MESUREE ICI ET PAS DEDUITE (26/08 20:05).
+          // J'ai ecrit dans le carnet que la separation pensee/visible
+          // « n'existe pas en local ». FAUX. `--reasoning-format none` ne
+          // supprime rien -- l'aide du binaire le dit : « leaves thoughts
+          // unparsed in message.content ». La pensee est donc LA, entre
+          // <think> et </think> ; ce qui manque est un compteur pre-calcule
+          // dans `usage`, pas l'information. C'etait un trou de MON
+          // instrument, lu comme une limite de la pile locale.
+          //
+          // On ne stocke que des LONGUEURS, jamais le texte -- meme regle que
+          // la sonde de prefixe. Et on ne touche pas au serveur : basculer en
+          // `--reasoning-format deepseek` sortirait la pensee de `content` et
+          // casserait le parseur du banc GPQA (`pensee_de()`), qui tourne.
+          //
+          // `reasoning_content` est lu AUSSI : si un amont separe deja la
+          // pensee, elle ne doit pas compter pour zero.
+          // EN FLUX, `message` N'EXISTE PAS. Constate le 26/08 a 20:10 : dsh
+          // appelle avec `stream: true`, le contenu arrive en `delta` fragment
+          // par fragment, et le dernier fragment ne porte que `usage`. Une
+          // premiere version de ce compteur lisait `choices[0].message` et ne
+          // s'est jamais declenchee -- un instrument muet qui a l'air pose.
+          // On reconstitue donc le texte a partir des `delta`, on le mesure, et
+          // on ne le garde pas.
+          let txt = '', rc = '';
+          const msg = (ch && ch.message) || {};
+          if (typeof msg.content === 'string') txt = msg.content;
+          if (typeof msg.reasoning_content === 'string') rc = msg.reasoning_content;
+          if (!txt && !rc && sent.stream) {
+            for (const l of raw.split(String.fromCharCode(10))) {
+              if (!l.startsWith('data: ') || l.includes('[DONE]')) continue;
+              let o = null; try { o = JSON.parse(l.slice(6)); } catch (e) { continue; }
+              const d = ((o.choices || [])[0] || {}).delta || {};
+              if (typeof d.content === 'string') txt += d.content;
+              if (typeof d.reasoning_content === 'string') rc += d.reasoning_content;
+            }
+          }
+          if (txt || rc) {
+            const i = txt.indexOf('<think>');
+            const j = txt.indexOf('</think>');
+            // j sans i : l'ouverture peut manquer si l'amont l'a rognee.
+            const dedans = j >= 0 ? txt.slice(i >= 0 ? i + 7 : 0, j).length : 0;
+            rec.pensee_car = dedans + rc.length;
+            rec.visible_car = j >= 0 ? txt.length - j - 8 - (i >= 0 ? i + 7 : 0)
+                                     : txt.length;
+          }
           if (last.error) rec.error = last.error;
         } else if (ur.statusCode >= 400) {
           rec.error_raw = raw.slice(0, 600);

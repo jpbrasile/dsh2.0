@@ -3314,3 +3314,70 @@ coût (225 exercices × 0,47 $ = 106 $ contre 11,28 $ de crédit) ; elle est
 maintenant prise aussi sur le **temps** — 3,3× plus rapide qu'AkashML sur un run
 complet, et au-dessus de tous les fournisseurs sauf Venice au débit brut, sans
 le mur de jetons de Venice.
+
+### Correction, 20:05 : la pensée n'est pas perdue en local, c'est mon proxy qui ne la comptait pas
+
+Dans l'entrée ci-dessus j'ai écrit, en gras, que la séparation pensée / visible
+« **n'existe pas en local** », et je l'ai présentée comme « une vraie perte » de
+l'essai local. **C'est faux.** L'aide du binaire est explicite :
+
+```
+--reasoning-format FORMAT
+  - none: leaves thoughts unparsed in `message.content`
+  - deepseek: puts thoughts in `message.reasoning_content`
+  - deepseek-legacy: keeps <think> tags in `message.content` while
+    also populating `message.reasoning_content`
+```
+
+`none` ne supprime rien. Il **laisse la pensée dans `message.content`**, entre
+`<think>` et `</think>`. Ce qui manque dans `usage`, c'est un **compteur
+pré-calculé** — pas l'information. Le banc GPQA le sait depuis toujours et vit
+très bien avec : `pensee_de()` de `depouiller_gpqa.py` va chercher les balises
+dans le texte, et c'est de là que sortent les `pensee_car` de tous les
+enregistrements du bras.
+
+**C'était donc un trou de mon instrument, que j'ai lu comme une limite de la
+pile locale.** Exactement la même erreur qu'avec `JSON.stringify` et les clés
+`undefined`, quelques heures plus tôt : une absence dans mon journal prise pour
+une absence dans le monde.
+
+### Ce qui a été fait, et ce qui n'a surtout pas été fait
+
+Le proxy mesure désormais `pensee_car` et `visible_car` sur la réponse — des
+**longueurs uniquement**, jamais le texte, même règle que la sonde de préfixe.
+Il lit aussi `reasoning_content` quand un amont sépare déjà la pensée, pour
+qu'elle ne compte pas pour zéro.
+
+**Le serveur n'a pas été touché.** Basculer en `--reasoning-format deepseek`
+sortirait la pensée de `content` et casserait `pensee_de()`, donc le
+dépouillement du bras GPQA qui reprend juste après. La bonne correction était
+côté instrument, pas côté serveur — et elle ne coûte pas un redémarrage.
+
+### Ce que ça change au tableau des trois amonts
+
+Rien aux chiffres publiés : la colonne « pensée par appel » du bras local @10
+reste vide, parce que ce bras a tourné avant la correction et que le contenu
+n'a jamais été stocké. **Elle ne sera pas estimée par différence.** Elle sera
+remplie par une nouvelle mesure, pas par un calcul.
+
+Et la phrase « le local est meilleur sur le temps et le cache, aveugle sur la
+composition » est retirée. Le local n'est pas aveugle ; c'était le proxy.
+
+### Et une deuxième fois, dans la même heure : le compteur posé mais muet
+
+La première version de ce compteur lisait `choices[0].message.content`. Elle ne
+s'est **jamais déclenchée**. dsh appelle avec `stream: true` : le contenu arrive
+en fragments `delta`, et le dernier fragment ne porte que `usage`. Quatre appels
+ont été journalisés sans un seul `pensee_car`.
+
+C'est la troisième fois de la journée que la même faute revient sous une autre
+forme — un instrument qui a l'air posé et qui ne mesure rien, dont le silence
+ressemble à une mesure nulle. Elle n'a été vue que parce que j'ai **regardé un
+enregistrement entier** au lieu de faire confiance à la présence du code.
+
+Corrigé : le texte est reconstitué à partir des `delta`, mesuré, et non conservé.
+La raison d'arrêt est cherchée **à rebours** dans les fragments pour la même
+raison — le fragment qui porte `usage` a souvent `choices: []`, et un bras coupé
+au plafond passerait sinon pour un bras fini. Les quatre appels du bras avorté
+ont été retirés plutôt que gardés à côté d'appels instrumentés : un journal qui
+mélange deux instruments ne se dépouille pas.
