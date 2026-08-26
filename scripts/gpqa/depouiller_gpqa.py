@@ -34,7 +34,7 @@ import os
 import sys
 
 
-def charger(chemin):
+def charger(chemin, premier=False):
     ok, err = [], 0
     with io.open(chemin, encoding="utf-8", errors="replace") as f:
         for ligne in f:
@@ -50,9 +50,27 @@ def charger(chemin):
             else:
                 ok.append(d)
     # une reprise peut redoubler un couple (id, rotation) : le dernier gagne
+    #
+    # POURQUOI CE DEFAUT NE SUFFIT PLUS (26/08 19:35, Revision 6). `deja_fait()`
+    # de `gpqa_diamond.py` ne compte PAS un appel tronque comme fait -- par
+    # dessein, pour qu'un rattrapage a plafond plus haut ne le saute pas. Une
+    # simple PAUSE du bras declenche donc, a la reprise, un REJEU des questions
+    # tronquees, au meme plafond. « Le dernier gagne » remplace alors
+    # silencieusement le tirage d'origine par un second tirage -- et la borne
+    # basse du bras, qui compte les tronques comme faux, devient incalculable a
+    # partir du jeu dedoublonne.
+    #
+    # Le fichier, lui, est en ajout seul : les deux tirages y sont. Il suffit
+    # donc de pouvoir choisir. `premier=True` rend le bras PRE-ENREGISTRE (un
+    # tirage par question, celui d'origine) ; le defaut rend l'estimation par
+    # REJEU. Les deux sont legitimes, ils ne repondent pas a la meme question,
+    # et Revision 6 impose de publier les deux plutot que de choisir en silence.
     uniq = {}
     for d in ok:
-        uniq[(d.get("id"), d.get("rotation"))] = d
+        cle = (d.get("id"), d.get("rotation"))
+        if premier and cle in uniq:
+            continue
+        uniq[cle] = d
     return list(uniq.values()), err
 
 
@@ -143,8 +161,8 @@ def quant(t, q):
     return sorted(t)[int(round(q * (len(t) - 1)))]
 
 
-def rapport(chemin):
-    recs, err = charger(chemin)
+def rapport(chemin, premier=False):
+    recs, err = charger(chemin, premier)
     if not recs:
         print("%s : aucun appel exploitable (%d erreurs)" % (chemin, err))
         return None
@@ -357,11 +375,20 @@ def comparer(a, qa, b, qb):
 
 
 def main():
-    if len(sys.argv) < 2:
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    premier = "--premier" in sys.argv[1:]
+    if not args:
         raise SystemExit(__doc__)
+    if premier:
+        print("MODE --premier : sur un couple (id, rotation) redouble, le tirage")
+        print("  d'ORIGINE est retenu et le rejeu ignore. C'est le bras tel qu'il")
+        print("  etait pre-enregistre. Sans ce drapeau, le rejeu gagne et le")
+        print("  chiffre publie est une estimation par REJEU -- les deux sont")
+        print("  legitimes, ils ne repondent pas a la meme question.")
+        print("")
     qs = []
-    for chemin in sys.argv[1:]:
-        q = rapport(chemin)
+    for chemin in args:
+        q = rapport(chemin, premier)
         qs.append((chemin, q))
         print("")
     if len(qs) >= 2 and qs[0][1] and qs[1][1]:

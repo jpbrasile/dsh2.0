@@ -591,3 +591,75 @@ reste `specdec-q38-plain` (sans spéculation, cf. le verdict B1 du 26/08 au
 soir), et les 198 questions restent en position tournante. Aucun paramètre du
 bras en vol n'est touché : cette révision porte uniquement sur ce qu'on aura le
 droit de dire de ses résultats.
+
+---
+
+## Révision 6 — 26/08/2026 19:35 : une pause du bras déclenche un rejeu, et il faut le dire avant
+
+**Écrite pendant que le bras tourne, et avant que les enregistrements rejoués
+existent.** Au moment où ces lignes sont commitées, le fichier porte 21
+enregistrements et le processus vient de repartir en annonçant « reprise : 19
+appels deja en place ». Les 2 rejeux ne sont pas encore écrits.
+
+### Ce qui s'est passé
+
+Le bras a été **mis en pause à 21/198** pour libérer la carte le temps d'un
+essai agentique local, puis relancé. La pause elle-même est sans effet sur la
+mesure : le fichier est en ajout seul, `deja_fait()` saute les couples
+(Record ID, rotation) déjà présents, et la reprise est prévue par le script.
+
+**Mais `deja_fait()` ne compte pas un appel TRONQUÉ comme fait** — par dessein,
+et le commentaire du code le dit : sans cette clause, un rattrapage à plafond
+plus haut sauterait en silence les questions qu'il est censé rejouer.
+
+Conséquence non voulue : une simple pause déclenche, à la reprise, **un rejeu
+des questions tronquées, au même plafond de 32 768**. Sur les 21
+enregistrements, 19 sont sautés et **2 sont rejoués**.
+
+### Pourquoi ce n'est pas anodin
+
+`depouiller_gpqa.py` dédoublonne les couples (id, rotation) en gardant **le
+dernier**. Et la règle 3b exclut toujours du taux les réponses tronquées au
+plafond. Donc, sans intervention :
+
+- le tirage d'origine, tronqué et **exclu** du taux, serait remplacé en silence
+  par un second tirage, complet et **compté** ;
+- la **borne basse** du bras — celle qui compte les tronquées comme fausses —
+  deviendrait incalculable à partir du jeu dédoublonné ;
+- et le taux publié ne serait plus celui du bras pré-enregistré, sans que rien
+  ne le signale.
+
+C'est exactement le défaut que la Révision 5 avait nommé une heure plus tôt :
+**à température 1,0, un rejeu est un NOUVEAU tirage** (K1). Il ne « complète »
+pas le tirage d'origine, il le remplace.
+
+### Ce qui est décidé, et qui ne change rien au bras
+
+**D1. Le chiffre du bras est calculé sur le PREMIER tirage de chaque couple
+(id, rotation).** C'est le bras tel qu'il a été pré-enregistré : un tirage par
+question, celui d'origine. La pause devient alors strictement sans effet sur la
+mesure. Un drapeau `--premier` a été ajouté à `depouiller_gpqa.py` pour cela, et
+il annonce son propre mode en tête de sortie.
+
+**D2. Les tirages supplémentaires sont publiés séparément**, étiquetés
+« rejeu au même plafond », et ne sont **jamais** mélangés au taux du bras.
+
+**D3. Les trois nombres de la Révision 5 K3 restent dus** — borne basse, borne
+haute, estimation par rejeu — et sont désormais tous les trois calculables :
+les deux premiers sur le premier tirage, le troisième sur le dernier. C'est
+`depouiller_gpqa.py` avec et sans `--premier`.
+
+**D4. Ce rejeu n'est PAS le rattrapage de la Révision 5 K2**, qui se joue à un
+plafond **plus haut**. Un rejeu au même plafond a toute chance de tronquer à
+nouveau. Le rattrapage reste dû, et reste à faire.
+
+**D5. Rien de ce qui est déjà sur le disque n'est modifié ni effacé.** Les 21
+enregistrements restent tels quels ; toute la Révision 6 est une règle de
+lecture, pas une réécriture.
+
+### Ce qui n'est pas prétendu
+
+Que la pause était sans coût. Elle a consommé un appel de plus par question
+tronquée, et elle décale la fin du bras d'autant. Elle a été faite pour une
+raison nommée — libérer le slot unique pour un essai local qui, lui non plus,
+ne pouvait pas attendre — et le coût est celui-là, déclaré.
