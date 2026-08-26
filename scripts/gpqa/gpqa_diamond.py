@@ -56,6 +56,32 @@ D) {d}"""
 # Extraction. L'ordre compte : la forme demandee d'abord, les rattrapages
 # ensuite. Tout ce qui echappe aux trois est compte NON PARSE et rapporte --
 # jamais devine, jamais compte faux par defaut.
+#
+# ATTAQUEE, PAS RELUE -- test_extraction.py, 26/08/2026, 13 cas adverses :
+# auto-correction, lettre citee dans la pensee, pensee jamais fermee, gras,
+# minuscules, parentheses, annexe de 2500 caracteres, boxed LaTeX.
+# **Aucun cas ne rend une MAUVAISE lettre.** C'est la seule propriete qui
+# compte : une lettre fausse entre dans le score en se faisant passer pour une
+# erreur du modele, alors qu'un NON PARSE est rapporte et exclu.
+#
+# DEUX TROUS CONNUS, tous deux a defaillance SURE (ils rendent None) :
+#   - `Answer: $\boxed{B}$` n'est pas parse, et Qwen produit spontanement du
+#     \boxed ;
+#   - une lettre en fin de PHRASE (« the best matching answer is **D. ») n'est
+#     pas parsee : le troisieme motif exige la lettre seule sur la ligne.
+#
+# CE QU'ILS COUTENT, MESURE : 7 echecs reels sur 808 appels des bras de
+# notation, soit 0,87 % (les non-parses restants sont des TRONCATURES, deja
+# exclues a un autre titre). Les fichiers sonde_memo* montrent un taux enorme,
+# c'est normal et hors sujet : ce sont des sondes sans format de reponse.
+#
+# POURQUOI ON NE CORRIGE PAS. Les bras geles ont ete notes avec CETTE fonction.
+# L'elargir maintenant noterait les bras suivants avec une regle plus
+# permissive que les precedents, ce qui est exactement le geste qu'on
+# s'interdit. Un re-parsage retroactif n'est pas une sortie non plus : le
+# journal ne garde que la QUEUE de la reponse ([-24000:]) alors que la notation
+# d'origine a vu le texte ENTIER -- ce serait une autre mesure, pas la meme.
+# A rouvrir a la prochaine campagne, avant de collecter, jamais pendant.
 MOTIFS = [
     re.compile(r"Answer\s*:\s*\(?\*{0,2}([ABCD])\*{0,2}\)?", re.IGNORECASE),
     re.compile(r"\bfinal answer\b[^ABCD]{0,20}\(?([ABCD])\)?", re.IGNORECASE),
