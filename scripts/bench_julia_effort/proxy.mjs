@@ -257,6 +257,15 @@ const server = http.createServer((req, res) => {
           if (last.model) rec.servi = last.model;
           if (last.usage) rec.usage = last.usage;
           if (last.timings) rec.timings = last.timings;
+          // POURQUOI LA RAISON D'ARRET (26/08, apres le bras Venice). Ce bras
+          // s'est arrete au 8e appel en 187 s, et la paroi seule le faisait
+          // passer pour 7x plus rapide que la reference. Le fil disait autre
+          // chose : le dernier appel avait rendu 16 384 jetons, c'est-a-dire le
+          // PLAFOND, et le tour etait mort dessus. Sans ce champ, la difference
+          // entre « a fini » et « a ete coupe » se deduit d'une egalite entre
+          // deux nombres -- une deduction, la ou une declaration existe.
+          const ch = (last.choices || [])[0];
+          if (ch && ch.finish_reason) rec.fin_raison = ch.finish_reason;
           if (last.error) rec.error = last.error;
         } else if (ur.statusCode >= 400) {
           rec.error_raw = raw.slice(0, 600);

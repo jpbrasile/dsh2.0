@@ -3001,3 +3001,206 @@ système contre 2 686, la structure des messages et la formulation de la tâche
 varient tous ensemble entre les deux agents. La mesure dit « c'est l'invite »,
 pas « c'est le nombre d'outils ». Isoler demanderait un bras où l'on ne change
 que la liste d'outils — faisable, non fait.
+
+## 26/08 19:00 — Le fournisseur déplace la paroi de 42 %, et le rapport de 0,4 %
+
+### La question, et l'erreur qu'elle corrige
+
+« As-tu essayé un autre fournisseur sur un cas dsh représentatif ? » **Non.** Les
+29 appels de `go/beer-song` sont tous partis chez **AkashML**, sans épinglage,
+parce que c'est ce qu'OpenRouter a choisi. Tout le rapport dsh/pi repose sur ce
+routage-là.
+
+J'avais écarté le routage plus tôt dans la journée en montrant qu'un cache
+parfait ne rendrait que 1,39×. **Cet argument ne portait que sur le cache.** Le
+décode pèse 65,8 % de la paroi, et un fournisseur peut y changer un facteur.
+L'écarter sur la base du cache était une **erreur de portée**, pas une erreur de
+calcul.
+
+### La sonde de débit — 10 fournisseurs, 0,0187 $
+
+Un appel de longueur fixe chacun, épinglé sans repli, le fournisseur **servi**
+relu dans la réponse.
+
+| fournisseur | quantif | jetons/s | contexte | $/M sortie | cache |
+|---|---|---|---|---|---|
+| **Venice** | fp8 | **94,0** | 262 144 | 3,200 | — |
+| Alibaba | — | 70,0 | 1 000 000 | 2,550 | oui |
+| Io Net | fp8 | 63,3 | 65 500 | 3,400 | oui |
+| Parasail | fp8 | 53,5 | 262 144 | 3,200 | — |
+| Phala | — | 46,0 | 262 144 | 3,000 | oui |
+| CoreWeave | fp8 | 41,3 | 262 144 | 3,000 | oui |
+| **AkashML** | bf16 | **33,9** | 262 144 | 2,550 | oui |
+| Reka | fp8 | 25,5 | 262 144 | 3,200 | oui |
+| Chutes | fp8 | 21,8 | 262 144 | 2,750 | oui |
+| Cloudflare | — | 3,3 | 262 144 | 3,200 | oui |
+
+**Facteur 28 entre les extrêmes.** AkashML est **7ᵉ sur 10**.
+
+**Ce que la sonde vaut, et ce qu'elle ne vaut pas.** Un appel par fournisseur ne
+donne aucun intervalle : la charge varie d'une minute à l'autre. Un écart de
+10 % ici ne veut rien dire ; un facteur 2,77× en veut un. Les capacités de
+contexte sont des **déclarations** du catalogue, pas des mesures.
+
+### La validation croisée, qui n'était pas prévue
+
+| méthode | débit de décode d'AkashML |
+|---|---|
+| moindres carrés à deux pentes sur 29 appels de dsh | **33,0 jetons/s** |
+| sonde directe, un appel dédié | **33,9 jetons/s** |
+
+**3 % d'écart entre deux méthodes indépendantes.** L'ajustement lisait bien le
+débit du *fournisseur*, pas un artefact de l'agent. C'est la première
+vérification externe de l'instrument.
+
+### Ce que le fournisseur change — et ce qu'il ne change pas
+
+Les deux agents ont des parts prefill/décode identiques à 0,1 point près
+(34,9/65,8 chez dsh, 35,0/66,6 chez pi). Un facteur sur le décode s'applique
+donc **à la même fraction des deux**.
+
+| | prefill | décode | paroi AkashML | paroi si décode ×2,77 |
+|---|---|---|---|---|
+| dsh | 477 s | 898 s | **1 375 s** | **801 s** (−42 %) |
+| pi | 94 s | 180 s | **274 s** | **159 s** (−42 %) |
+| **rapport dsh/pi** | | | **5,02×** | **5,04×** |
+
+**Le fournisseur déplace fortement la paroi et pas du tout le rapport.** Les
+« 1 383 s » et « 282 s » publiés sont des chiffres **d'AkashML**, pas du modèle
+— c'est à corriger partout où ils apparaissent. Le **4,9×**, lui, tient : il est
+porté par le **volume** de génération, pas par la vitesse à laquelle on le
+génère.
+
+Conséquence pratique : le décode local sans spéculation (46,9 t/s) et avec
+dflash2 (103,6 t/s) encadrent Venice. Le local n'est donc pas seulement moins
+cher, il est **au niveau du meilleur fournisseur du catalogue** — ce qui renforce
+la décision de jouer le polyglot complet en local, prise sur le coût.
+
+---
+
+## 26/08 19:05 — Bras à outils réduits : la machinerie n'est pas la cause
+
+### Ce qui a été fait varier
+
+`cordis.patch.yml` désactive 11 rangées de machinerie multi-agents. Témoin
+**direct sur le fil**, pas une déclaration : `n_tools` passe de 25 à 10, et le
+prompt système de 4 335 à 1 765 caractères. dsh reste dsh ; même exercice, même
+variante D, même effort `medium`, même modèle.
+
+### Le résultat
+
+| | 25 outils (référence) | 10 outils (allégé) |
+|---|---|---|
+| appels | 29 | **45** |
+| jetons de sortie | 29 632 | 55 637 |
+| dont pensée | 17 722 (59,8 %) | 38 308 (68,9 %) |
+| **pensée par appel** | **611** | **851** (+39 %) |
+| cache servi | 8,0 % | 19,4 % |
+| verdict | FAIL | FAIL |
+
+**Retirer 15 outils et 2 570 caractères de système fait penser dsh PLUS, pas
+moins** : +39 % de pensée par appel, +55 % d'appels. L'hypothèse « la machinerie
+gonfle la pensée » est **réfutée dans le sens où elle était posée**.
+
+Le cache, lui, a bien doublé (8,0 → 19,4 %) : un préfixe fixe plus court se
+recache mieux. Et l'exercice a quand même échoué et coûté plus cher — nouvelle
+confirmation, par un autre chemin, que **le cache n'est pas le levier**.
+
+### Ce qui n'est PAS lisible dans ce bras
+
+La paroi. Le bras allégé a tourné **18:21–18:50**, en même temps que
+l'échantillon pi (17:55–18:51) ; la référence à 25 outils avait tourné **seule**
+(17:21–17:42). Les deux runs partagent le CPU de la machine et les verrous du
+conteneur juge — `pilote.py` le déclare lui-même. **Les 1 805,9 s ne se
+comparent donc pas aux 1 383,0 s**, et l'ajustement prefill/décode de ce bras
+sort à **11,9 % de résidu**, au-delà de la barre de 10 % que l'outil s'impose :
+son verdict de répartition n'est pas lisible non plus.
+
+Ce qui reste lisible est ce qui ne dépend pas de cette machine : **les comptes
+de jetons et le nombre d'appels**, relevés sur le fil appel par appel.
+
+### La réserve qui compte
+
+**Un seul tirage, à température 1,0.** +39 % sur une génération unique n'est pas
+un intervalle. Ce bras autorise à dire « la machinerie n'explique pas l'écart »,
+et interdit de dire « la retirer coûte 39 % ». Pour l'affirmer il faudrait
+rejouer les deux bras plusieurs fois, séquentiellement — ce qui n'a pas été fait.
+
+### Où cela laisse la cause
+
+L'écart de pensée dsh/pi (611 contre 95 par appel, **6,4×**) n'est ni un effet de
+réglage (les deux agents envoient des corps identiques champ pour champ), ni un
+effet de la machinerie d'outils (ce bras), ni un effet du cache (mesure appariée
+du 26/08), ni un effet du fournisseur (invariance ci-dessus). Restent la
+**formulation de la consigne** et la **structure des messages** — non isolées.
+
+## 26/08 19:10 — Venice : le débit est confirmé, la paroi ne veut rien dire
+
+### Le montage
+
+dsh n'a **aucune voie de configuration** pour le champ `provider` d'OpenRouter :
+l'épinglage doit donc être extérieur à l'agent. `PROXY_INJECT` du proxy
+enregistreur pose `{"provider": {"order": ["Venice"], "allow_fallbacks": false}}`
+dans chaque corps. Un second enregistreur (port 8012) a été posé plutôt que de
+réutiliser le 8009, qui journalisait un bras en vol.
+
+**L'épinglage est vérifié sur la réponse avant d'engager** — un appel témoin de
+8 jetons, `servi par Venice`. Épingler dans une requête ne prouve rien.
+
+### Ce que la paroi disait, et pourquoi il ne fallait pas la lire
+
+`go/beer-song`, variante D, effort `medium`, 10 outils : **187,2 s**, FAIL.
+Contre 1 805,9 s pour le même montage chez AkashML. **9,6×.**
+
+Le fil dit autre chose. Huit appels, et le huitième rend **16 384 jetons de
+sortie** — c'est-à-dire le **plafond exact**, en 180 s à lui seul, soit 96 % de
+la paroi. Le tour n'a pas fini : il est mort sur le mur de jetons.
+
+| | AkashML @10 outils | Venice @10 outils |
+|---|---|---|
+| appels | 45 | **8** |
+| jetons de sortie | 55 637 | 16 614 |
+| pensée par appel | 851 | **2 708** |
+| dernier appel | — | **tronqué au plafond** |
+| verdict | FAIL | FAIL |
+
+**Publier « Venice va 9,6× plus vite » aurait été fabriquer un résultat.**
+L'exercice n'a pas été joué plus vite : il a été joué **moins**, puis coupé.
+
+### Ce que ce bras établit quand même, et proprement
+
+L'ajustement sur ces 8 appels sort à **0,3 % de résidu** — le meilleur des trois
+bras — et donne :
+
+| | prefill | décode |
+|---|---|---|
+| Venice, ajusté sur l'exercice | 8 106 j/s | **91,5 j/s** |
+| Venice, sonde dédiée | — | **94,0 j/s** |
+
+**2,7 % d'écart** entre un exercice agentique réel et un appel de sonde. C'est la
+deuxième validation croisée de l'instrument après AkashML (33,0 ajusté contre
+33,9 sondé, 3 %). **La méthode des deux pentes tient.**
+
+### L'anomalie, qui n'était pas cherchée
+
+Même modèle, même corps de requête au champ près, même consigne, même liste de
+10 outils : **2 708 jetons de pensée par appel chez Venice contre 851 chez
+AkashML, soit 3,2×.** Le seul facteur qui change est le fournisseur — donc la
+quantification (fp8 contre bf16) et le moteur d'inférence.
+
+**Ce qui n'est pas établi.** Un seul exercice, huit appels, à température 1,0 :
+aucun intervalle. Trois lectures restent ouvertes et ce bras ne les sépare pas —
+(a) la quantification fp8 dégrade la génération et le modèle tourne en rond ;
+(b) Venice ignore silencieusement `top_k` ou `min_p`, que le corps envoie, et
+l'échantillonnage n'est pas celui qu'on croit ; (c) tirage malheureux.
+
+La lecture (b) est **testable et pas chère** : rejouer la sonde de débit avec et
+sans `top_k`/`min_p` et comparer les longueurs. Non fait.
+
+### Conséquence pratique
+
+Un fournisseur rapide **au jeton** peut être plus lent **à la tâche** s'il en
+génère trois fois plus. Le classement de débit du soir ne se traduit donc pas
+directement en classement de coût ou de temps d'exercice, et je ne l'utiliserai
+pas comme tel. Il fallait un exercice réel pour le voir : la sonde à 0,0187 $ ne
+pouvait pas le montrer, elle imposait la longueur.
