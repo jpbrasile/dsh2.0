@@ -2470,3 +2470,75 @@ au modèle.
   pi, et le fournisseur amont n'est pas enregistré.
 - **Non mesuré** : pi n'a pas fini. Toute comparaison de bout en bout attend
   son run complet sur les six mêmes exercices.
+
+---
+
+## 26/08/2026 — Suite : « 20,2 contre 53,3 jet/s, c'est pas normal » — non, et la cause est le cache
+
+Trois hypothèses écartées par la mesure, dans cet ordre, avant de trouver.
+
+**1. Concurrence — écartée.** Compte des appels en vol simultanément :
+dsh 167 appels sur 189 étaient **seuls**. À un seul appel en vol, dsh reste à
+22,5 jet/s contre 58,1 pour pi. Ce n'est pas de la contention.
+
+**2. Dérive du fournisseur — écartée, après une lecture trop rapide de ma
+part.** dsh passe de 19,3 jet/s (14h) à 52,5 (15h) toutes tranches confondues,
+et j'ai d'abord lu ça comme une dérive côté OpenRouter. C'était faux : dans la
+tranche 20–40k à 15h, dsh est à **22,5**, pas 52,5. Le 52,5 était un effet de
+composition — d'autres tranches. Correction faite avant publication.
+
+**3. Longueur du contexte — écartée, et c'est elle qui met sur la piste.**
+La vitesse de dsh n'est pas monotone en contexte :
+
+| dsh 15h00–15h16 | n | jet/s |
+|---|---|---|
+| 8–20k | 11 | 51,0 |
+| 20–40k | 19 | **22,5** |
+| 40–80k | 9 | **64,2** |
+
+40–80k plus rapide que 20–40k : le contexte n'est pas la variable. dsh a
+**deux populations d'appels**, des rapides et des lents.
+
+### La variable, c'est la fraction déjà en cache
+
+| | contexte méd | à préfiller | durée méd | jet/s méd | n |
+|---|---|---|---|---|---|
+| dsh cache 0–25 % | 29 062 | **29 062** | 29,4 s | **19,7** | 87 |
+| dsh cache 75–100 % | **32 618** | 2 075 | 11,3 s | **54,4** | 32 |
+| pi cache 75–100 % | 28 318 | 1 659 | 9,2 s | 58,6 | 18 |
+
+Le contrôle est meilleur que prévu : les appels **cachés** de dsh ont un
+contexte **plus gros** (32 618 contre 29 062) et vont pourtant **2,8× plus
+vite**. Le contexte est donc écarté par la mesure elle-même, pas par
+hypothèse.
+
+Et les appels cachés de dsh (54,4) rejoignent pi (58,6). **Il n'y a jamais eu
+d'écart de vitesse entre les deux agents.** Il y a un écart de taux de cache :
+24,7 % contre 78,3 %.
+
+### Ce que ça corrige dans l'entrée précédente
+
+L'entrée du jour concluait « effet du déficit de cache sur le TEMPS : non
+établi », parce que la régression avait rendu un coefficient négatif. Elle
+avait raison de refuser, et tort de s'arrêter là : la régression était le
+mauvais instrument (colinéarité), pas la mauvaise question. **Mesuré
+directement par stratification, l'effet est établi** : à contexte comparable,
+un appel non caché de dsh met 29,4 s là où un appel caché en met 11,3 —
+**~18 s par appel**, sur 189 appels.
+
+Ce n'est pas une vitesse de décodage : c'est du **temps de premier jeton**,
+passé à préfiller ~29 000 jetons que pi ne repaie pas. La métrique
+« jetons de sortie / durée » les mélangeait, d'où le mot « vitesse » impropre
+dans l'entrée précédente.
+
+### Statut
+
+- **Établi** : les appels lents de dsh sont ses appels non cachés, à contexte
+  contrôlé (et même défavorable).
+- **Établi** : dsh caché (54,4) ≈ pi caché (58,6). Pas d'écart d'agent à agent
+  une fois le cache égalisé.
+- **Non établi** : le total de secondes récupérables. Les ~18 s/appel viennent
+  de médianes observationnelles sur deux populations que dsh n'a pas tirées au
+  hasard ; le chiffre agrégé demande de savoir POURQUOI le préfixe casse.
+- **Non mesuré** : la cause de la casse du préfixe. C'est la prochaine question,
+  et elle est dans le code de dsh, plus dans le journal de fil.
