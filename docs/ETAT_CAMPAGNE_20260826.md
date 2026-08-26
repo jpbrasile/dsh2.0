@@ -4,6 +4,9 @@ Ce fichier existe pour survivre à une compaction. **Aucun chiffre ici n'est une
 mesure fraîche** : chacun porte sa commande de re-mesure. Un nombre repris d'un
 résumé sans être re-mesuré est une affirmation, pas un résultat.
 
+> **Lire la section 8 en premier.** Elle date de la soirée du 26/08 et prime sur
+> les sections 1 à 5 partout où elles se contredisent.
+
 ---
 
 ## 1. Ce qui tourne, ce qui est arrêté
@@ -149,3 +152,84 @@ fournisseur enregistré).
    message de transition lui-même, stocké dans le bloc de pensée.
 6. **Auto-match de processus** : mes filtres `-match 'chainer'` ont matché ma
    propre commande d'inspection, deux fois. Exclure `$PID`.
+
+---
+
+## 8. Soirée du 26/08 — ce qui a bougé depuis la section 1
+
+**Cette section prime sur les sections 1 à 5 partout où elles se contredisent.**
+
+### Ce qui tourne au moment où j'écris
+
+| quoi | état | re-mesure |
+|---|---|---|
+| **GPQA bras de PRODUCTION** | **EN VOL** — `local_q4_t1_libre_tournant.jsonl` | `wc -l scripts/gpqa/local_q4_t1_libre_tournant.jsonl` |
+| llama-server 8005 | debout, **alias `specdec-q38-plain`** | argv sur le processus vivant |
+| proxy 8009 | debout, sonde active | `wire_sonde_20260826.jsonl` |
+
+Le bras de production : **budget −1** (aucune guillotine), **plafond de sortie
+32768**, **198 questions en position tournante**, un appel par question,
+température 1.0 / top_p 0.95 / top_k 20, `--delai 1800`. **Sans spéculation** —
+voir ci-dessous. Rythme mesuré sur les 6 premières : 140 s/question, projection
+**7,7 h**. Une question sur six tape le plafond de 32768.
+
+Le serveur n'est plus en dflash2 : `relance_serveur_illimite.ps1 -Config
+q38-plain`, **même binaire** (build `src-dflash2`) des deux côtés.
+
+### Quatre choses tranchées, toutes au carnet
+
+1. **La règle 4 du pré-enregistrement classait à l'envers.** Un serveur lancé
+   sans `--reasoning-budget-message` n'injecte aucun marqueur : le témoin par
+   marqueur est alors muet par construction. Sur le bras 512 nu, marqueur
+   0/293, **mur de jetons 248/293 (84,6 %)**. Règle 4 réécrite en disjonction
+   des deux témoins. Ma phrase du matin — « le bras 512 n'a jamais existé,
+   c'est une copie renommée » — était **fausse**.
+2. **Le balayage de budget comparait deux guillotines.** Courbe de coupure
+   mesurée sur 55 questions : 512 → 89,1 %, 2048 → **63,6 %**, 8192 →
+   **45,5 %**, ≥ 12288 inestimable [0,0 ; 45,5]. La calibration de 8192 sur
+   8 questions est caduque.
+3. **Le décodage spéculatif n'est PAS sans perte en glouton.** Trois jambes :
+   A1/A2 (plain, deux processus) 12/12 identiques ; B1/B2 (dflash2, même
+   processus) 12/12 identiques ; **A1/B1 12/12 divergents**. Les deux témoins
+   écartent le « serveur non reproductible ». Coût du choix : 46,9 t/s au lieu
+   de 103,6.
+4. **Le rapport dsh/pi est la PENSÉE, pas le cache.** Mesure appariée sur
+   `go/beer-song` : dsh 1383,0 s contre pi 282,5 s (**4,9×**), même verdict
+   FAIL. Cache servi 8,0 % contre 7,3 %, parts prefill/décode identiques à
+   0,1 point — le cache est commun aux deux et ne peut pas expliquer un écart
+   entre eux. Cause : 29 632 jetons générés contre 4 813, dont **17 722 de
+   pensée contre 1 336** (611 par appel contre 95, à effort nominal égal).
+   Contrefactuel : un cache parfait ne rendrait que **1,39×**.
+
+### Livrables
+
+| | état |
+|---|---|
+| 1 — polyglot agentique complet, variante D | **bloqué par la carte** jusqu'à la fin du bras GPQA. Amont : local (le crédit OpenRouter, 11,50 $, ne finance pas 225 exercices). |
+| 2 — chiffre GPQA local | **en vol**, ETA ~7,7 h |
+| 3 — comparaison pi/dsh | **condition levée** : le rapport est élucidé (mécanisme nommé, cause cache écartée par mesure appariée) |
+
+### Ce qui reste ouvert
+
+- **Pourquoi `medium` vaut 6,4× plus de pensée chez dsh que chez pi.** Le proxy
+  ne journalise pas le champ de raisonnement. Je ne l'ai pas modifié : le
+  processus en cours n'a pas été lancé par moi.
+- **B2** (rattrapage 32768 sur les bras gelés), **B3** (KV q8/q4 contre f16) —
+  les deux demandent la carte, donc après le bras de production.
+- Le levier « 25 outils contre 4 » côté dsh : réel, mais borné, le prefill ne
+  pesant que 35 % de la paroi.
+
+### Erreurs de la soirée, pour ne pas les refaire
+
+- **Un bras a failli sortir mal étiqueté.** Le lanceur ne passait pas
+  `--modele` ; `gpqa_diamond.py` écrivait son défaut et le bras joué sur le
+  serveur plain sortait marqué `dflash2` dans ses 198 enregistrements.
+  llama-server sert la requête quel que soit le champ `model` : rien ne lève à
+  l'exécution. Rattrapé après une question. Le lanceur lit désormais l'alias sur
+  le processus vivant et refuse (exit 6) s'il n'y en a pas.
+- **Une renomination a fait sortir un `.jsonl` GPQA du `.gitignore`.** Le motif
+  visait `*.jsonl` ; `x.jsonl.avorte` n'était plus couvert, sur un dépôt
+  **public** avec des données sous accès restreint. Motif élargi aux suffixes.
+- `pilote.py --agent pi` demande **deux** drapeaux que dsh n'exige pas :
+  `--accueil-pi` et `--dotenv`. Sans eux le pré-vol refuse — c'est à ça qu'il
+  sert, mais ça coûte deux tours.

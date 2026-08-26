@@ -123,6 +123,22 @@ classe d'outil différente, revendication non concurrente.
    0-shot (pas l'absolu leaderboard 25-shot).
 5. Décode @62k q8/q8 vu −23 % vs f16@65K sur 138 jetons générés —
    acceptation sous KV quantifié non isolée au propre.
+6. **Le décodage spéculatif de ce build n'est PAS sans perte.** Mesuré le
+   26/08 en glouton (`temperature 0`, `top_k 1`, graine fixe, même
+   binaire des deux côtés), là où une seule suite de jetons est correcte
+   et où l'égalité est donc décidable : **12 sorties sur 12 diffèrent**
+   avec spéculation contre sans, premier octet divergent entre 58 et 1113
+   — divergence précoce, pas une dérive de queue. Deux témoins écartent
+   la cause alternative : plain contre plain sur deux **processus**
+   distincts donne 12/12 identiques (pas de bruit de redémarrage), et
+   dflash2 contre lui-même dans le **même** processus donne 12/12
+   identiques (instrument déterministe). Le fork porte « Revert draft
+   sampling in rejection sampling », ce qui est cohérent.
+   Conséquence pour la lecture de ce document : **tous les chiffres de
+   qualité ci-dessus sont ceux de la CONFIGURATION publiée**, spéculation
+   comprise, et non ceux du modèle. Le lecteur qui suppose, comme le veut
+   l'usage, qu'une spéculation est neutre en sortie doit corriger cette
+   supposition ici.
 
 ### Repro (l'essentiel)
 
