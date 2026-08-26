@@ -322,7 +322,14 @@ def main():
             "tokens_entree": rep["tokens_entree"],
             "secondes": round(rep["secondes"], 2),
             "fournisseur": rep.get("fournisseur"),
-            "reponse": (rep["texte"] or "")[-4000:],
+            # 4000 -> 24000 le 26/08. La coupe a 4000 emportait le `<think>`
+            # OUVRANT des reponses longues : on lisait « aucun bloc de pensee »
+            # sur des appels qui en avaient un de 16 000 jetons, et le debut du
+            # champ commencait en plein calcul. La notation n'etait PAS touchee
+            # (`extraire` travaille sur rep["texte"] complet, avant stockage),
+            # mais toute analyse du raisonnement l'etait. 24000 caracteres
+            # couvrent ~8000 jetons, au-dela du budget de pensee pose.
+            "reponse": (rep["texte"] or "")[-24000:],
         })
         with verrou:
             f.write(json.dumps(enreg, ensure_ascii=False) + "\n")

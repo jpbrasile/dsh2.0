@@ -2168,3 +2168,149 @@ faut compter ce qui a réellement été exécuté et comparer ce compte à ce qu
 était attendu. Un juge qui ne sait pas dire « INVALIDE » ne sait pas dire
 « PASS » non plus.
 
+
+
+---
+
+## 26/08/2026 — `reasoning_effort` n'est PAS mort, et c'est une plus mauvaise nouvelle
+
+**La question posée : l'écart avec Claude (185 s contre 1434 s, 7,7×) est
+anormalement grand.** La piste venue du web était nette — Qwen3.8-27B part en
+`xhigh` par défaut et sur-réfléchit massivement (21 min et 22 276 jetons de
+raisonnement pour un SVG ; ~60 K jetons de pensée par tour) — et le correctif
+documenté est le paramètre d'effort. Nos deux agents envoient déjà
+`reasoning_effort: "medium"`. D'où l'hypothèse commode : **le drapeau ne
+franchit pas OpenRouter**, il tombe dans le vide et le modèle tourne à son
+défaut.
+
+**Mesuré, `test_effort_openrouter.py`, même question, seul l'effort change :**
+
+| variante envoyée | jetons de raisonnement | durée | coût |
+|---|---|---|---|
+| aucun effort | **4787** | 96,7 s | 0,0152 $ |
+| `reasoning_effort: "medium"` | **870** | 40,9 s | 0,0043 $ |
+| `reasoning_effort: "low"` | 1307 | 54,5 s | 0,0062 $ |
+| `reasoning: {"effort": "low"}` | 0 (non compté) | 61,4 s | 0,0076 $ |
+
+**L'hypothèse commode est fausse.** `reasoning_effort` traverse bien
+OpenRouter : 4787 → 870, un facteur 5,5. Le banc n'envoie pas un drapeau mort.
+
+**Réserves, à porter avec le tableau.** Un seul appel par cellule. `low` (1307)
+au-dessus de `medium` (870) est non monotone : c'est du bruit, et ces deux
+cellules ne se départagent pas. Seul l'écart 4787 vs 870 est assez gros pour
+conclure. La ligne 4 ne mesure pas moins de raisonnement, elle mesure un
+**comptage différent** : 2766 jetons de sortie mais `reasoning_tokens: 0` — la
+forme native ne remonte pas le même champ, on ne peut pas la comparer aux
+autres.
+
+**Ce qui reste donc sur la table.** Le drapeau est honoré, et l'appel du banc a
+quand même brûlé 10 095 jetons de raisonnement en 511 s. `medium` est appliqué
+et reste insuffisant sur une tâche agentique dure. L'écart avec Claude n'a pas
+d'explication de plomberie : c'est le comportement du modèle.
+
+### La conséquence opérationnelle est arrivée pendant que je mesurais
+
+`go/beer-song`, fumée « cas durs » dsh :
+
+```
+secondes : 1800.3   coupe : True   rc : 1   sortie_queue : (vide)
+```
+
+**Mur du `--delai-tour 1800`.** Ce n'est pas un échec du modèle, c'est une
+**non-mesure** : l'agent n'a jamais rendu sa copie. La sur-délibération vient de
+franchir la frontière entre « lent » et « détruit l'exercice ». À 1434 s pour un
+exercice réussi, la marge avant le mur était de 20 %.
+
+État de la fumée à 14:16 — `java/book-store` PASS en 1434,0 s ;
+`go/beer-song` NON-MESURE (coupé à 1800 s) ; `go/crypto-square` en cours ;
+trois restants ; le run pi est chaîné derrière (PID 26336).
+
+---
+
+## 26/08/2026 — Budget de pensée 8192 apparié à un message : le bras est en vol
+
+**Pourquoi.** Le bras illimité tronquait 17 % de ses appels. Sa distribution est
+bimodale et le creux est **total** : les appels qui aboutissent font médiane
+1111 jetons de pensée, p90 2695, **max 4371** ; ceux qui échouent tapent 16384,
+tous, exactement. Rien entre les deux. Ce n'est pas un manque de marge, c'est un
+régime d'emballement. **8192 = 1,9× le pire appel sain.**
+
+**Jamais nu.** Une coupure sans message de transition mesure *pire* que pas de
+raisonnement du tout (Qwen3 9B / HumanEval : 94 % sans bride, 88 % sans
+raisonnement, **78 % coupure nue**, 89 % avec message à budget 1000). C'est le
+défaut qu'on venait de retirer du lanceur ; on ne le réintroduit pas par la
+fenêtre. Le lanceur **refuse désormais (exit 8)** un budget > 0 sans message.
+
+### Le canal shell a mangé le message, exactement comme le garde-fou l'annonce
+
+Premier essai de relance : le message multi-ligne passé dans le
+`-ArgumentList` de `Start-Process`. PowerShell rejoint le tableau par des
+espaces puis re-découpe. Résultat :
+
+```
+Impossible de traiter la transformation d'argument sur le paramètre «Port».
+Impossible de convertir la valeur «is» en type «System.Int32».
+```
+
+Le mot **« is »** du message avait été lié à `-Port`. Le serveur est resté à
+terre, le 4090 vide, aucun bras en vol. Correction : une **enveloppe fichier**
+(`_relance_budget8192_fils.ps1`) appelée sans argument, où le message est une
+**variable PowerShell** — `& $script -ReasoningBudgetMessage $msg` lie une seule
+valeur, aucun re-découpage. Message ramené sur **une ligne** au passage : un
+saut de ligne survit à PowerShell mais pas forcément à la ligne de commande
+native que CreateProcess reconstruit.
+
+**Vérifié sur l'argv du processus vivant**, pas sur le script :
+
+```
+budget  : 8192
+message : "My thinking budget is now exhausted. I will stop analysing, commit
+           to the single most likely option, and finish my response with the
+           required last line: Answer: $LETTER"
+binaire : build-faq OK
+```
+
+`$LETTER` est arrivé **littéral**, non interpolé.
+
+### Le dispositif est vérifié, pas supposé
+
+`sonde_budget8192.py`, question ouverte choisie pour provoquer la
+sur-délibération :
+
+```
+finish_reason      : stop
+jetons sortie      : 11738
+jetons de pensee   : 8228   (budget pose : 8192)
+message de transition present dans la pensee : True
+```
+
+La pensée est coupée à 8228 jetons (8192 + le message), le message ferme le
+bloc, et le modèle enchaîne derrière sur une réponse complète et structurée au
+lieu de caler. **`finish_reason` reste `stop`** — c'est le piège du dispositif,
+et c'est précisément ce qui a rendu la guillotine 512 invisible pendant vingt
+heures : un budget de pensée ne lève **jamais** `length`. Le journal ne le dira
+pas ; seul le texte le dit.
+
+(Pas de ligne `Answer:` dans la sonde : elle n'envoie pas le gabarit GPQA.
+Attendu, ce n'est pas un défaut.)
+
+### En vol
+
+`local_q4_t1_budget8192.jsonl`, fichier neuf — obligatoire, `gpqa_diamond.py`
+reprend en sautant les couples (Record ID, rotation) déjà présents et
+mélangerait deux régimes de serveur sans rien signaler. L'effet visé est visible
+dès le cinquième appel : **8485 jetons et un verdict rendu** (C au lieu de A) là
+où le régime illimité aurait tapé 16384 et compté comme non-mesure. Une mauvaise
+réponse est une mesure ; une troncature n'en est pas une.
+
+**Bras gelés :**
+
+| bras | appels | questions | score | tronqués |
+|---|---|---|---|---|
+| `local_q4_t1_budget512.jsonl` | 294 | 74 | 68,7 % ± 4,2 | — |
+| `local_q4_t1_budget_illimite.jsonl` | 30 | 8 | 81,2 % ± 12,3 | 17 % |
+| `local_q4_t1_budget8192.jsonl` | en vol | — | — | — |
+
+Le rattrapage symétrique à 32768 sur les appels tronqués reste **dû** sur les
+deux bras gelés : règle de lecture pré-enregistrée, un appel tronqué est exclu
+**et compté**.

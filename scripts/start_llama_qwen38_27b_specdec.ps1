@@ -173,6 +173,17 @@ param(
     # than not thinking; a transition message at budget 1000 recovered 89 %.
     # So: -1 here, and if a budget is ever wanted again, pair it with a message.
     [int]$ReasoningBudget = -1,
+    # Texte injecte JUSTE AVANT la balise de fin de pensee quand le budget est
+    # epuise (--reasoning-budget-message, defaut du binaire : none).
+    #
+    # NE JAMAIS POSER UN BUDGET SANS CE MESSAGE. C'est la difference entre une
+    # coupure nue et une conclusion : la mesure publiee sur Qwen3 9B / HumanEval
+    # donne 94 % sans bride, 88 % sans raisonnement, 78 % coupe NU, et 89 % avec
+    # un message de transition a budget 1000. Une coupure nue est donc PIRE que
+    # pas de raisonnement du tout.
+    #
+    # Vide => le drapeau est absent de l'argv, comportement inchange.
+    [string]$ReasoningBudgetMessage = "",
     [switch]$CheckOnly,
     [switch]$AssumeDflash2Capable
 )
@@ -430,6 +441,22 @@ $cmdArgs += @(
     "--presence-penalty", "0.0",
     "--repeat-penalty",   "1.0"
 )
+
+# --- budget de pensee : jamais nu -------------------------------------------
+# Un budget SANS message de transition coupe la pensee en pleine phrase. La
+# mesure publiee (Qwen3 9B / HumanEval) : 94 % sans bride, 88 % sans
+# raisonnement, 78 % coupe NU, 89 % avec message a budget 1000. Une coupure nue
+# est donc PIRE que pas de raisonnement du tout -- on refuse de la produire par
+# accident, comme ce lanceur l'a fait du 25/08 au 26/08 avec un 512 code en dur.
+if ($ReasoningBudget -gt 0 -and -not $ReasoningBudgetMessage) {
+    Write-Host "REFUS (exit 8): -ReasoningBudget $ReasoningBudget sans -ReasoningBudgetMessage."
+    Write-Host "  Une coupure NUE mesure PIRE que pas de raisonnement du tout (78 % contre 88 %)."
+    Write-Host "  Donner un message de transition, ou -ReasoningBudget -1 (illimite)."
+    exit 8
+}
+if ($ReasoningBudgetMessage) {
+    $cmdArgs += @("--reasoning-budget-message", $ReasoningBudgetMessage)
+}
 
 # --- vision (opt-in; unset => argv byte-identical to today) -----------------
 if ($Mmproj) {
