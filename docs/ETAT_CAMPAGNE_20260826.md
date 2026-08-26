@@ -218,6 +218,51 @@ copy ~/.dsh-bench-dflash2/profiles/headless/cordis.patch.yml.avant-bras-outils ^
 
 Verifier la restauration sur le FIL (n_tools revenu a 25), pas sur le fichier.
 
+### L'essai local de dsh — prepare, PAS lance, et pourquoi
+
+Question posee le 26/08 au soir : « as-tu essaye un autre fournisseur sur un cas
+dsh representatif ? un essai du meme type en local ? ». **Non aux deux.** Les 29
+appels de dsh sur `go/beer-song` sont partis chez AkashML, 29 fois sur 29, sans
+epinglage ; et aucun run agentique local n'etait possible tant que la route
+locale de dsh visait le port 8006, qui n'ecoute pas (repare le 26/08 a 18:19
+par `cabler_local.py`).
+
+**Ce qui rend la question urgente**, deja mesure :
+
+| decode | jetons/s |
+|---|---|
+| AkashML, ajuste sur 29 appels de dsh | **33,0** |
+| local, sans speculation (`q38-plain`) | **46,9** |
+| local, dflash2 | **103,6** |
+
+Le decode pese **65 %** de la paroi de dsh. Le local est deja 1,4x a 3,1x plus
+rapide que le seul fournisseur sur lequel tout le rapport dsh/pi a ete mesure :
+**ce rapport pourrait ne pas transferer.**
+
+**Pourquoi ce n'est pas lance maintenant.** Le bras GPQA occupe la carte avec
+`--parallel 1` jusque vers 02:50. Un agent lance en parallele contendrait sur le
+slot unique et gonflerait les DEUX mesures — dont les durees par question du
+bras, qui font partie de la mesure pre-enregistree. Un second serveur ne tient
+pas non plus : 21 060 MiB sur 24 564 sont pris.
+
+**Commande a jouer des que le bras est FINI** (le chien de garde distingue FINI
+de BLOQUE ; ne pas lancer sur BLOQUE) :
+
+```
+$env:DSH_LOCAL_API_KEY = 'local'
+cd scripts\polyglot_dsh
+python pilote.py dsh_local_beersong --tests-maison --conteneur dsh-polyglot-tests ^
+  --exercices go/beer-song --tours 1 --delai-tour 1800 --effort medium ^
+  --fournisseur local-8005 --modele specdec-q38-plain
+```
+
+**Avant de la jouer, restaurer `cordis.patch.yml`** (voir l'avertissement
+ci-dessus) : sinon l'essai local se ferait avec la liste d'outils allegee et ne
+serait comparable a rien. Verifier le retour a 25 outils SUR LE FIL.
+
+Reference a battre, meme exercice, meme variante, meme effort : **dsh 1383,0 s /
+29 appels chez AkashML**, **pi 282,5 s / 17 appels**.
+
 ### Livrables
 
 | | état |
