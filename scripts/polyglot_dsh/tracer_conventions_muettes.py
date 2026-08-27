@@ -343,11 +343,83 @@ LECONS = {
     "compilation": "Compilation : la solution ne se construit pas avec la "
                    "suite officielle. Compiler le fichier livre avant de "
                    "conclure, pas seulement ses propres tests.",
+    "panique": "Panique : le code compile et les tests demarrent, mais la "
+               "solution se plante en cours de route au lieu de rendre une "
+               "mauvaise valeur. Ni une ambiguite d'enonce, ni un defaut de "
+               "construction : un cas limite non couvert par ses propres "
+               "tests.",
     "fond": "Logique : l'ecart n'est pas de forme. A traiter comme un vrai "
             "echec, pas comme une ambiguite d'enonce.",
     "illisible": "Sortie du juge non reconnue par les motifs : a lire a la "
                  "main avant d'en tirer quoi que ce soit.",
 }
+
+
+# LA SUITE A-T-ELLE TOURNE ? Si oui, l'echec n'est PAS de compilation, quels
+# que soient les mots presents ailleurs dans la sortie.
+#
+# Un compte de tests est la seule preuve directe que la compilation a reussi :
+# aucun harnais n'imprime « 44 tests completed » sur un binaire qui n'existe pas.
+A_TOURNE = re.compile(
+    r"\d+ tests? completed"                 # gradle / JUnit
+    r"|^Tests:\s+\d+"                       # jest
+    r"|^(ok|FAIL)\s+\S+\s+[\d.]+m?s"        # go test
+    r"|\d+ (passed|failed)(,|\s|$)"         # pytest, jest
+    r"|test result: (ok|FAILED)"            # cargo test
+    r"|--- (FAIL|PASS):",                   # go, cas par cas
+    re.M)
+
+# COMPILATION : des marqueurs SPECIFIQUES, jamais le mot « error » nu.
+#
+# BUG MESURE LE 27/08, et c'est pourquoi cette liste existe. L'ancien motif
+# portait `error:` avec `re.I`, qui attrape `org.opentest4j.AssertionFailedError:`
+# -- donc TOUT echec d'assertion JUnit etait etiquete « compilation ». Le defaut
+# etait invisible tant que la source etait la queue de 3 000 caracteres du
+# journal, ou l'entete d'assertion est coupee ; il est apparu des qu'on a lu la
+# sortie entiere. Un mauvais libelle est PIRE qu'`illisible` : `illisible` dit
+# « je ne sais pas », `compilation` affirme une cause fausse.
+COMPILATION = re.compile(
+    r"error: cannot find symbol"
+    r"|error: cannot find package"
+    r"|Compilation failed"
+    r"|compileJava FAILED|compileTestJava FAILED"
+    r"|declared and not used|redeclared in this block"
+    r"|^\S+\.go:\d+:\d+: (undefined|cannot use|too many|not enough)"
+    r"|Cannot find module"
+    r"|^SyntaxError:"
+    r"|could not compile",
+    re.M)
+
+
+# PANIQUE : le code compile, les tests demarrent, et la solution SE PLANTE en
+# cours de route au lieu de rendre une mauvaise valeur. Distinct d'un echec
+# d'assertion, et distinct d'une erreur de compilation : ni l'un ni l'autre ne
+# se corrige de la meme facon. Sans cette classe, `go/react` (index out of range
+# [3] with length 2) retombait dans `illisible`, qui ne dit rien.
+PANIQUE = re.compile(
+    r"panic: runtime error"
+    r"|panic: .*\[recovered\]"
+    r"|StackOverflowError|OutOfMemoryError"
+    r"|NullPointerException|IndexOutOfBoundsException"
+    r"|ArrayIndexOutOfBoundsException|StringIndexOutOfBoundsException"
+    r"|RecursionError|MemoryError"
+    r"|thread '.*' panicked at")
+
+
+def tests_ont_tourne(texte):
+    return bool(A_TOURNE.search(texte))
+
+
+def lire_juge_entier(cle):
+    """Sortie ENTIERE du juge pour `<piste>/<exercice>`, si rejuger.py l'a ecrite.
+
+    Rend "" quand le fichier n'existe pas -- l'appelant retombe alors sur la
+    queue du journal. Aucune execution : lecture pure d'un fichier deja la.
+    """
+    chemin = os.path.join(ICI, "juge_%s.txt" % cle.replace("/", "_"))
+    if not os.path.exists(chemin):
+        return ""
+    return io.open(chemin, encoding="utf-8", errors="replace").read()
 
 
 def depouiller(run):
@@ -361,14 +433,33 @@ def depouiller(run):
             continue                                  # PASS : rien a tracer
         rel = os.path.relpath(os.path.dirname(f), racine).replace(os.sep, "/")
         cle = rel.replace("/exercises/practice", "")
-        tours = d.get("turns") or []
-        texte = ""
-        for t in tours:
-            if t.get("erreurs"):
-                texte = t["erreurs"]
+        # LA SOURCE ENTIERE D'ABORD, la queue tronquee ensuite.
+        #
+        # Le journal ne garde que 3 000 caracteres de la sortie du juge. Pour go
+        # et python cette queue porte l'assertion ; pour JAVA elle porte la pile
+        # gradle et pour JEST le resume final, l'assertion utile etant en tete,
+        # donc coupee. Mesure du 27/08 : 23 echecs sur 50 restaient `illisible`
+        # pour cette seule raison -- la moitie du corpus muette par troncature,
+        # pas par absence de signal.
+        #
+        # `rejuger.py` ecrit la sortie ENTIERE dans juge_<piste>_<exo>.txt sans
+        # toucher au verdict. Quand ce fichier existe, il prime.
+        #
+        # POURQUOI CORRIGER EN LECTURE ET PAS A LA SOURCE : allonger la queue
+        # dans `pilote.py` pendant qu'un run est en vol donnerait aux exercices
+        # suivants une capture que les precedents n'ont pas eue, et les rendrait
+        # incomparables entre eux. Meme raison que l'entete de rejuger.py.
+        texte = lire_juge_entier(cle)
+        source = "juge_entier"
+        if not texte:
+            source = "queue_journal"
+            for t in (d.get("turns") or []):
+                if t.get("erreurs"):
+                    texte = t["erreurs"]
         if not texte:
             sortie["sans_champ_erreurs"].append(cle)
             continue
+        sortie.setdefault("sources", {})[cle] = source
 
         cas, motif_vu = [], None
         for nom, motif in MOTIFS:
@@ -404,9 +495,10 @@ def depouiller(run):
             verdict = "contrat"
         elif "TIMEOUT" in texte:
             verdict = "delai"
-        elif re.search(r"redeclared|cannot find|error:|erreur|FAILED to compile"
-                       r"|compilation", texte, re.I):
+        elif not tests_ont_tourne(texte) and re.search(COMPILATION, texte):
             verdict = "compilation"
+        elif PANIQUE.search(texte):
+            verdict = "panique"
         else:
             verdict = "illisible"
 
