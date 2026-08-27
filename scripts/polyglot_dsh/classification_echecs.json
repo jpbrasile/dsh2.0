@@ -35,6 +35,20 @@
       "mecanisme_signature": "S4 a RENONCE, et c'etait correct : elle exige les DEUX conditions, or si le stub declare bien `throws BankAccountActionInvalidException` sur les cinq methodes, l'enonce n'est pas muet sur l'erreur -- ligne 8 : « operations against a closed account must fail ». La signature n'est pas en defaut ; l'enonce annonce UNE erreur et en exige QUATRE.",
       "preuve": "Les cas de fond passent, y compris le plus dur : multipleDeposits, withdrawTwice, singleDeposit, reopenedAccountDoesNotRetainBalance et canHandleConcurrentTransactions (l'acces concurrent, seul sujet reellement traite par l'enonce). Ce qui tombe n'est jamais dans l'enonce de 749 caracteres : cannotDepositNegativeAmount et cannotWithdrawNegativeAmount (« Expecting code to raise a throwable » -- les montants negatifs n'y sont pas mentionnes), cannotWithdrawMoreThanWasDeposited (pas davantage), et cannotDepositIntoUnopenedAccount sur le TEXTE : attendu « Account closed », obtenu « Account is closed ». NON compte pour P1 : la divergence n'est pas SEULEMENT un libelle."
     },
+    "java/circular-buffer": {
+      "classe": "ambiguite",
+      "signature": "aucune",
+      "divergence": "libelle_seul",
+      "mecanisme_signature": "S4 a RENONCE, correctement : le stub declare bien `T read() throws BufferIOException` et `void write(T) throws BufferIOException`, mais l'enonce n'est pas muet sur l'erreur -- ligne 37 : « When the buffer is full an error will be raised ». Comme pour affine-cipher, l'enonce annonce l'erreur et tait son TEXTE. C'est la famille de PREDICTION_LIBELLES_ERREUR.md, pas celle de S4.",
+      "preuve": "9 des 14 tests passent -- lecture, ecriture, ecrasement force, enroulement, effacement. Les 5 qui tombent portent TOUS la meme forme, « Expecting message to be », et rien d'autre : attendu « Tried to read from empty buffer », obtenu « Read from empty buffer » ; attendu « Tried to write to full buffer », obtenu « Write to full buffer ». La bonne exception, au bon moment, avec un message de meme sens -- seule la redaction differe, et c'est le mot « Tried to ». La chaine « Tried to » est ABSENTE de .docs/ ET du stub, verifie par grep recursif le 27/08. Sortie complete obtenue par rejuger.py : la queue de 3 000 caracteres du pilote ne portait que « 14 tests completed, 5 failed »."
+    },
+    "java/custom-set": {
+      "classe": "ambiguite",
+      "signature": "aucune",
+      "divergence": "orientation_de_la_relation",
+      "mecanisme_signature": "AUCUNE signature ne pouvait tirer, et l'angle mort se nomme : S4 exige un retour d'erreur declare (il n'y en a pas), S2 et S3 exigent un bloc rendu (l'enonce fait 269 caracteres et ne contient aucun bloc). Le defaut porte sur le SENS d'une relation binaire dans une signature nue -- meme phenomene que go/simple-linked-list, ou le stub nomme Push et Pop sans dire sur quel bout ils agissent. Famille CANDIDATE, PAS une signature ajoutee apres coup : l'ajouter maintenant reviendrait a inscrire une regle apres avoir vu l'echec qu'elle attraperait.",
+      "preuve": "21 tests passent -- union, intersection, difference, egalite, disjonction, doublons. Les 2 qui tombent sont les seuls a porter sur le sens de isSubset. La suite vierge, CustomSetTest.java:55-59 : customSet = {1}, secondCustomSet = {} et `customSet.isSubset(secondCustomSet)` doit rendre TRUE ; lignes 63-67, customSet = {} et secondCustomSet = {'1'} doit rendre FALSE. Donc `a.isSubset(b)` veut dire « b est un sous-ensemble de a » : l'ARGUMENT est le sous-ensemble. L'agent a ecrit l'inverse (CustomSet.java:83-90, `for (T e : elements) if (!other.contains(e)) return false`), c'est-a-dire this ⊆ other -- la convention de set.issubset() en Python et de Set#subset? en Ruby. Le corpus inverse le sens usuel. L'enonce entier fait 269 caracteres et ne contient NI « subset », NI « empty », NI « contain » (grep le 27/08) ; le stub ne porte que `boolean isSubset(CustomSet<T> other)`, signature nue. Rien de visible ne donne le sens."
+    },
     "java/bottle-song": {
       "classe": "ambiguite",
       "signature": "S2",
