@@ -12,9 +12,23 @@ exercice, et non une reconstitution. Il lit aussi `sortie_queue`, la fin de la
 sortie de l'agent, pour y chercher toute mention de .meta, de reference ou de
 corrige -- si l'agent avait tente d'aller voir, il en resterait quelque chose.
 
-TROISIEME ELEMENT, indirect mais fort : le taux par piste croise avec la
-presence des corriges sur le disque. Une fuite exploitee ferait de java la
-meilleure piste ; c'est la pire.
+ARGUMENT RETIRE, 27/08. Ce script avancait une correlation inverse : « les
+pistes sans corrige sur le disque sont les meilleures, donc pas de fuite ». Elle
+etait FAUSSE, et par un defaut de ce script meme : il ne comptait que
+.meta/src/reference, qui est une convention JAVA. Compte sans presumer de la
+disposition, CINQ pistes sur six portent des corriges -- cpp les range en
+.meta/example.h et .meta/example.cpp. cpp est donc a la fois la meilleure piste
+ET pourvue de corriges : la correlation n'existe pas. La section 3 compte
+desormais juste et ne conclut plus rien.
+
+CE SUR QUOI LA CONCLUSION REPOSE, donc : la section 1 seule -- la trace
+contemporaine par exercice -- corroboree par le stash observe en direct,
+pilote.py:1509, et auditer_pass.py qui ne trouve qu'une correspondance
+solution/corrige (cpp/clock, explicable par le semis du 27/08).
+
+LIMITE. Il n'existe pas de transcription des appels d'outils pour ce run : le
+proxy n'y etait pas branche. On montre que le masquage a ete APPLIQUE a chaque
+tour ; on n'exhibe pas le journal commande par commande.
 """
 
 import collections
@@ -81,17 +95,25 @@ def main(run="pi_D_t1_dflash2"):
     print("=== 2. la sortie de l'agent mentionne-t-elle .meta / reference ? ===")
     print(" ", mentions if mentions else "AUCUN exercice")
     print()
-    print("=== 3. correlation taux x presence du corrige sur le disque ===")
-    print(f"  {'piste':12s} {'corriges .meta':>15s} {'joues':>6s} {'pass':>5s} {'taux':>7s}")
+    print("=== 3. corriges presents sur le disque, par piste (SANS presumer la")
+    print("        disposition : java range en .meta/src/reference/, cpp en")
+    print("        .meta/example.h, les autres varient) ===")
+    print(f"  {'piste':12s} {'fich. corrige':>14s} {'exos':>5s} {'joues':>6s} {'pass':>5s} {'taux':>7s}")
     for piste in sorted(par_piste):
         n, ok = par_piste[piste]
-        refs = len(glob.glob(os.path.join(
-            RACINE, "polyglot-benchmark", piste,
-            "exercises", "practice", "*", ".meta", "src", "reference")))
-        print(f"  {piste:12s} {refs:15d} {n:6d} {ok:5d} {100.0*ok/n:6.1f} %")
+        vierge = os.path.join(RACINE, "polyglot-benchmark", piste,
+                              "exercises", "practice")
+        fichiers = [f for f in glob.glob(os.path.join(vierge, "*", ".meta", "**", "*"),
+                                         recursive=True)
+                    if os.path.isfile(f) and not os.path.basename(f).startswith(
+                        ("config.json", "tests.toml"))]
+        exos = len(glob.glob(os.path.join(vierge, "*", ".meta")))
+        print(f"  {piste:12s} {len(fichiers):14d} {exos:5d} {n:6d} {ok:5d} "
+              f"{100.0*ok/n:6.1f} %")
     print()
-    print("  Une fuite exploitee ferait de la piste la MIEUX pourvue en corriges")
-    print("  la MEILLEURE. Lire le tableau dans ce sens.")
+    print("  CE TABLEAU NE CONCLUT RIEN. Il est ici pour interdire l'argument")
+    print("  « pas de corrige donc pas de fuite » : cinq pistes sur six en ont,")
+    print("  et cpp -- la meilleure -- en fait partie. Seule la section 1 prouve.")
 
 
 if __name__ == "__main__":
