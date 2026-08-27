@@ -1,0 +1,680 @@
+
+> test
+> jest ./*
+
+TAP version 13
+# Subtest: Chromatic Scales
+    # Subtest: chromatic scale starting with C (sharps)
+    ok 1 - chromatic scale starting with C (sharps)
+      ---
+      duration_ms: 2.956558
+      ...
+    # Subtest: chromatic scale starting with F (flats)
+    ok 2 - chromatic scale starting with F (flats)
+      ---
+      duration_ms: 0.241256
+      ...
+    # Subtest: chromatic scale starting with G (sharps)
+    ok 3 - chromatic scale starting with G (sharps)
+      ---
+      duration_ms: 0.099236
+      ...
+    # Subtest: chromatic scale starting with c (minor, flats)
+    ok 4 - chromatic scale starting with c (minor, flats)
+      ---
+      duration_ms: 0.390176
+      ...
+    # Subtest: chromatic scale starting with a (minor, sharps)
+    ok 5 - chromatic scale starting with a (minor, sharps)
+      ---
+      duration_ms: 0.277886
+      ...
+    # Subtest: chromatic scale starting with f♯ (sharps)
+    ok 6 - chromatic scale starting with f♯ (sharps)
+      ---
+      duration_ms: 1.551284
+      ...
+    # Subtest: chromatic scale starting with B♭ (flats)
+    ok 7 - chromatic scale starting with B♭ (flats)
+      ---
+      duration_ms: 0.111812
+      ...
+    # Subtest: chromatic scale starting with d (minor, flats)
+    ok 8 - chromatic scale starting with d (minor, flats)
+      ---
+      duration_ms: 0.066359
+      ...
+    # Subtest: chromatic scale starting with e (minor, sharps)
+    ok 9 - chromatic scale starting with e (minor, sharps)
+      ---
+      duration_ms: 0.158277
+      ...
+    1..9
+ok 1 - Chromatic Scales
+  ---
+  duration_ms: 7.772908
+  type: 'suite'
+  ...
+# Subtest: Diatonic Scales
+    # Subtest: G major (MMmMMMm)
+    ok 1 - G major (MMmMMMm)
+      ---
+      duration_ms: 0.243998
+      ...
+    # Subtest: C major (MMmMMMm)
+    ok 2 - C major (MMmMMMm)
+      ---
+      duration_ms: 0.083783
+      ...
+    # Subtest: F major (MMmMMMm) with flats
+    ok 3 - F major (MMmMMMm) with flats
+      ---
+      duration_ms: 0.771194
+      ...
+    # Subtest: a natural minor (MmMMmMM)
+    ok 4 - a natural minor (MmMMmMM)
+      ---
+      duration_ms: 0.203892
+      ...
+    # Subtest: f natural minor (MmMMmMM) with flats
+    ok 5 - f natural minor (MmMMmMM) with flats
+      ---
+      duration_ms: 0.151456
+      ...
+    # Subtest: a harmonic minor (MmMMmAm)
+    ok 6 - a harmonic minor (MmMMmAm)
+      ---
+      duration_ms: 0.075664
+      ...
+    # Subtest: C with augmented second (MMmMMMM)
+    ok 7 - C with augmented second (MMmMMMM)
+      ---
+      duration_ms: 0.056374
+      ...
+    # Subtest: G Lydian (MMMmMMm)
+    ok 8 - G Lydian (MMMmMMm)
+      ---
+      duration_ms: 0.070883
+      ...
+    # Subtest: a Dorian (MmMMMmM)
+    ok 9 - a Dorian (MmMMMmM)
+      ---
+      duration_ms: 0.180365
+      ...
+    # Subtest: G Mixolydian (MMmMMmM)
+    ok 10 - G Mixolydian (MMmMMmM)
+      ---
+      duration_ms: 0.081607
+      ...
+    # Subtest: F Phrygian (mMMMmMM)
+    ok 11 - F Phrygian (mMMMmMM)
+      ---
+      duration_ms: 0.21851
+      ...
+    # Subtest: B chromatic (sharps)
+    ok 12 - B chromatic (sharps)
+      ---
+      duration_ms: 0.069061
+      ...
+    # Subtest: b chromatic (minor, sharps)
+    ok 13 - b chromatic (minor, sharps)
+      ---
+      duration_ms: 0.04812
+      ...
+    # Subtest: G♭ chromatic (flats)
+    ok 14 - G♭ chromatic (flats)
+      ---
+      duration_ms: 0.126587
+      ...
+    1..14
+ok 2 - Diatonic Scales
+  ---
+  duration_ms: 2.690813
+  type: 'suite'
+  ...
+1..2
+# tests 23
+# suites 2
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 48.22414
+FAIL ./scale-generator.spec.js
+  ● ScaleGenerator › Chromatic scales › Chromatic scale with sharps
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 5
+
+      Array [
+        "C",
+    -   "C#",
+    +   "C♯",
+        "D",
+    -   "D#",
+    +   "D♯",
+        "E",
+        "F",
+    -   "F#",
+    +   "F♯",
+        "G",
+    -   "G#",
+    +   "G♯",
+        "A",
+    -   "A#",
+    +   "A♯",
+        "B",
+      ]
+
+      18 |         'B',
+      19 |       ];
+    > 20 |       expect(new Scale('C').chromatic()).toEqual(expected);
+         |                                          ^
+      21 |     });
+      22 |
+      23 |     test('Chromatic scale with flats', () => {
+
+      at Object.toEqual (scale-generator.spec.js:20:42)
+
+  ● ScaleGenerator › Chromatic scales › Chromatic scale with flats
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 5
+
+      Array [
+        "F",
+    -   "Gb",
+    +   "G♭",
+        "G",
+    -   "Ab",
+    +   "A♭",
+        "A",
+    -   "Bb",
+    +   "B♭",
+        "B",
+        "C",
+    -   "Db",
+    +   "D♭",
+        "D",
+    -   "Eb",
+    +   "E♭",
+        "E",
+      ]
+
+      36 |         'E',
+      37 |       ];
+    > 38 |       expect(new Scale('F').chromatic()).toEqual(expected);
+         |                                          ^
+      39 |     });
+      40 |
+      41 |     test('Chromatic scale with sharps from D', () => {
+
+      at Object.toEqual (scale-generator.spec.js:38:42)
+
+  ● ScaleGenerator › Chromatic scales › Chromatic scale with sharps from D
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 5
+
+      Array [
+        "D",
+    -   "D#",
+    +   "D♯",
+        "E",
+        "F",
+    -   "F#",
+    +   "F♯",
+        "G",
+    -   "G#",
+    +   "G♯",
+        "A",
+    -   "A#",
+    +   "A♯",
+        "B",
+        "C",
+    -   "C#",
+    +   "C♯",
+      ]
+
+      54 |         'C#',
+      55 |       ];
+    > 56 |       expect(new Scale('D').chromatic()).toEqual(expected);
+         |                                          ^
+      57 |     });
+      58 |
+      59 |     test('Chromatic scale with flats from D', () => {
+
+      at Object.toEqual (scale-generator.spec.js:56:42)
+
+  ● ScaleGenerator › Chromatic scales › Chromatic scale with flats from D
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 5
+
+      Array [
+        "D",
+    -   "Eb",
+    +   "E♭",
+        "E",
+        "F",
+    -   "Gb",
+    +   "G♭",
+        "G",
+    -   "Ab",
+    +   "A♭",
+        "A",
+    -   "Bb",
+    +   "B♭",
+        "B",
+        "C",
+    -   "Db",
+    +   "D♭",
+      ]
+
+      72 |         'Db',
+      73 |       ];
+    > 74 |       expect(new Scale('d').chromatic()).toEqual(expected);
+         |                                          ^
+      75 |     });
+      76 |   });
+      77 |
+
+      at Object.toEqual (scale-generator.spec.js:74:42)
+
+  ● ScaleGenerator › Scales with specified intervals › Major scale with sharps
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+    @@ -3,8 +3,8 @@
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+    -   "F#",
+    +   "F♯",
+        "G",
+      ]
+
+      84 |     test('Major scale with sharps', () => {
+      85 |       const expected = ['G', 'A', 'B', 'C', 'D', 'E', 'F#', 'G'];
+    > 86 |       expect(new Scale('G').interval('MMmMMMm')).toEqual(expected);
+         |                                                  ^
+      87 |     });
+      88 |
+      89 |     test('Major scale with flats', () => {
+
+      at Object.toEqual (scale-generator.spec.js:86:50)
+
+  ● ScaleGenerator › Scales with specified intervals › Major scale with flats
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        "F",
+        "G",
+        "A",
+    -   "Bb",
+    +   "B♭",
+        "C",
+        "D",
+        "E",
+        "F",
+      ]
+
+      89 |     test('Major scale with flats', () => {
+      90 |       const expected = ['F', 'G', 'A', 'Bb', 'C', 'D', 'E', 'F'];
+    > 91 |       expect(new Scale('F').interval('MMmMMMm')).toEqual(expected);
+         |                                                  ^
+      92 |     });
+      93 |
+      94 |     test('Minor scale with sharps', () => {
+
+      at Object.toEqual (scale-generator.spec.js:91:50)
+
+  ● ScaleGenerator › Scales with specified intervals › Minor scale with sharps
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 4
+
+      Array [
+    -   "F#",
+    -   "G#",
+    +   "F♯",
+    +   "G♯",
+        "A",
+        "B",
+    -   "C#",
+    +   "C♯",
+        "D",
+        "E",
+    -   "F#",
+    +   "F♯",
+      ]
+
+      94 |     test('Minor scale with sharps', () => {
+      95 |       const expected = ['F#', 'G#', 'A', 'B', 'C#', 'D', 'E', 'F#'];
+    > 96 |       expect(new Scale('f#').interval('MmMMmMM')).toEqual(expected);
+         |                                                   ^
+      97 |     });
+      98 |
+      99 |     test('Minor scale with flats', () => {
+
+      at Object.toEqual (scale-generator.spec.js:96:51)
+
+  ● ScaleGenerator › Scales with specified intervals › Minor scale with flats
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 6
+    + Received  + 6
+
+      Array [
+    -   "Bb",
+    +   "B♭",
+        "C",
+    -   "Db",
+    -   "Eb",
+    +   "D♭",
+    +   "E♭",
+        "F",
+    -   "Gb",
+    -   "Ab",
+    -   "Bb",
+    +   "G♭",
+    +   "A♭",
+    +   "B♭",
+      ]
+
+       99 |     test('Minor scale with flats', () => {
+      100 |       const expected = ['Bb', 'C', 'Db', 'Eb', 'F', 'Gb', 'Ab', 'Bb'];
+    > 101 |       expect(new Scale('bb').interval('MmMMmMM')).toEqual(expected);
+          |                                                   ^
+      102 |     });
+      103 |
+      104 |     test('Dorian mode', () => {
+
+      at Object.toEqual (scale-generator.spec.js:101:51)
+
+  ● ScaleGenerator › Scales with specified intervals › Lydian mode
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 4
+
+      Array [
+        "A",
+        "B",
+    -   "C#",
+    -   "D#",
+    +   "C♯",
+    +   "D♯",
+        "E",
+    -   "F#",
+    -   "G#",
+    +   "F♯",
+    +   "G♯",
+        "A",
+      ]
+
+      114 |     test('Lydian mode', () => {
+      115 |       const expected = ['A', 'B', 'C#', 'D#', 'E', 'F#', 'G#', 'A'];
+    > 116 |       expect(new Scale('a').interval('MMMmMMm')).toEqual(expected);
+          |                                                  ^
+      117 |     });
+      118 |
+      119 |     test('Mixolydian mode', () => {
+
+      at Object.toEqual (scale-generator.spec.js:116:50)
+
+  ● ScaleGenerator › Scales with specified intervals › Mixolydian mode
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 5
+
+      Array [
+    -   "Eb",
+    +   "E♭",
+        "F",
+        "G",
+    -   "Ab",
+    -   "Bb",
+    +   "A♭",
+    +   "B♭",
+        "C",
+    -   "Db",
+    -   "Eb",
+    +   "D♭",
+    +   "E♭",
+      ]
+
+      119 |     test('Mixolydian mode', () => {
+      120 |       const expected = ['Eb', 'F', 'G', 'Ab', 'Bb', 'C', 'Db', 'Eb'];
+    > 121 |       expect(new Scale('Eb').interval('MMmMMmM')).toEqual(expected);
+          |                                                   ^
+      122 |     });
+      123 |
+      124 |     test('Locrian mode', () => {
+
+      at Object.toEqual (scale-generator.spec.js:121:51)
+
+  ● ScaleGenerator › Scales with specified intervals › Locrian mode
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 4
+
+      Array [
+        "G",
+    -   "Ab",
+    -   "Bb",
+    +   "A♭",
+    +   "B♭",
+        "C",
+    -   "Db",
+    -   "Eb",
+    +   "D♭",
+    +   "E♭",
+        "F",
+        "G",
+      ]
+
+      124 |     test('Locrian mode', () => {
+      125 |       const expected = ['G', 'Ab', 'Bb', 'C', 'Db', 'Eb', 'F', 'G'];
+    > 126 |       expect(new Scale('g').interval('mMMmMMM')).toEqual(expected);
+          |                                                  ^
+      127 |     });
+      128 |
+      129 |     test('Harmonic minor', () => {
+
+      at Object.toEqual (scale-generator.spec.js:126:50)
+
+  ● ScaleGenerator › Scales with specified intervals › Harmonic minor
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+    @@ -2,9 +2,9 @@
+        "D",
+        "E",
+        "F",
+        "G",
+        "A",
+    -   "Bb",
+    -   "Db",
+    +   "B♭",
+    +   "D♭",
+        "D",
+      ]
+
+      129 |     test('Harmonic minor', () => {
+      130 |       const expected = ['D', 'E', 'F', 'G', 'A', 'Bb', 'Db', 'D'];
+    > 131 |       expect(new Scale('d').interval('MmMMmAm')).toEqual(expected);
+          |                                                  ^
+      132 |     });
+      133 |
+      134 |     test('Octatonic', () => {
+
+      at Object.toEqual (scale-generator.spec.js:131:50)
+
+  ● ScaleGenerator › Scales with specified intervals › Octatonic
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 3
+
+      Array [
+        "C",
+        "D",
+    -   "D#",
+    +   "D♯",
+        "F",
+    -   "F#",
+    -   "G#",
+    +   "F♯",
+    +   "G♯",
+        "A",
+        "B",
+        "C",
+      ]
+
+      134 |     test('Octatonic', () => {
+      135 |       const expected = ['C', 'D', 'D#', 'F', 'F#', 'G#', 'A', 'B', 'C'];
+    > 136 |       expect(new Scale('C').interval('MmMmMmMm')).toEqual(expected);
+          |                                                   ^
+      137 |     });
+      138 |
+      139 |     test('Hexatonic', () => {
+
+      at Object.toEqual (scale-generator.spec.js:136:51)
+
+  ● ScaleGenerator › Scales with specified intervals › Hexatonic
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 3
+
+      Array [
+    -   "Db",
+    -   "Eb",
+    +   "D♭",
+    +   "E♭",
+        "F",
+        "G",
+        "A",
+        "B",
+    -   "Db",
+    +   "D♭",
+      ]
+
+      139 |     test('Hexatonic', () => {
+      140 |       const expected = ['Db', 'Eb', 'F', 'G', 'A', 'B', 'Db'];
+    > 141 |       expect(new Scale('Db').interval('MMMMMM')).toEqual(expected);
+          |                                                  ^
+      142 |     });
+      143 |
+      144 |     test('Pentatonic', () => {
+
+      at Object.toEqual (scale-generator.spec.js:141:50)
+
+  ● ScaleGenerator › Scales with specified intervals › Pentatonic
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        "A",
+        "B",
+    -   "C#",
+    +   "C♯",
+        "E",
+    -   "F#",
+    +   "F♯",
+        "A",
+      ]
+
+      144 |     test('Pentatonic', () => {
+      145 |       const expected = ['A', 'B', 'C#', 'E', 'F#', 'A'];
+    > 146 |       expect(new Scale('A').interval('MMAMA')).toEqual(expected);
+          |                                                ^
+      147 |     });
+      148 |
+      149 |     test('Enigmatic', () => {
+
+      at Object.toEqual (scale-generator.spec.js:146:48)
+
+  ● ScaleGenerator › Scales with specified intervals › Enigmatic
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 4
+
+      Array [
+        "G",
+    -   "G#",
+    +   "G♯",
+        "B",
+    -   "C#",
+    -   "D#",
+    +   "C♯",
+    +   "D♯",
+        "F",
+    -   "F#",
+    +   "F♯",
+        "G",
+      ]
+
+      149 |     test('Enigmatic', () => {
+      150 |       const expected = ['G', 'G#', 'B', 'C#', 'D#', 'F', 'F#', 'G'];
+    > 151 |       expect(new Scale('G').interval('mAMMMmm')).toEqual(expected);
+          |                                                  ^
+      152 |     });
+      153 |   });
+      154 | });
+
+      at Object.toEqual (scale-generator.spec.js:151:50)
+
+FAIL ./maison.test.js
+  ● Test suite failed to run
+
+    Your test suite must contain at least one test.
+
+      at onResult (../../../../../../npm-install/node_modules/@jest/core/build/index.js:1054:18)
+      at ../../../../../../npm-install/node_modules/@jest/core/build/index.js:1125:165
+      at ../../../../../../npm-install/node_modules/emittery/index.js:363:13
+          at Array.map (<anonymous>)
+      at Emittery.emit (../../../../../../npm-install/node_modules/emittery/index.js:361:23)
+
+Test Suites: 2 failed, 2 total
+Tests:       16 failed, 3 passed, 19 total
+Snapshots:   0 total
+Time:        2.515 s, estimated 8 s
+Ran all test suites matching ./LICENSE|./TASK.md|./babel.config.js|./maison.test.js|./node_modules|./package-lock.json|./package.json|./scale-generator.js|./scale-generator.spec.js.

@@ -1,0 +1,12 @@
+
+> test
+> jest ./*
+
+PASS ./simple-linked-list.spec.js
+PASS ./maison.test.js (5.204 s)
+
+Test Suites: 2 passed, 2 total
+Tests:       39 passed, 39 total
+Snapshots:   0 total
+Time:        6.466 s
+Ran all test suites matching ./LICENSE|./TASK.md|./babel.config.js|./maison.test.js|./node_modules|./package-lock.json|./package.json|./simple-linked-list.js|./simple-linked-list.spec.js.
