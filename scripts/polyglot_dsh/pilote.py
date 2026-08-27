@@ -1091,6 +1091,23 @@ def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
         "sans_tests": bool(sans_tests),
         "sans_corriges": bool(sans_corriges),
         "tests_maison": bool(tests_maison),
+        # LE BUDGET DE TOURS EST ECRIT AU MEME TITRE QUE LA VARIANTE, et pour
+        # exactement la meme raison. `--tours 1` produit un pass_rate_1 ;
+        # `--tours 2` produit un pass_rate_2, parce que le tour 2 rend a
+        # l'agent la sortie d'erreur de la suite officielle (ci-dessus, l.1071
+        # -- ordre operateur du 27/08 07:10, c'est la DEFINITION de
+        # pass_rate_2, pas un defaut). Les deux taux ne se posent pas a cote
+        # des memes lignes publiees.
+        #
+        # DEFAUT MESURE LE 27/08 : le run `pi_D_t1_dflash2` porte 103
+        # exercices a 1 tour ET 5 exercices cpp a 2 tours -- residu de l'etape
+        # « complement » de mesurer_valeur_du_semis.ps1:136-141, qui rejoue en
+        # `--tours 2` dans le MEME repertoire de run. Quatre d'entre eux
+        # basculent FAIL -> PASS au tour 2. Le bras melange donc deux
+        # protocoles sans que rien ne le signale : `len(tests_outcomes)` etait
+        # le seul indice, et il ne distingue pas « 2 tours demandes, converge
+        # au premier » de « 1 tour demande ». D'ou ce champ, EXPLICITE.
+        "tours_demandes": int(tours),
         "tests_ecrits_par_l_agent": maison,
         # ENONCE REFORMULE : identifiant, degre et texte exact de chaque ajout.
         # Un resultat obtenu avec un enonce reformule et un resultat obtenu

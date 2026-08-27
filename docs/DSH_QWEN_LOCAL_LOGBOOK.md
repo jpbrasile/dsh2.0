@@ -6283,3 +6283,79 @@ markdown ne peut pas montrer une terminaison) et `java/state-of-tic-tac-toe`.
 
 **Etat du run a cette lecture : 110 verdicts. Lecture d'etape. La regle d'arret
 tient -- le depouillement fait foi une seule fois, sur les 225.**
+
+---
+
+## R28x — 27/08 : CORRECTION DE R28w. Le retour du juge au tour 2 n'est pas un defaut, c'est un ordre operateur
+
+**Ce que R28w disait de faux.** J'y ai ecrit que `pilote.py:1071` -- qui rend a
+l'agent la sortie d'erreur de la suite officielle au tour 2 -- etait une
+« contamination » et un « defaut de conception ». **C'est faux.** Le lanceur
+porte l'ordre, date, `lancer_polyglot_complet.ps1:50-68` :
+
+> ORDRE OPERATEUR, 27/08 07:10. Au tour 2, `pilote.py` renvoie a l'agent la
+> SORTIE D'ERREUR de la suite officielle (jamais son code source) avec la
+> relance mot pour mot d'aider. […] C'est la definition de `pass_rate_2`. Les
+> chiffres publies auxquels on se compare -- 52,0 %, Qwen3 32B 40,0, Qwen3
+> 235B-A22B 59,6 -- sont TOUS des `pass_rate_2`. A `--tours 1` on produisait un
+> `pass_rate_1`, qui ne se pose a cote d'aucune de ces lignes.
+
+Un bras D a 2 tours est le symetrique HONNETE de `pass_rate_2`. Rien a corriger
+la-dedans, et je n'y touche pas.
+
+**Ce qui reste vrai de R28w**, et que le lanceur dit avec moi : le run en cours
+est a UN tour, donc il produit un `pass_rate_1`. Le comparer a 52,0 % etait
+faux. Le chiffre a information egale (46,3 % contre 15,9 % sur 82, p ~ 1e-5)
+tient sans changement.
+
+**LE DEFAUT REEL, plus etroit : LE BRAS N'EST PAS HOMOGENE.** 107 exercices a
+1 tour, 5 exercices cpp a 2 tours -- residu de l'etape « complement » de
+`mesurer_valeur_du_semis.ps1:136-141`, qui rejoue en `--tours 2` DANS LE MEME
+repertoire de run. 4 des 5 basculent FAIL -> PASS. Un meme bras melange donc
+`pass_rate_1` et `pass_rate_2`.
+
+**Pourquoi personne ne l'a vu.** `len(tests_outcomes)` etait le seul indice
+disponible, et il ne distingue pas « 2 tours demandes, converge au premier » de
+« 1 tour demande ». Le pilote ecrivait deja `variante`, `sans_tests`,
+`sans_corriges`, `tests_maison` -- avec, en commentaire, exactement le bon
+principe : « sans ca, deux runs du meme pilote produisent des
+`.dsh.results.json` indiscernables et on finit par comparer B a C sans le
+savoir ». Le budget de tours manquait a cette liste. C'est tout le defaut.
+
+### Correctifs poses le 27/08
+
+ * `pilote.py` : nouveau champ **`tours_demandes`**, ecrit dans chaque
+   `.dsh.results.json` au meme titre que `variante`. Additif, ne change aucun
+   comportement. Le pilote en vol a ete lance une seule fois
+   (`lancer_polyglot_complet.ps1:231`, tout `--langages` d'un coup) : editer le
+   fichier n'atteint pas le processus, verifie avant d'ecrire.
+ * `etat_run.py` : nouvelle **`alerte_bras_heterogene()`**, appelee a chaque
+   depouillement. Elle groupe par budget de tours, nomme le taux correspondant
+   (`pass_rate_1` / `pass_rate_2`), liste le groupe minoritaire quand il fait
+   8 exercices ou moins, et refuse de laisser moyenner. Elle tire sur le cas
+   reel : 107 a 1 tour / 5 a 2 tours.
+ * `comparer_protocoles.py` : en-tete reecrit -- le tour 2 n'y est plus decrit
+   comme un defaut mais comme la definition de `pass_rate_2` ; le defaut nomme
+   est l'heterogeneite du bras.
+
+### Reste a faire, BLOQUE SUR LA CARTE
+
+Rejouer les 5 cpp a 1 tour pour rendre le bras homogene. **Non lance** : le run
+principal est en vol (PID 51944, depuis 14:52:32) et la carte est a 94 % avec
+23 998 / 24 564 MiB. Un second pilote contre le meme llama-server serialiserait
+les appels ; avec `--veille-silence 600` sur le run principal, une attente de
+plus de 600 s declencherait des coupures fantomes et abimerait la mesure en
+cours. Garde-fou ressource partagee : occupe => attendre, jamais tuer.
+
+Commande, a lancer quand la carte est libre :
+
+```
+python pilote.py pi_D_t1_dflash2 --agent pi --accueil-pi $env:USERPROFILE\.pi-bench-polyglot \
+  --dotenv <racine>\.env --tests-maison --conteneur pi-polyglot-tests \
+  --exercices cpp/all-your-base,cpp/bank-account,cpp/parallel-letter-frequency,cpp/phone-number,cpp/zebra-puzzle \
+  --tours 1 --delai-tour 1800 --veille-silence 600 --effort medium \
+  --fournisseur local-mesure --modele specdec-q38-dflash2
+```
+
+Les 5 `.dsh.results.json` doivent etre retires d'abord, sinon `pilote.py:1044`
+saute l'exercice. **Retrait de fichiers = autorisation humaine**, non fait.

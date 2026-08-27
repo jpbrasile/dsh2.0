@@ -88,8 +88,57 @@ def lire(run):
                 "exercice": os.path.basename(os.path.dirname(f)),
                 "classe": classer(ok, coupe, err, d.get("exception")),
                 "duree": d.get("duration") or 0.0,
+                # Budget de tours DEMANDE. `tours_demandes` est ecrit par le
+                # pilote depuis le 27/08 ; avant cette date on retombe sur le
+                # nombre de tours JOUES, qui sous-estime (un run a 2 tours qui
+                # converge au premier n'en joue qu'un). La sous-estimation est
+                # sans danger ici : elle ne peut que MANQUER un melange, jamais
+                # en inventer un.
+                "tours": d.get("tours_demandes")
+                         or len(d.get("tests_outcomes") or []) or 1,
             })
     return out
+
+
+def alerte_bras_heterogene(lignes):
+    """UN BRAS NE MELANGE PAS DEUX PROTOCOLES.
+
+    `--tours 1` produit un pass_rate_1 ; `--tours 2` produit un pass_rate_2,
+    parce que le tour 2 rend a l'agent la sortie d'erreur de la suite
+    officielle (pilote.py:1071, ordre operateur du 27/08 07:10 -- c'est la
+    DEFINITION de pass_rate_2, pas un defaut). Les deux ne se posent pas a cote
+    des memes lignes publiees, donc ils ne se moyennent pas.
+
+    LE CAS QUI A MOTIVE CETTE ALERTE : `pi_D_t1_dflash2` porte 103 exercices a
+    1 tour et 5 exercices cpp a 2 tours, residu de l'etape « complement » de
+    mesurer_valeur_du_semis.ps1, qui rejoue en `--tours 2` DANS LE MEME
+    repertoire de run. Quatre basculent FAIL -> PASS au tour 2. Rien ne le
+    signalait : le melange s'est vu a la main, un mois de mesures plus tard.
+    """
+    par_tours = {}
+    for x in lignes:
+        par_tours.setdefault(x["tours"], []).append(x)
+    if len(par_tours) <= 1:
+        return False
+    print("!" * 70)
+    print("BRAS HETEROGENE -- CE RUN MELANGE DEUX PROTOCOLES. NE PAS MOYENNER.")
+    print("!" * 70)
+    for t in sorted(par_tours):
+        gr = par_tours[t]
+        p = sum(1 for x in gr if x["classe"] == "pass")
+        taux = "pass_rate_1" if t == 1 else "pass_rate_%d" % t
+        print("  %d tour(s) demande(s) -> %s : %3d exercices, %3d pass"
+              % (t, taux, len(gr), p))
+        if len(gr) <= 8:
+            for x in sorted(gr, key=lambda y: (y["piste"], y["exercice"])):
+                print("        %-6s %-30s %s" % (x["piste"], x["exercice"],
+                                                 x["classe"]))
+    print("  A 2 tours l'agent a recu la SORTIE D'ERREUR de la suite")
+    print("  officielle : c'est le protocole du board, pas un tour aveugle.")
+    print("  Rejouer le groupe minoritaire, ou publier les deux separement.")
+    print("!" * 70)
+    print("")
+    return True
 
 
 def main():
@@ -135,6 +184,8 @@ def main():
               % (tot.get("pass", 0), len(lignes),
                  100.0 * tot.get("pass", 0) / len(lignes)))
         print("")
+
+    alerte_bras_heterogene(lignes)
 
     print("ECHECS :")
     for x in lignes:

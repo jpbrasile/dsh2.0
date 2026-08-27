@@ -33,14 +33,25 @@ est par nombre de tours :
     D a 2 tours  <->  pass_rate_2  (52,0 %)   -- les deux en ont un
 Ce script sort DESORMAIS LES DEUX, et refuse de n'en publier qu'un.
 
-DEUXIEME DEFAUT, MESURE LE 27/08 : la variante D n'est pas uniformement a un
-tour. 5 exercices cpp ont joue DEUX tours -- sequelle de l'etape « complement »
-de mesurer_valeur_du_semis.ps1:136-141, qui rejoue en `--tours 2`. Or
-pilote.py:1071 reinjecte `erreurs`, qui sort de lancer_tests() sur les fichiers
-de test OFFICIELS. Ces 5 exercices ont donc vu la sortie d'echec officielle, et
-4 d'entre eux ont bascule FAIL -> PASS a ce tour 2. Ce ne sont pas des verdicts
-aveugles : c'est le protocole du board. Le script les ISOLE et publie le taux
-avec et sans eux.
+CE QUE LE TOUR 2 FAIT, ET POURQUOI CE N'EST PAS UN DEFAUT. `pilote.py:1071`
+reinjecte `erreurs`, qui sort de `lancer_tests()` sur les fichiers de test
+OFFICIELS. C'est VOULU et documente : ordre operateur du 27/08 07:10, inscrit
+dans `lancer_polyglot_complet.ps1:50-68` -- « Au tour 2, pilote.py renvoie a
+l'agent la SORTIE D'ERREUR de la suite officielle (jamais son code source) avec
+la relance mot pour mot d'aider. C'est la definition de pass_rate_2. » Un bras D
+a 2 tours est le symetrique honnete de `pass_rate_2` ; un bras D a 1 tour est le
+symetrique de `pass_rate_1`. Aucun des deux n'est illegitime ; ils ne se posent
+simplement pas a cote des memes lignes publiees.
+
+LE VRAI DEFAUT, MESURE LE 27/08 : LE BRAS N'EST PAS HOMOGENE. Le run
+`pi_D_t1_dflash2` porte 107 exercices a 1 tour ET 5 exercices cpp a 2 tours --
+sequelle de l'etape « complement » de mesurer_valeur_du_semis.ps1:136-141, qui
+rejoue en `--tours 2` DANS LE MEME repertoire de run. 4 des 5 basculent
+FAIL -> PASS au tour 2. Un meme bras melange donc pass_rate_1 et pass_rate_2, et
+rien ne le signalait : `len(tests_outcomes)` etait le seul indice, et il ne
+distingue pas « 2 tours demandes, converge au premier » de « 1 tour demande ».
+D'ou le champ `tours_demandes` (pilote.py) et l'alerte de `etat_run.py`, tous
+deux poses le 27/08. Ce script ISOLE les 5 et publie le taux sans eux.
 
 RESERVE, a lire avec tout chiffre qui sort d'ici : le run variante D est EN
 COURS. Ceci est une lecture d'etape, jamais un depouillement. La regle d'arret
@@ -156,9 +167,10 @@ def main():
     print(f"aider board : {len(a2):3d} exercices juges")
     print(f"INTERSECTION: {len(inter):3d}  <-- tout ce qui suit porte SUR ELLE SEULE")
     print()
-    print("EXERCICES D NON AVEUGLES (2 tours => sortie d'echec OFFICIELLE recue")
-    print("entre les deux, pilote.py:1071). Ils relevent du protocole du board,")
-    print("pas de la variante D :")
+    print("EXERCICES A 2 TOURS -- ILS RELEVENT DE pass_rate_2, PAS DE pass_rate_1.")
+    print("Le tour 2 rend a l'agent la sortie d'erreur de la suite officielle")
+    print("(pilote.py:1071) : c'est voulu et documente (ordre operateur 27/08),")
+    print("mais ca ne se moyenne pas avec des tours aveugles. Isoles ici :")
     if contamines:
         for p, e in contamines:
             print(f"    {p}/{e:28s} tours={tours[(p, e)]}  verdict final={'PASS' if d[(p, e)] else 'FAIL'}")
