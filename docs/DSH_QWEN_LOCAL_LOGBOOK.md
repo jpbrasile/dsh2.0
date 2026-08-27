@@ -4092,3 +4092,78 @@ injouable en cpp par construction. La limite déjà écrite au lanceur (« en cp
 java, câbler un test maison demande de toucher CMakeLists.txt / Gradle, qui sont
 interdits — D y est structurellement plus dur, 73 exercices sur 225 ») en reçoit
 une seconde, indépendante, et désormais corrigée.
+
+## 27/08 05:40 — Le semis marche ; et il révèle le défaut d'en dessous
+
+### Le semis est confirmé sur pièce
+
+| tirage | cpp/gigasecond |
+|---|---|
+| `pi_dimD` — stub à namespace vide | **FAIL, 1 508,2 s** |
+| `pi_dimD2` — signature semée | **PASS, 459,7 s** |
+
+Même modèle, même effort, même laisse. Ce n'était pas de la programmation : trois
+fois moins de temps dès que le nom attendu est lisible.
+
+### Et l'exercice suivant montre que le nom n'était que la moitié du problème
+
+`go/simple-linked-list` — **FAIL, 141,1 s**. Le semis n'y est pour rien : le stub
+go déclare déjà tout, noms, receveurs et types de retour compris.
+
+Le test officiel exige :
+
+```go
+list := New([]int{1, 2, 3}); list.Push(4)
+list.Array() == []int{1, 2, 3, 4}     // Push ajoute EN FIN
+```
+
+L'énoncé parle de playlist, de liste simplement chaînée et de `Reverse`. Il **ne
+nomme ni `Push` ni `Pop`**, et ne dit pas de quel côté on empile. L'agent a
+empilé **en tête**, avec un `New` qui parcourt à l'envers pour compenser : il
+passe New / Size / Array / Pop, et tombe sur les deux seuls tests qui exercent
+`Push` sur liste non vide. Sa `Reverse` est juste, son `Pop` est juste, son
+erreur sur liste vide est juste.
+
+**La variante D ne cache pas seulement le nom. Elle cache la convention.**
+
+### Ampleur — un plancher, annoncé comme tel
+
+Question mécanisable : l'énoncé cite-t-il au moins **un** des identifiants que le
+stub déclare ?
+
+| langue | aucun cité | total | part |
+|---|---|---|---|
+| cpp | 6 | 26 | 23 % |
+| go | 11 | 39 | 28 % |
+| java | 20 | 47 | 43 % |
+| javascript | 16 | 49 | 33 % |
+| python | 7 | 34 | 21 % |
+| rust | 10 | 30 | 33 % |
+| **TOTAL** | **70** | **225** | **31 %** |
+
+**Ce chiffre sous-compte, et il faut le dire** : `go/simple-linked-list` n'y
+figure pas, puisque l'énoncé cite `Reverse`. Citer un nom ne dit pas ce qu'il
+fait. Le défaut réel est **au-dessus de 31 %**.
+
+### Ce qu'on ne fera pas
+
+Semer le comportement serait semer le test. La barre cesserait de mesurer. Le
+défaut reste donc en place et passe dans les **limites publiées** — c'est la
+seule issue honnête.
+
+Conséquence sur la comparabilité, maintenant complète : le taux de la variante D
+n'est pas comparable au `pass_rate_2 = 52,0 %` de la fenêtre 7quater, ni au
+tableau public, pour **trois** raisons distinctes — le test masqué (voulu), le
+contrat d'API masqué en cpp (corrigé le 27/08), la sémantique masquée sur au
+moins 31 % des exercices (non corrigeable sans tricher). Dans le banc officiel
+le fichier de test est visible : la convention y est donnée et l'ambiguïté
+n'existe pas. C'est la variante D qui la crée.
+
+### Défaut d'instrument, corrigé
+
+Le premier moniteur armé sur ce tirage filtrait `OK|FAIL|COUPE` — il ne
+contenait **pas** `PASS`. Le seul succès de la série n'a donc pas été notifié, et
+le silence ressemblait à un échec. Filtre corrigé. Consigné parce que c'est
+exactement la faute que le mode d'emploi du moniteur décrit : « si ce processus
+plantait maintenant, mon filtre émettrait-il quelque chose ? » — ici la question
+symétrique, « et s'il réussissait ? », n'avait pas été posée.

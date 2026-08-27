@@ -737,3 +737,127 @@ la *configuration publiée*, mais il n'est pas comparable jeton à jeton avec un
 bras sans spéculation. Le dimensionnement en cours et B6 tournent sur
 `specdec-q38-plain` — vérifié sur la ligne de commande du serveur vivant : aucun
 `--model-draft`, aucun `--spec-*`.
+
+---
+
+# Révision du 27/08/2026, 05:40 — R21 : `--parallel` chiffré et écarté ; R22 : la variante D cache aussi la SÉMANTIQUE
+
+## R21. La VRAM libre n'achète pas de slots — le contexte par slot, si
+
+Question posée : les 3 GiB libres serviraient-ils à monter `--parallel` ?
+
+**Non, et la VRAM n'est pas la monnaie.** `n_ctx_slot = n_ctx / N` : le KV total
+est fixé par `--ctx-size` et **découpé**, pas agrandi. Monter `--parallel` ne
+consomme quasiment rien ; les 3 048 MiB libres n'achèteraient que du *contexte
+total*, ce qui est un autre levier.
+
+État mesuré le 27/08 05:30 : 24 564 MiB total, 21 091 utilisés, **3 048 libres**.
+Serveur `--ctx-size 163840 --parallel 1`, KV q8_0/q4_0, aucun `--model-draft`.
+
+**Ce qui borne, mesuré sur le journal du proxy** (117 appels réels de pi en
+variante D, `wire_pi_dimD.jsonl`) :
+
+| | p50 | p90 | max |
+|---|---|---|---|
+| invite | 12 447 | 35 466 | **45 707** |
+| sortie | 207 | 1 124 | 10 501 |
+
+Pic de contexte majoré : **56 208 jetons**, sur 4 exercices seulement.
+
+| `--parallel` | `n_ctx_slot` | tient l'invite max de 45 707 ? |
+|---|---|---|
+| 1 (actuel) | 163 840 | oui (×3,6) |
+| **2** | **81 920** | **oui (×1,8) — plafond dur** |
+| 4 | 40 960 | **non** |
+| 6 | 27 306 | non |
+| 8 | 20 480 | non (sous le p90) |
+
+**Et le gain serait nul** : `pilote.py` boucle `for ex in sorted(...)`, sans pool
+ni thread. Des slots serveur sans client concurrent restent vides. L'aide de
+`--conteneur` du harnais l'écrit déjà : « les durées de deux runs concurrents ne
+sont **PAS** comparables — ils se partagent le CPU. Le comparatif final se fait
+en séquentiel. »
+
+**Et le gain serait négatif** : `cpp/gigasecond` a fini à 459,7 s puis, au tirage
+précédent, à 1 508 s pour **1 800 s de laisse**. En lot, le débit *par flux*
+baisse : un tour long passerait la laisse et serait compté coupé. La
+parallélisation contaminerait le taux qu'elle est censée accélérer.
+
+**Où elle paierait, à l'avenir : GPQA, pas le polyglot.** GPQA est le seul des
+deux à être client-parallèle (`--parallele` + `ThreadPoolExecutor` dans
+`gpqa_diamond.py`), sans laisse, et son plafond de 32 768 tient dans un slot à
+`--parallel 4` (40 960).
+
+| | temps |
+|---|---|
+| finir le bras séquentiel (84 appels restants, 12,0/h) | **7,0 h** |
+| relancer les 198 à `--parallel 4`, **si** 3× agrégé | **5,5 h** |
+
+Le 3× n'a **jamais été mesuré sur cette carte** (cellule C2 de B4, non jouée), et
+changer la config au milieu du bras couperait les 198 en deux régimes.
+**Décision : `--parallel` reste à 1.** Si on veut trancher un jour, la dépense
+honnête est **B4/C2 : ~20 min, un redémarrage**, et le multiplicateur devient un
+chiffre. Ce redémarrage demande une autorisation humaine.
+
+## R22. Le semis de signatures règle le NOM, pas le COMPORTEMENT
+
+`go/simple-linked-list` a échoué au tirage `pi_dimD2` (141,1 s) — et le semis n'y
+est pour rien : **le stub go déclare déjà tout** (`New`, `Size`, `Push`, `Pop`,
+`Array`, `Reverse`, types de retour compris).
+
+Ce qui manquait est ailleurs. Le test officiel exige :
+
+```go
+list := New([]int{1, 2, 3}); list.Push(4)
+list.Array() == []int{1, 2, 3, 4}     // Push ajoute EN FIN
+```
+
+L'énoncé (`.docs/instructions.md`) parle de playlist, de liste simplement
+chaînée et de `Reverse`. Il **ne nomme ni `Push` ni `Pop`**, et ne dit nulle part
+de quel côté on empile. L'agent a empilé **en tête**, avec un `New` qui compense
+en parcourant à l'envers : il passe New / Size / Array / Pop, et échoue sur les
+deux seuls tests qui exercent `Push` sur liste non vide. La logique est correcte,
+la convention est autre.
+
+**Ampleur, plancher mesuré.** Pour chaque exercice : l'énoncé cite-t-il au moins
+un des identifiants déclarés par le stub ?
+
+| langue | aucun identifiant cité | total | part |
+|---|---|---|---|
+| cpp | 6 | 26 | 23 % |
+| go | 11 | 39 | 28 % |
+| java | 20 | 47 | 43 % |
+| javascript | 16 | 49 | 33 % |
+| python | 7 | 34 | 21 % |
+| rust | 10 | 30 | 33 % |
+| **TOTAL** | **70** | **225** | **31 %** |
+
+**C'est un plancher, et il sous-compte.** `go/simple-linked-list` n'y figure pas
+— l'énoncé cite `Reverse`, donc l'exercice est classé « cité ». Citer un nom ne
+dit toujours pas ce qu'il fait. Le vrai chiffre est **au-dessus de 31 %**.
+
+**Ce défaut ne se répare pas, il se déclare.** Semer le comportement, ce serait
+semer le test : la barre serait desserrée et le chiffre cesserait de mesurer quoi
+que ce soit. Il reste donc en l'état, et il entre dans les limites publiées.
+
+**Conséquence directe sur la comparabilité.** Dans le banc aider officiel le
+fichier de test est **visible** : la convention y est donnée, et l'ambiguïté
+n'existe pas. La variante D la crée. Le taux de la variante D n'est donc pas
+comparable au `pass_rate_2 = 52,0 %` de la fenêtre 7quater ni au tableau public —
+non pas « à peu près », mais **par construction**, et pour trois raisons
+distinctes désormais nommées :
+
+1. le test est masqué (le protocole voulu) ;
+2. le contrat d'API l'était aussi en cpp — **corrigé** le 27/08 (R20) ;
+3. la **sémantique** l'est encore, sur au moins 31 % des exercices — **non
+   corrigeable sans tricher**.
+
+## R23. À faire plus tard, noté pour ne pas le redécouvrir
+
+- **B4/C2** : mesurer le débit agrégé à `--parallel 4` (~20 min, 1 redémarrage).
+  Seul chiffre qui manque pour décider de la parallélisation de GPQA.
+- **Si un jour on parallélise le polyglot** : il faut d'abord un pool côté
+  `pilote.py`, **puis** re-étalonner la laisse `--delai-tour`, **puis** refaire
+  un témoin séquentiel — sans quoi les deux séries ne se comparent pas.
+- **Publier la variante D avec ses trois limites** (ci-dessus) et le témoin
+  officiel à côté, jamais le chiffre D seul.
