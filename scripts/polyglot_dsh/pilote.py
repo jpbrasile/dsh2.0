@@ -85,6 +85,7 @@ import re
 import shutil
 import subprocess
 import sys
+import threading
 import time
 
 # --- l'installation aider, seule source du corpus et des chaines de test ----
@@ -183,6 +184,38 @@ def commande_dsh(dsh):
     return [dsh]
 
 
+def taire_les_boites_windows():
+    """Un binaire qui plante ne doit pas ouvrir de fenetre : il doit mourir.
+
+    Sans cela, « ... a cesse de fonctionner » attend un humain, et le tour
+    entier est fige derriere une boite de dialogue -- meme signature au
+    journal de fil qu'une commande non bornee : plus un appel au modele, et
+    la laisse consommee jusqu'au bout.
+
+    Le mode d'erreur est HERITE par la descendance (node, bash, les binaires
+    de test), et il meurt avec le pilote : on ne touche pas aux reglages de
+    la session, seulement a ce qu'on lance soi-meme.
+    """
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        SEM_FAILCRITICALERRORS = 0x0001
+        SEM_NOGPFAULTERRORBOX = 0x0002
+        SEM_NOOPENFILEERRORBOX = 0x8000
+        ctypes.windll.kernel32.SetErrorMode(
+            SEM_FAILCRITICALERRORS | SEM_NOGPFAULTERRORBOX
+            | SEM_NOOPENFILEERRORBOX)
+        dire("boites d'erreur Windows desactivees pour la descendance "
+             "(un plantage rend son code, il n'ouvre plus de fenetre).")
+    except Exception as e:
+        # Un echec ici n'est pas bloquant : on le DIT, et le chien de garde
+        # sur le silence reste le filet.
+        dire("AVERTISSEMENT : SetErrorMode a echoue (%r). Un binaire qui "
+             "plante peut encore ouvrir une fenetre ; la veille silence "
+             "reste le filet." % (e,))
+
+
 def tuer_arbre(p):
     """Tue le processus ET sa descendance.
 
@@ -200,23 +233,221 @@ def tuer_arbre(p):
             pass
 
 
-def lancer_dsh(cmd, ws, env, delai):
-    """Lance dsh dans `ws`. Rend (rc, sortie, secondes, coupe_par_le_delai)."""
+def _descendants(racine):
+    """PID de toute la descendance de `racine`, y compris indirecte.
+
+    Photographie unique de la table des processus (Toolhelp32), puis
+    fermeture transitive. Pas de dependance externe, pas de sous-processus
+    lance a chaque tour de garde.
+    """
+    if os.name != "nt":
+        return set()
+    import ctypes
+    from ctypes import wintypes
+
+    TH32CS_SNAPPROCESS = 0x00000002
+    INVALIDE = ctypes.c_void_p(-1).value
+
+    class PROCESSENTRY32(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD),
+                    ("cntUsage", wintypes.DWORD),
+                    ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.POINTER(ctypes.c_ulong)),
+                    ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", ctypes.c_long),
+                    ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", ctypes.c_char * 260)]
+
+    k32 = ctypes.windll.kernel32
+    snap = k32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+    if snap == INVALIDE:
+        return set()
+    enfants = {}
+    try:
+        e = PROCESSENTRY32()
+        e.dwSize = ctypes.sizeof(PROCESSENTRY32)
+        ok = k32.Process32First(snap, ctypes.byref(e))
+        while ok:
+            enfants.setdefault(e.th32ParentProcessID, []).append(
+                e.th32ProcessID)
+            ok = k32.Process32Next(snap, ctypes.byref(e))
+    finally:
+        k32.CloseHandle(snap)
+
+    vus, pile = set(), [racine]
+    while pile:
+        pid = pile.pop()
+        for f in enfants.get(pid, ()):
+            if f not in vus:
+                vus.add(f)
+                pile.append(f)
+    return vus
+
+
+def _boites_ouvertes():
+    """(hwnd, pid, titre) des fenetres de dialogue visibles.
+
+    Classe #32770 : c'est celle de toutes les boites de dialogue Windows,
+    dont « Debug Assertion Failed » du CRT.
+    """
+    if os.name != "nt":
+        return []
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.windll.user32
+    trouvees = []
+
+    proto = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+
+    def rappel(hwnd, _lparam):
+        try:
+            if not user32.IsWindowVisible(hwnd):
+                return True
+            cls = ctypes.create_unicode_buffer(64)
+            user32.GetClassNameW(hwnd, cls, 64)
+            if cls.value != "#32770":
+                return True
+            pid = wintypes.DWORD(0)
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            titre = ctypes.create_unicode_buffer(256)
+            user32.GetWindowTextW(hwnd, titre, 256)
+            trouvees.append((hwnd, int(pid.value), titre.value))
+        except Exception:
+            pass
+        return True
+
+    try:
+        user32.EnumWindows(proto(rappel), 0)
+    except Exception:
+        return []
+    return trouvees
+
+
+def chasser_les_boites(pid_agent, arret, periode=15):
+    """Tue les processus DESCENDANTS de l'agent qui ouvrent une boite.
+
+    La condition de descendance n'est pas une precaution de style : sans
+    elle, ce fil fermerait les fenetres de l'operateur. On ne tue que ce que
+    ce tour a lance.
+    """
+    if os.name != "nt":
+        return
+    while not arret.is_set():
+        try:
+            boites = _boites_ouvertes()
+            if boites:
+                famille = _descendants(pid_agent)
+                for _hwnd, pid, titre in boites:
+                    if pid in famille and pid != pid_agent:
+                        dire("   BOITE DE DIALOGUE tuee : PID %d « %s » "
+                             "(descendant de l'agent %d)"
+                             % (pid, titre or "sans titre", pid_agent))
+                        subprocess.run(["taskkill", "/F", "/T", "/PID",
+                                        str(pid)], capture_output=True)
+        except Exception as e:
+            dire("   AVERTISSEMENT chasseur de boites : %r" % (e,))
+        arret.wait(periode)
+
+
+def _mtime(chemin):
+    try:
+        return os.path.getmtime(chemin)
+    except OSError:
+        return 0.0
+
+
+def lancer_dsh(cmd, ws, env, delai, veille_silence=0, journal_fil=None):
+    """Lance dsh dans `ws`. Rend (rc, sortie, secondes, coupe_par_le_delai).
+
+    Deux facons de couper, et elles ne disent pas la meme chose :
+
+    - LA LAISSE (`delai`) : l'agent a eu son temps. C'est un budget.
+    - LE SILENCE (`veille_silence`) : l'agent ne demande plus rien au
+      modele. Ce n'est pas un budget depasse, c'est une PENDAISON --
+      mesuree trois fois sur trois le 27/08, toujours dans un appel
+      d'outil `bash` sans delai (le schema de pi dit « no default
+      timeout »). Couper la rend la main au lieu d'attendre la laisse.
+
+    Le chien ne s'arme QUE si le journal de fil a bouge depuis le debut de
+    ce tour : sans cette garde, un journal surveille par erreur (le proxy
+    ecrit ailleurs) ferait couper des tours sains et fabriquerait des FAIL.
+    """
     t0 = time.time()
     p = subprocess.Popen(cmd, cwd=ws, env=env, stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT, text=True,
                          encoding="utf-8", errors="replace")
     coupe = False
-    try:
-        out, _ = p.communicate(timeout=delai)
-    except subprocess.TimeoutExpired:
-        coupe = True
-        tuer_arbre(p)
+
+    if not (veille_silence and journal_fil):
+        # comportement d'avant, mot pour mot
         try:
-            out, _ = p.communicate(timeout=60)
+            out, _ = p.communicate(timeout=delai)
+        except subprocess.TimeoutExpired:
+            coupe = True
+            tuer_arbre(p)
+            try:
+                out, _ = p.communicate(timeout=60)
+            except Exception:
+                out = ""
+        return p.returncode, out or "", time.time() - t0, coupe
+
+    # Un fil avale la sortie : sans lui, le tampon du tube se remplit et
+    # l'agent se bloque en ecrivant -- une pendaison de notre fabrication.
+    morceaux = []
+
+    def avaler():
+        try:
+            for ligne in p.stdout:
+                morceaux.append(ligne)
         except Exception:
-            out = ""
-    return p.returncode, out or "", time.time() - t0, coupe
+            pass
+
+    fil = threading.Thread(target=avaler, daemon=True)
+    fil.start()
+
+    # Un binaire de test qui casse un `assert` ouvre une boite MSVC et
+    # n'exite jamais. On la tue -- et l'agent recoit enfin son code d'erreur.
+    arret_chasse = threading.Event()
+    chasse = threading.Thread(target=chasser_les_boites,
+                              args=(p.pid, arret_chasse), daemon=True)
+    chasse.start()
+
+    vu0 = _mtime(journal_fil)     # etat du journal AVANT ce tour
+    arme = False
+    motif = ""
+    while True:
+        if p.poll() is not None:
+            break
+        maintenant = time.time()
+        if maintenant - t0 >= delai:
+            coupe, motif = True, "laisse %ds" % delai
+            break
+        vu = _mtime(journal_fil)
+        if vu > vu0:
+            arme = True
+        if arme and (maintenant - vu) >= veille_silence:
+            coupe, motif = True, ("silence %ds sans appel au modele"
+                                  % int(maintenant - vu))
+            break
+        time.sleep(5)
+
+    arret_chasse.set()
+    if coupe:
+        dire("   COUPE : %s (apres %.1f s)" % (motif, time.time() - t0))
+        tuer_arbre(p)
+    try:
+        p.wait(timeout=60)
+    except Exception:
+        pass
+    fil.join(timeout=30)
+    try:
+        p.stdout.close()
+    except Exception:
+        pass
+    return p.returncode, "".join(morceaux), time.time() - t0, coupe
 
 
 # ---------------------------------------------------------------------------
@@ -603,7 +834,8 @@ def consigne_initiale(ex_hote, editables):
 # ---------------------------------------------------------------------------
 def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
                 stash_ex=None, sans_tests=False, sans_corriges=False,
-                tests_maison=False, delai_tour_2=0):
+                tests_maison=False, delai_tour_2=0,
+                veille_silence=0, journal_fil=None):
     cfg = lire_config(ex_hote)
     editables = fichiers_editables(ex_hote, cfg)
     fichiers_test = cfg.get("files", {}).get("test", [])
@@ -665,7 +897,8 @@ def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
                 laisse = delai_tour_2
             rc, sortie, secondes, coupe = lancer_dsh(
                 cmd_dsh + [CONSIGNE],
-                ex_hote, env, laisse)
+                ex_hote, env, laisse,
+                veille_silence=veille_silence, journal_fil=journal_fil)
         finally:
             if sortis:
                 demasquer(ex_hote, stash_ex, sortis)
@@ -870,7 +1103,26 @@ def main():
     ap.add_argument("--delai-tour", type=int, default=900)
     # Laisse des tours 2+. 0 = identique a --delai-tour.
     ap.add_argument("--delai-tour-2", type=int, default=0)
+    # Chien de garde sur le SILENCE : secondes sans un seul appel au modele
+    # avant de couper le tour. 0 = desarme (comportement d'avant).
+    ap.add_argument("--veille-silence", type=int, default=600)
+    # Journal de fil du proxy, seule preuve qu'un appel a eu lieu. Vide =
+    # deduit du nom du run ; s'il ne bouge pas, le chien ne s'arme jamais.
+    ap.add_argument("--journal-fil", default="")
     args = ap.parse_args()
+
+    if args.veille_silence and not args.journal_fil:
+        args.journal_fil = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "bench_julia_effort", "wire_%s.jsonl" % args.nom)
+    if args.veille_silence:
+        dire("veille silence : %d s ; journal de fil %s"
+             % (args.veille_silence, args.journal_fil))
+        if not os.path.exists(args.journal_fil):
+            dire("  (le journal n'existe pas encore : le chien s'armera "
+                 "au premier appel qui y tombe)")
+
+    taire_les_boites_windows()
 
     vierge = os.path.join(BENCH_HOTE, ORIGINAL)
     if not os.path.isdir(vierge):
@@ -1067,6 +1319,8 @@ def main():
                               args.tours, args.delai_tour,
                               stash_ex=stash_ex,
                               delai_tour_2=args.delai_tour_2,
+                              veille_silence=args.veille_silence,
+                              journal_fil=args.journal_fil,
                               sans_tests=args.sans_tests or args.tests_maison,
                               sans_corriges=args.sans_corriges or args.tests_maison,
                               tests_maison=args.tests_maison)

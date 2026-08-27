@@ -83,7 +83,20 @@ param(
     [string]$Modele = 'specdec-q38-plain',
     [int]$Tours = 2,
     [int]$DelaiTour = 1800,
-    [int]$DelaiTour2 = 600
+    [int]$DelaiTour2 = 600,
+    # Chien de garde sur le SILENCE : secondes sans un seul appel au modele
+    # avant de couper le tour. Mesure du 27/08 : les 3 tours coupes a 1 800 s
+    # ne calculaient pas, ils PENDAIENT dans un appel `bash` sans delai (le
+    # schema de pi dit « no default timeout ») -- 5 231 s des 8 328 s de paroi,
+    # GPU a l'arret. Seuil lu dans la distribution des 460 ecarts entre appels :
+    # plus long ecart LEGITIME 120,4 s, puis rien jusqu'a 1 677 s. 600 s laisse
+    # 5x de marge, de quoi couvrir une compilation froide gradle ou cargo que
+    # le seul bloc cpp n'a pas encore montree. 0 = desarme.
+    #
+    # On le PASSE explicitement au lieu de s'en remettre au defaut de
+    # pilote.py : un defaut silencieux ne se retrouve pas dans le journal du
+    # run, et devient une inconnue au depouillement.
+    [int]$VeilleSilence = 600
 )
 
 $ErrorActionPreference = 'Stop'
@@ -139,10 +152,11 @@ Start-Process -FilePath 'node' -ArgumentList 'proxy.mjs' `
 Start-Sleep -Seconds 3
 
 Write-Output ''
-Write-Output "=== LIVRABLE 1 : 225 exercices, VARIANTE D, $Tours tour(s), laisse $DelaiTour s (tour 2+ : $DelaiTour2 s) ==="
+Write-Output "=== LIVRABLE 1 : 225 exercices, VARIANTE D, $Tours tour(s), laisse $DelaiTour s (tour 2+ : $DelaiTour2 s), veille silence $VeilleSilence s ==="
 python pilote.py $Nom --agent pi --accueil-pi $accueilPi --dotenv $dotenv `
     --tests-maison --conteneur pi-polyglot-tests `
-    --tours $Tours --delai-tour $DelaiTour --delai-tour-2 $DelaiTour2 --effort medium `
+    --tours $Tours --delai-tour $DelaiTour --delai-tour-2 $DelaiTour2 `
+    --veille-silence $VeilleSilence --effort medium `
     --fournisseur local-mesure --modele $Modele
 
 Write-Output ''
