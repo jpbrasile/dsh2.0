@@ -936,6 +936,71 @@ def demasquer(ex_hote, stash_ex, chemins):
         shutil.move(src, dst)
 
 
+# ---------------------------------------------------------------------------
+# LE TROU DE MASQUAGE, trouve le 27/08 par le red team GLM-5.3 (F1) et verifie
+# ---------------------------------------------------------------------------
+# `chemins_a_masquer` ne retirait que `files.test` de .meta/config.json. Or les
+# exercices go rangent leur TABLE DE CAS OFFICIELLE ailleurs dans la meme
+# config :
+#
+#     "test":   ["word_search_test.go"]     <- masque
+#     "editor": ["cases_test.go"]           <- JAMAIS masque
+#
+# et `cases_test.go` porte les entrees ET les sorties attendues, `expectError`
+# compris. robot-simulator est pire encore : `robot_simulator_step2_test.go` et
+# `_step3_test.go` sont des SUITES COMPLETES, dans aucune cle de config.
+#
+# 19 exercices de l'intersection etaient concernes -- 18 go et java/satellite.
+# Ce n'est pas une deduction : l'agent le dit dans sa propre sortie. go/book-
+# store, mot pour mot : « I then extended them to cover all 18 cases from the
+# provided cases_test.go data to confirm the solution matches THE FULL HIDDEN
+# SUITE ». 9 exercices go le citent nommement, et les 9 passent.
+#
+# COUT MESURE : l'ecart appariee tombe de +23,7 a +16,7 points quand on les
+# retire (comparer_protocoles.py, cellule publiable). La phrase publiee
+# « l'agent ne voit jamais la suite officielle » etait fausse pour eux.
+#
+# CE CORRECTIF NE VAUT QUE POUR LES RUNS SUIVANTS. Le pilote en vol a importe ce
+# module a son demarrage ; Python ne relit pas un module charge. Le run
+# `pi_D_t1_dflash2` garde donc sa fuite, et elle se retranche a la lecture.
+NOMS_TEST = re.compile(r"(^|/)(.*_test\.go|.*Test\.java|.*\.spec\.js"
+                       r"|.*_test\.py|.*_test\.rs|.*_test\.cpp)$", re.I)
+# Un fichier ne compte que s'il PORTE des cas. `cpp/*/test/tests-main.cpp` porte
+# le nom d'un test mais ne contient que `#define CATCH_CONFIG_MAIN` : le masquer
+# casserait la construction sans rien cacher.
+FLAIRS_TEST = re.compile(r"[Tt]estCases|func Test|TEST_CASE|@Test|#\[test\]"
+                         r"|def test_|describe\(|\bit\(")
+
+
+def tests_hors_config(ex_hote, deja):
+    """Fichiers de test presents que `files.test` ne declare pas.
+
+    Rend des chemins RELATIFS POSIX, comme `files.test`, pour que l'appelant les
+    traite a l'identique.
+    """
+    deja = set(deja)
+    trouves = []
+    for cur, sous, fs in os.walk(ex_hote):
+        sous[:] = [s for s in sous if s not in (".meta", ".docs", ".approaches",
+                                                "node_modules", "target",
+                                                "build")]
+        for f in fs:
+            rel = os.path.relpath(os.path.join(cur, f),
+                                  ex_hote).replace("\\", "/")
+            if rel in deja or not NOMS_TEST.search(rel):
+                continue
+            try:
+                txt = io.open(os.path.join(cur, f), encoding="utf-8",
+                              errors="replace").read()
+            except Exception:
+                continue
+            if FLAIRS_TEST.search(txt):
+                trouves.append(rel)
+                dire("  masque AUSSI : %s (test officiel absent de "
+                     "files.test)" % rel)
+    return sorted(trouves)
+
+
 def chemins_a_masquer(ex_hote, fichiers_test, sans_tests, sans_corriges):
     """Ce qui quitte l'espace de travail, selon les deux drapeaux.
 
@@ -949,6 +1014,7 @@ def chemins_a_masquer(ex_hote, fichiers_test, sans_tests, sans_corriges):
     chemins = []
     if sans_tests:
         chemins.extend(fichiers_test)
+        chemins.extend(tests_hors_config(ex_hote, fichiers_test))
     if sans_corriges:
         for d in (".meta", ".approaches"):
             if os.path.isdir(os.path.join(ex_hote, d)):

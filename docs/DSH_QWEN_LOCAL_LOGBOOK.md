@@ -6431,3 +6431,117 @@ les pieces ne la soutiennent pas au seuil corrige.
 * **Attendre** les 225 verdicts, puis depouiller une fois.
 * En attendant, ne plus ecrire nulle part que « les echecs viennent surtout de
   l'enonce » sans citer ce tableau a cote.
+
+---
+
+## R28z — 27/08 : RETRACTATION DU +30,5. Le masquage avait un trou, et l'agent l'a utilise
+
+**Ce qui est retire.** La phrase publiee en R28w/R28x —
+
+> un agent local qui **ecrit ses propres tests** et **ne voit jamais la suite
+> officielle** reussit 46,3 % contre 15,9 % pour le meme modele sous le
+> protocole du board a information egale, ecart **+30,5 points**, p = 1,1e-5
+
+— est **fausse sur sa premisse** et **fausse sur sa magnitude**. Elle ne doit
+plus etre citee. Trouvee par le red team GLM-5.3 du 27/08 (constat F1),
+verifiee sur pieces ici avant d'etre reprise.
+
+### Le trou
+
+`pilote.py::chemins_a_masquer` ne retirait que `files.test` de
+`.meta/config.json`. Or les exercices go rangent leur **table de cas
+officielle** sous une autre cle de la meme config :
+
+```
+"test":   ["word_search_test.go"]     <- masque
+"editor": ["cases_test.go"]           <- JAMAIS masque
+```
+
+et `cases_test.go` porte les entrees **et les sorties attendues**,
+`expectError` compris. `go/robot-simulator` est pire : ses
+`robot_simulator_step2_test.go` et `_step3_test.go` sont des **suites
+completes**, declarees dans aucune cle.
+
+**19 exercices de l'intersection** etaient concernes : 18 go et `java/satellite`.
+
+### Ce n'est pas une deduction — l'agent le dit
+
+Sortie de `go/book-store`, mot pour mot :
+
+> « I then extended them to cover all 18 cases from the provided
+> `cases_test.go` data to confirm the solution matches **the full hidden
+> suite** — all pass. »
+
+`go/alphametics` : « a runner over the provided `testCases` in `cases_test.go`
+comparing against the exact expected maps ». `go/bottle-song`, `go/word-search`,
+`go/forth`, `go/say`, `go/sublist`, `go/two-bucket`, `go/bowling` : idem.
+**9 exercices go citent le fichier nommement. Les 9 passent.**
+
+### Le cout, mesure
+
+**Instant de lecture : 126 exercices juges cote D, intersection aveugle 121.**
+Le run est en vol, ces chiffres bougeront ; la ligne « publiee » ci-dessous est
+la lecture du matin sur un run plus jeune, elle n'est pas re-mesurable. Toutes
+cellules hors confondus documentes (cpp — stubs semes le 27/08 contre un run
+aider du 25/08 — et les deux `ledger`), bras aveugle, contre `pass_rate_1` :
+
+| cellule | n | D | board | ecart | b / c | McNemar exact |
+|---|---|---|---|---|---|---|
+| **publiee ce matin** (run plus jeune) | 82 | 46,3 % | 15,9 % | **+30,5** | 29 / 4 | 1,1e-5 |
+| A. meme base, a 126 juges, fuite comprise | 98 | 41,8 % | 18,4 % | +23,5 | 32 / 9 | 4,3e-4 |
+| **B. fuite retiree (F1)** | **79** | **34,2 %** | **17,7 %** | **+16,5** | **21 / 8** | **0,024** |
+
+**Deux causes distinctes, et il faut les separer :**
+
+* de **+30,5 a +23,5** : l'**avancement du run**. javascript est entre depuis, et
+  D y perd. Rien a voir avec la fuite. La lecture du matin portait sur le
+  sous-ensemble favorable.
+* de **+23,5 a +16,5** : la **fuite de masquage**, soit **−7,0 points**. Les 19
+  exercices fuites font 14 PASS cote D contre 4 cote board.
+
+Par piste, cellule B :
+
+| piste | n | D | board | ecart | b / c | p |
+|---|---|---|---|---|---|---|
+| go | 20 | 55,0 % | 20,0 % | +35,0 | 7 / 0 | 0,016 |
+| java | 44 | 31,8 % | 11,4 % | +20,5 | 12 / 3 | 0,035 |
+| javascript | 15 | 13,3 % | 33,3 % | **−20,0** | 2 / 5 | 0,45 |
+
+**La direction s'inverse en javascript.** Non significatif a n = 15, mais c'est
+la seule piste ou le board devance l'agent, et elle n'etait pas commencee quand
+le +30,5 a ete ecrit.
+
+### Ce qui survit, et ce qui ne survit pas
+
+* **Survit** : la direction sur go et java, chacune significative isolement.
+  L'ecart global +16,5 reste positif, p = 0,024.
+* **Ne survit pas** : la magnitude « +30,5 », la premisse « ne voit jamais la
+  suite officielle », et toute lecture qui generalise a « le polyglot ». Un p de
+  0,024 ne survivrait a aucune correction de multiplicite.
+
+### Corrige
+
+* `pilote.py` : `tests_hors_config()` masque desormais tout fichier qui porte un
+  nom de test **et** des cas (`[Tt]estCases`, `func Test`, `@Test`, `#[test]`,
+  `TEST_CASE`, `def test_`, `describe(`, `it(`), quelle que soit la cle de
+  config. Essai a blanc sur le corpus vierge : attrape `cases_test.go` et les
+  deux suites `_stepN_` de robot-simulator, **n'attrape pas**
+  `cpp/*/test/tests-main.cpp` (qui ne porte que `#define CATCH_CONFIG_MAIN` --
+  le masquer casserait la construction sans rien cacher).
+* `comparer_protocoles.py` : deux blocs de plus, `APPARIEMENT PROPRE` et
+  `CELLULE PUBLIABLE`, avec les confondus nommes dans `--exclure` plutot que
+  retranches a la main.
+
+**CE CORRECTIF NE SAUVE PAS LE RUN EN VOL.** Le pilote PID 51944 a importe
+`pilote.py` a 14:52 ; Python ne relit pas un module charge. `pi_D_t1_dflash2`
+garde sa fuite jusqu'au bout ; elle se retranche a la lecture, pas a la source.
+Un bras propre demande un run neuf.
+
+### Ecart avec le rapport du red team, declare
+
+Le red team compte **21** exercices fuites (20 go + satellite) et publie
+36,1 % / 11,5 % sur 61. Je compte **19** (18 go + satellite) et publie
+34,2 % / 17,7 % sur 79. Les deux lectures ne portent pas sur le meme instant du
+run ni sur les memes exclusions de confondus. Je publie la mienne parce que sa
+regle est ecrite dans l'instrument et rejouable ; l'ecart de comptage n'est pas
+elucide et il est declare comme tel.

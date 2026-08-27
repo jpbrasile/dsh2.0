@@ -59,8 +59,11 @@ tient : le depouillement fait foi une seule fois, sur les 225 verdicts.
 """
 
 import argparse
+import glob
+import io
 import json
 import os
+import re
 from math import comb
 
 PISTES = ("cpp", "go", "java", "javascript", "python", "rust")
@@ -148,13 +151,98 @@ def mcnemar_exact(b, c):
     return min(1.0, 2.0 * queue)
 
 
+# ---------------------------------------------------------------------------
+# LE TROU DE MASQUAGE -- trouve par le red team GLM-5.3 du 27/08, verifie ici
+# ---------------------------------------------------------------------------
+# `pilote.py` masque les fichiers listes sous `files.test` de .meta/config.json.
+# Or les exercices go rangent leur TABLE DE CAS OFFICIELLE sous `files.editor` :
+#
+#     "test":   ["word_search_test.go"]        <- masque
+#     "editor": ["cases_test.go"]              <- JAMAIS masque
+#
+# et `cases_test.go` porte les entrees ET les sorties attendues, `expectError`
+# compris. Pour ces exercices, la phrase publiee « l'agent ne voit jamais la
+# suite officielle » est FAUSSE.
+#
+# Ce n'est pas une deduction : l'agent le dit lui-meme dans sa sortie. go/book-
+# store, mot pour mot : « I then extended them to cover all 18 cases from the
+# provided cases_test.go data to confirm the solution matches THE FULL HIDDEN
+# SUITE ». 9 exercices go le citent explicitement, et les 9 passent.
+#
+# Ampleur mesuree sur le corpus vierge : 19 go sur 39, 1 java sur 47, 0 ailleurs.
+# Ecart brut entre les deux groupes en go : 16/19 = 84,2 % avec le fichier,
+# 10/20 = 50,0 % sans.
+# `[Tt]estCases` et non `testCases` : go/bowling nomme sa table `scoreTestCases`,
+# et un motif sensible a la casse la manquait -- soit 1 fuite non comptee, dans
+# le sens qui m'arrange. Corrige apres verification a la main sur bowling, say et
+# word-search.
+FLAIRS_TEST = re.compile(r"[Tt]estCases|func Test|TEST_CASE|@Test|#\[test\]"
+                         r"|def test_|describe\(|\bit\(")
+NOMS_TEST = re.compile(r"(^|/)(.*_test\.go|.*Test\.java|.*\.spec\.js"
+                       r"|.*_test\.py|.*_test\.rs|.*_test\.cpp)$", re.I)
+
+
+def fuites_de_masquage(racine):
+    """(piste, exercice) ou un fichier de test officiel est reste visible.
+
+    Mesure sur le CORPUS VIERGE, donc sans regarder un seul verdict.
+
+    Un fichier compte s'il PORTE des cas -- `FLAIRS_TEST`. Ce filtre existe
+    pour une raison precise : `cpp/*/test/tests-main.cpp` porte le nom d'un test
+    mais ne contient que `#define CATCH_CONFIG_MAIN` + `#include "catch.hpp"`.
+    Le compter aurait signale les 26 cpp comme fuites, ce qui est faux.
+    """
+    vierge = os.path.join(racine, "polyglot-benchmark")
+    fuites = set()
+    motif = os.path.join(vierge, "*", "exercises", "practice", "*",
+                         ".meta", "config.json")
+    for cfg_p in glob.glob(motif):
+        ex = os.path.dirname(os.path.dirname(cfg_p))
+        piste, nom = ex.split(os.sep)[-4], os.path.basename(ex)
+        try:
+            masques = set((json.load(io.open(cfg_p, encoding="utf-8"))
+                           .get("files", {}).get("test")) or [])
+        except Exception:
+            continue
+        for cur, sous, fs in os.walk(ex):
+            sous[:] = [s for s in sous if s not in (".meta", ".docs",
+                                                    ".approaches")]
+            for f in fs:
+                rel = os.path.relpath(os.path.join(cur, f), ex).replace("\\", "/")
+                if not NOMS_TEST.search(rel) or rel in masques:
+                    continue
+                try:
+                    txt = io.open(os.path.join(cur, f), encoding="utf-8",
+                                  errors="replace").read()
+                except Exception:
+                    continue
+                if FLAIRS_TEST.search(txt):
+                    fuites.add((piste, nom))
+    return fuites
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("run_d", help="nom du run variante D, ex. pi_D_t1_dflash2")
     ap.add_argument("run_aider", help="dirname du run aider dans tmp.benchmarks")
     ap.add_argument("--racine", default=os.path.join(
         os.path.expanduser("~"), "tools", "aider-bench", "aider", "tmp.benchmarks"))
+    # LES DEUX CONFONDUS CONNUS, exclus par defaut et pour des raisons ECRITES.
+    # Les nommer ici plutot que les retrancher a la main evite qu'une cellule
+    # publiee un jour les reprenne sans le dire.
+    #
+    #   cpp   -- ses 26 stubs d'origine sont des namespaces VIDES ; les stubs
+    #            complets ont ete semes dans le corpus vierge le 27/08, alors
+    #            que le run aider date du 25/08. Les deux bras n'ont donc pas
+    #            recu le meme point de depart. cpp n'est pas comparable, et son
+    #            +85,7 est precisement ce que ce biais produit.
+    #   ledger -- go/ledger et java/ledger portent leur suite dans le fichier
+    #            de solution lui-meme ; le masquage n'a pas de prise.
+    ap.add_argument("--exclure", default="cpp,go/ledger,java/ledger",
+                    help="pistes ou piste/exercice a retirer de la cellule "
+                         "publiable, separes par des virgules")
     a = ap.parse_args()
+    exclus = set(x.strip() for x in a.exclure.split(",") if x.strip())
 
     d = recolter(os.path.join(a.racine, a.run_d), ".dsh.results.json", verdict_d)
     tours = recolter(os.path.join(a.racine, a.run_d), ".dsh.results.json", tours_d)
@@ -229,6 +317,41 @@ def main():
          "Aucun des deux bras n'a recu de sortie d'echec. Le board garde son\n"
          "avantage propre : il LIT le fichier de test officiel. C'est la seule\n"
          "comparaison que ce run autorise.")
+
+    fuites = fuites_de_masquage(a.racine)
+    fuites_ici = sorted(k for k in aveugles if k in fuites)
+    propres = [k for k in aveugles if k not in fuites]
+    print("=" * 62)
+    print("TROU DE MASQUAGE -- %d exercice(s) de l'intersection ou un fichier"
+          % len(fuites_ici))
+    print("de test OFFICIEL est reste visible pendant le tour de l'agent.")
+    print("=" * 62)
+    print("`pilote.py` ne masque que `files.test` ; go range sa table de cas")
+    print("sous `files.editor` (`cases_test.go`), avec entrees ET sorties")
+    print("attendues. Pour ces exercices, « l'agent ne voit jamais la suite")
+    print("officielle » est FAUX -- et l'agent le dit lui-meme : go/book-store,")
+    print("« all 18 cases from the provided cases_test.go ... THE FULL HIDDEN SUITE ».")
+    if fuites_ici:
+        for p, e in fuites_ici:
+            print(f"    {p}/{e:28s} verdict={'PASS' if d[(p, e)] else 'FAIL'}")
+    print()
+
+    bloc("APPARIEMENT PROPRE -- hors exercices ou un test officiel a fuite",
+         a1, propres,
+         "Meme appariement que ci-dessus, prive des exercices ou la premisse de\n"
+         "la variante D ne tenait pas. Trouve par le red team GLM-5.3 du 27/08\n"
+         "(F1), verifie sur pieces avant d'etre repris. cpp y figure encore.")
+
+    def garde(k):
+        return k[0] not in exclus and "%s/%s" % k not in exclus
+
+    publiable = [k for k in propres if garde(k)]
+    bloc("CELLULE PUBLIABLE -- propre ET hors confondus (%s)" % a.exclure,
+         a1, publiable,
+         "C'EST CELLE-CI QUI SE PUBLIE, ET AUCUNE AUTRE. Elle retire, en plus\n"
+         "de la fuite de masquage, les deux confondus documentes : cpp (stubs\n"
+         "semes le 27/08, run aider du 25/08) et les deux `ledger` (suite dans\n"
+         "le fichier de solution). Voir --exclure pour les rouvrir.")
 
     bloc("POUR MEMOIRE -- D a 1 tour  CONTRE  board pass_rate_2  (ASYMETRIQUE)",
          a2, aveugles,
