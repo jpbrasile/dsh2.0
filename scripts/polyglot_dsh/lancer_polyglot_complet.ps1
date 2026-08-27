@@ -152,7 +152,26 @@ foreach ($d in @($goBin, $(if ($jdk) { Join-Path $jdk.FullName 'bin' }))) {
     }
 }
 if ($jdk) { $env:JAVA_HOME = $jdk.FullName }
-foreach ($t in 'cmake', 'go', 'java', 'node', 'python', 'cargo') {
+
+# javascript : `node` seul ne suffit pas. Mesure du 27/08 sur affine-cipher,
+# solution de reference posee :
+#     node --test, zero dependance ............... marche
+#     jest global, sans node_modules local ....... Test Suites: 1 failed,
+#                                                  Tests: 0 total
+#     jest + NODE_PATH vers le global ............ 16 tests, 2 passes, 14 sautes
+# Le juge lie /npm-install/node_modules dans le dossier de l'exercice
+# (benchmark/npm-test.sh) ; NODE_PATH est l'equivalent cote hote. jest 29.7.0
+# et le preset babel d'Exercism ont ete installes en global le 27/08, aux
+# memes versions que le Dockerfile du juge.
+$npmGlobal = Join-Path $env:APPDATA 'npm\node_modules'
+if (Test-Path (Join-Path $npmGlobal '@exercism\babel-preset-javascript')) {
+    $env:NODE_PATH = $npmGlobal
+    Write-Output "  NODE_PATH de l'agent : $npmGlobal"
+} else {
+    Write-Output "  ATTENTION : preset babel d'Exercism absent du npm global."
+}
+
+foreach ($t in 'cmake', 'go', 'java', 'node', 'python', 'cargo', 'jest') {
     $c = Get-Command $t -ErrorAction SilentlyContinue
     if (-not $c) { Write-Output "  ATTENTION : '$t' reste introuvable cote agent." }
 }

@@ -56,22 +56,45 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 # Comment chaque chaine de test annonce l'attendu et l'obtenu. Une seule
 # expression par famille, et on garde le NOM de celle qui a mordu : un echec
 # classe sans qu'on sache par quel motif ne serait pas verifiable.
+# CHAQUE MOTIF EST SOURCE SUR LE CORPUS REEL, pas devine (releve du 27/08 sur
+# tmp.benchmarks/polyglot-benchmark) :
+#   java   989 assertThat  -> AssertJ, PAS JUnit : « expected: X » / « but was: Y »
+#                            sur DEUX lignes, sans chevrons.
+#   python 735 self.assertEqual -> unittest sous pytest : « AssertionError: X != Y »,
+#                            avec un prefixe « Lists differ: » & co. selon le type.
+#   rust   728 assert_eq!  -> rustup NON EPINGLE dans le Dockerfile du juge, donc
+#                            rustc recent : le format sans guillemets obliques
+#                            (>= 1.73) est le probable, l'ancien est garde en repli.
+#   js     954 expect(...) -> jest : « Expected: » / « Received: » pour les valeurs
+#                            simples. Les objets sortent en diff +/- : NON couvert,
+#                            et le traceur dira « illisible » plutot que de deviner.
 MOTIFS = [
     # go : t.Fatalf("...\n got:%q\nwant:%q", ...)
     ("go/got-want", re.compile(
         r'\bgot\s*:\s*(?P<got>"(?:[^"\\]|\\.)*")\s*\n\s*want\s*:\s*'
         r'(?P<want>"(?:[^"\\]|\\.)*")', re.M)),
-    # rust : assert_eq!  ->  left: `...`, right: `...`
-    ("rust/left-right", re.compile(
+    # rust >= 1.73 : assertion `left == right` failed / left: X / right: Y
+    ("rust/left-right-1.73", re.compile(
+        r'^\s*left:\s*(?P<got>.+?)\s*\n\s*right:\s*(?P<want>.+?)\s*$', re.M)),
+    # rust < 1.73 : left: `X`, right: `Y`
+    ("rust/left-right-ancien", re.compile(
         r'left:\s*`(?P<got>(?:[^`\\]|\\.)*)`\s*,?\s*\n?\s*right:\s*'
         r'`(?P<want>(?:[^`\\]|\\.)*)`', re.M)),
     # jest / vitest : Expected: ...  Received: ...
     ("js/expected-received", re.compile(
         r'Expected:\s*(?P<want>.+?)\n\s*Received:\s*(?P<got>.+?)\n', re.S)),
-    # junit : expected: <...> but was: <...>
-    ("java/expected-butwas", re.compile(
+    # AssertJ (le style du corpus java) : expected: X \n but was: Y
+    ("java/assertj", re.compile(
+        r'^\s*expected:\s*(?P<want>.+?)\s*\n\s*but was:\s*(?P<got>.+?)\s*$',
+        re.M)),
+    # junit 5, garde en repli : expected: <X> but was: <Y>
+    ("java/junit-chevrons", re.compile(
         r'expected:\s*<(?P<want>.*?)>\s*but was:\s*<(?P<got>.*?)>', re.S)),
-    # pytest : assert X == Y
+    # unittest sous pytest : AssertionError: X != Y  (« Lists differ: » & co.)
+    ("py/unittest-neq", re.compile(
+        r'AssertionError:\s*(?:\w+ differ:\s*)?(?P<got>.+?)\s*!=\s*'
+        r'(?P<want>.+?)\s*$', re.M)),
+    # pytest nu : assert X == Y
     ("py/assert-eq", re.compile(
         r'^E\s+assert\s+(?P<got>.+?)\s*==\s*(?P<want>.+?)$', re.M)),
 ]
@@ -154,8 +177,13 @@ def deguillemete(s):
             return json.loads(s)
         except Exception:
             s = s[1:-1]
+    # `repr` de python entoure d'APOSTROPHES : sans ce cas, les guillemets
+    # restaient dans la valeur et `difference_lisible` ne voyait plus qu'un
+    # prefixe soit un prefixe. Releve sur unittest, 34 exercices concernes.
+    elif len(s) >= 2 and s[0] == "'" and s[-1] == "'":
+        s = s[1:-1]
     return (s.replace("\\n", "\n").replace("\\t", "\t")
-             .replace('\\"', '"').replace("\\\\", "\\"))
+             .replace('\\"', '"').replace("\\'", "'").replace("\\\\", "\\"))
 
 
 def classer(got, want):

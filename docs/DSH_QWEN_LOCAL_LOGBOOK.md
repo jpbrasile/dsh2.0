@@ -5512,3 +5512,93 @@ répond.
 correctif qui journalise la sortie du juge ; son `.dsh.results.json` n'a pas de
 champ `erreurs`. Retrouver sa cause demande un rejeu du juge dans le conteneur
 que le run occupe — reporté, pas oublié.
+
+---
+
+### R28o — les motifs du traceur étaient faux aux trois quarts ; vérifiés sur des sorties réelles
+
+Le traceur classait `go/beer-song` et `go/connect` correctement. Il ne l'aurait
+fait pour **aucune autre langue** : trois de ses cinq motifs d'extraction
+étaient écrits de mémoire, et faux pour ce corpus. Relevé sur le corpus, pas
+supposé :
+
+| langue | ce que j'avais écrit | ce que le corpus utilise vraiment |
+|---|---|---|
+| java | JUnit, `expected: <X> but was: <Y>` | **AssertJ** — 989 `assertThat`, format `expected: X` / `but was: Y` sur **deux lignes, sans chevrons** |
+| python | pytest nu, `assert X == Y` | **unittest** — 735 `self.assertEqual`, format `AssertionError: X != Y` |
+| rust | `left: \`X\`, right: \`Y\`` | rustup **non épinglé** dans le Dockerfile du juge → rustc récent, plus de guillemets obliques |
+
+Un traceur qui ne mord pas rend « illisible » : il ne ment pas, mais il ne
+mesure rien. Sur java (47), python (34) et rust (39), soit **120 exercices**,
+il n'aurait rien vu.
+
+#### Corrigé, puis vérifié en exécutant
+
+`verifier_motifs.py` rejoue les motifs sur des sorties **capturées en
+exécutant vraiment**, le 27/08 :
+
+- **java** — `./gradlew test --offline` sur affine-cipher, solution de
+  référence dont j'ai passé `GROUP_SIZE` de 5 à 4 : logique du chiffre intacte,
+  groupement faux. Sortie obtenue :
+  `expected: "rzcwa gnxzc dgt"` / `but was: "rzcw agnx zcdg t"`. Classée
+  `blancs` — juste, les deux sont identiques une fois les espaces retirés.
+- **rust** — `rustc --test` (rustc 1.95.0) sur des `assert_eq!`. Format
+  confirmé : `assertion \`left == right\` failed`, puis `left:` / `right:` sur
+  deux lignes, valeurs **sans** guillemets obliques.
+- **python** — `unittest` (3.11.5) sur cinq formes d'`assertEqual` (str, list,
+  dict, int, multiline). Les cinq mordent.
+- **javascript** — **aucun échantillon réel**. jest n'existe que dans le
+  conteneur du juge. Le motif js est donc **déclaré non vérifié**, pas supposé
+  bon.
+
+7 cas, 0 échec. Un défaut de plus corrigé au passage : le `repr` de python
+entoure d'**apostrophes**, que `deguillemete` ne retirait pas — la classe
+restait juste, la phrase d'écart perdait sa précision.
+
+#### Audit d'outillage, fait avant que les blocs arrivent et non après
+
+Le désastre de R28k — 86 exercices mesurés sans chaîne — venait d'un contrôle
+absent. J'ai donc contrôlé **à l'avance**, pour chaque langue restante :
+
+| langue | exigence du juge | état de l'hôte | verdict |
+|---|---|---|---|
+| java | `./gradlew test` | JDK 21.0.12.1 + `~/.gradle` **164 Mo**, `gradle-8.7-bin` (la version des 47 wrappers), jars AssertJ et JUnit présents | **prêt** — prouvé hors ligne : solution de référence, code de sortie **0** |
+| go | `go test ./...` | go1.22.5 hôte contre go1.21.5 juge | **neutre** — les 39 `go.mod` déclarent `go 1.18`, la sémantique 1.22 des variables de boucle **ne s'applique pas** |
+| javascript | `npm-test.sh`, jest global lié dans l'exercice | node 24, jest absent | **était un piège** — voir ci-dessous |
+| python | `pytest` | 3.11.5 | présent |
+| rust | `cargo test` | 1.95.0 | présent |
+
+**Le piège javascript, mesuré et refermé.** Trois voies essayées sur
+affine-cipher, solution de référence posée :
+
+```
+node --test, zero dependance ............... marche
+jest global, sans node_modules local ....... Test Suites: 1 failed, Tests: 0 total
+jest + NODE_PATH vers le node_modules global  16 tests, 2 passes, 14 sautes
+```
+
+Le juge lie `/npm-install/node_modules` dans le dossier de l'exercice
+(`benchmark/npm-test.sh`). L'équivalent côté hôte est `NODE_PATH`. jest 29.7.0
+et le preset babel d'Exercism ont donc été installés en global, **aux versions
+du Dockerfile du juge**, et le lanceur pose `NODE_PATH`. Le garde-fou ne se
+contente plus de chercher `node` : il vérifie que `NODE_PATH` **résout**
+`@exercism/babel-preset-javascript`, puisque jest seul exécute zéro test.
+
+**Vérifié aussi, et ce n'était pas un défaut** : les 47 exercices java portent
+`@Disabled` sur tous les tests sauf le premier (48 fichiers). `pilote.py:696`
+les retire déjà avant le verdict, comme `benchmark.py:1031` d'aider. Mon
+premier essai en montrait 15 sautés uniquement parce qu'il tournait hors du
+pilote.
+
+#### La réserve qui reste, et elle est datée
+
+Le pilote **en cours** (16168) a construit son environnement au démarrage de
+12:29, **avant** ces correctifs. Il n'a donc pas `NODE_PATH`. Quand javascript
+arrivera — après go (32 restants) et java (47), soit environ **4 heures** —
+l'agent y sera dans la situation de la voie 2 : jest présent, zéro test
+exécuté. Il lui restera `node --test`, qui marche, mais ce n'est pas la chaîne
+du juge.
+
+Relancer avant que javascript commence coûte **zéro verdict** : le pilote saute
+tout exercice ayant déjà son `.dsh.results.json`. C'est la même manœuvre qu'en
+R28l, et elle est à décider avant, pas après.

@@ -158,10 +158,35 @@ CHAINE_DE_L_AGENT = {
 }
 
 
-def chaines_manquantes(liste, env):
-    """Langages du peri metre dont l'agent n'a pas l'outil, avec leur poids.
+def _js_resolution_absente(env):
+    """En javascript, la presence de `node` NE SUFFIT PAS -- mesure du 27/08.
 
-    Rend [(langage, outil, nombre d'exercices)]. On regarde le PATH de l'ENV
+    Trois voies essayees sur l'hote, sur affine-cipher, solution de reference
+    en place :
+        node --test, zero dependance ................ marche
+        jest global, sans node_modules local ........ « Test Suites: 1 failed,
+                                                       Tests: 0 total »
+        jest + NODE_PATH vers le node_modules global  16 tests, 2 passes,
+                                                       14 sautes
+    Le juge, lui, lie /npm-install/node_modules dans le dossier de l'exercice
+    (benchmark/npm-test.sh). L'equivalent cote hote est NODE_PATH. On controle
+    donc la RESOLUTION du preset babel, pas la seule presence de jest.
+    """
+    for racine in (env.get("NODE_PATH") or "").split(os.pathsep):
+        if racine and os.path.isdir(os.path.join(
+                racine, "@exercism", "babel-preset-javascript")):
+            return None
+    return ("NODE_PATH ne resout pas @exercism/babel-preset-javascript "
+            "(jest global sans node_modules local execute 0 test)")
+
+
+CONTROLES_SUPPLEMENTAIRES = {"javascript": _js_resolution_absente}
+
+
+def chaines_manquantes(liste, env):
+    """Langages du perimetre dont l'agent n'a pas la chaine, avec leur poids.
+
+    Rend [(langage, ce qui manque, nombre d'exercices)]. On regarde l'ENV
     transmis a l'agent, pas celui du pilote : c'est l'agent qui lancera la
     commande.
     """
@@ -171,6 +196,11 @@ def chaines_manquantes(liste, env):
         outil = CHAINE_DE_L_AGENT.get(langue)
         if outil and not shutil.which(outil, path=env.get("PATH")):
             manque.append((langue, outil, poids[langue]))
+            continue
+        controle = CONTROLES_SUPPLEMENTAIRES.get(langue)
+        souci = controle(env) if controle else None
+        if souci:
+            manque.append((langue, souci, poids[langue]))
     return manque
 
 # Fichiers de CONSTRUCTION que l'agent a le droit de toucher, par extension
