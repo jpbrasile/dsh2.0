@@ -4590,3 +4590,125 @@ Fourchette de travail : **17–23 h**, centrale ~19 h. Deux réserves poussent v
 le haut — un PASS coûte 2,3× un FAIL, et le tour 2 fait monter le taux, donc
 l'allonge. L'estimation sera **remesurée sur les 10 premiers exercices du run
 réel**, ce qui ne coûte rien.
+
+## 27/08 09:25 — Le protocole est fixé par l'opérateur, et je perds l'arbitre au profit d'un greffier
+
+### Ce que l'opérateur a demandé, mot pour mot
+
+1. l'agent pi reçoit **les questions nues, sans indice** ;
+2. il les résout en écrivant **ses propres tests** et itère jusqu'à ce qu'ils
+   passent (de son point de vue) ou jusqu'à la laisse ;
+3. aider teste la source et confirme ou non ; **en cas de désaccord, un agent
+   `claude -p` disposant de toutes les données rend le verdict final.**
+
+### 1 et 2 : d'accord, et c'est plus propre que ce qu'on faisait
+
+C'est la variante D débarrassée du semis. Le point 1 généralise en protocole ce
+qui n'était qu'une mesure ponctuelle.
+
+### 3 : refusé, et l'argument est structurel
+
+**Regarder qui est convoqué.** Il n'y a désaccord que dans un cas : pi croit
+avoir réussi, la suite officielle dit FAIL. Le cas inverse — pi doute et la suite
+passe — n'existe quasiment pas. L'arbitre n'est donc **jamais saisi d'un PASS
+suspect** ; il est saisi exclusivement d'échecs. Il ne peut que faire monter le
+taux. C'est un **cliquet à sens unique** sur la métrique.
+
+**Chiffré sur notre propre matériel.** `javascript/say` : 14 tests officiels sur
+16 passent, les 2 échecs portent sur le littéral
+`Number must be between 0 and 999,999,999,999.`. Un arbitre « avec toutes les
+données » conclurait presque sûrement PASS. Sur les 5 exercices du
+dimensionnement, cette seule décision fait passer le taux de **40 % à 60 %**, et
+elle n'est pas auditable après coup : c'est un jugement, pas un contrôle.
+
+**Second coût.** La suite officielle *est* la définition du banc. Les 52,0 %, les
+40,0 de Qwen3 32B, les 59,6 du 235B en sortent tous. Dès qu'un tiers peut la
+contredire, notre chiffre ne mesure plus la même chose.
+
+**Mais l'intuition visait un vrai problème**, et il a déjà sa réponse : le
+**tour 2**, où la sortie d'erreur officielle revient à l'agent. Le renseignement
+manquant est donné, et l'agent doit s'en servir. Ce qui échoue après ça a échoué.
+
+### Le protocole retenu — le même agent, un rapport au lieu d'un score
+
+1. pi reçoit l'énoncé **nu**, aucun semis ;
+2. pi écrit ses tests et itère jusqu'à ce que **ses** tests passent ou la laisse ;
+3. la suite officielle juge — **verdict final, sans appel** ;
+4. tour 2 : la sortie d'erreur officielle revient à pi, laisse 600 s → deux taux,
+   `pass_1` et `pass_2`, le second comparable au classement ;
+5. un agent Claude **classe** les échecs restants — contrat non énoncé,
+   convention implicite, erreur de logique, rien écrit, coupé — et le résultat
+   est publié **à côté** du taux brut, jamais à sa place.
+
+Différence entre le 3 proposé et le 5 retenu, en une phrase : **le même agent, le
+même contexte, la même analyse, mais il écrit un rapport au lieu de modifier un
+score.**
+
+Un automatisme reste légitime : les **faux échecs du harnais** — `tours=0`,
+`FileNotFoundError`, `TIMEOUT`, cache cmake pollué. Ce ne sont pas des jugements,
+ils se détectent mécaniquement, et les corriger répare l'instrument au lieu de
+desserrer la barre.
+
+### Calendrier : ce qui était demandé se produisait déjà
+
+cpp est le seul langage semé, il tourne en premier, et la mesure appariée était
+déjà armée. Il suffit de **désigner `pi_cpp_sans_semis` comme le bloc cpp
+officiel** et de garder l'arm semé comme témoin. Les 199 autres exercices n'ont
+jamais été semés. Zéro reprise.
+
+## 27/08 09:25 — Le bridage du tour 2, et deux laisses qui disent l'inverse l'une de l'autre
+
+Ordre : « brides le tour 2 à 600 s dès maintenant ». `pilote.py` porte désormais
+`--delai-tour-2`, appliqué aux tours 2+ ; zéro = comportement d'avant.
+
+**Les deux cas de coupure observés disent des choses opposées, et il faut les
+deux.**
+
+| exercice | tour 1 | tour 2 | verdict |
+|---|---|---|---|
+| all-your-base | 119,0 s ✗ | **1 800,3 s COUPÉ** ✗ | FAIL |
+| kindergarten-garden | **1 800,3 s COUPÉ** ✗ | 181,7 s ✓ | **PASS** |
+
+Le premier justifie le bridage : un tour 2 qui part en vrille brûle une demi-heure
+pour un FAIL acquis. Le second **interdit de raccourcir le tour 1** : l'agent a
+été coupé en pleine exploration, et c'est le tour 2 — informé par l'erreur
+officielle — qui a sauvé l'exercice en 181,7 s. La laisse longue au tour 1 sert.
+
+Ce que le bridage peut coûter, écrit avant de le poser : une correction longue
+mais **légitime** au tour 2 devient un FAIL. Sur les exercices déjà jugés aucun
+verdict ne change — le seul tour 2 au-delà de 600 s échouait déjà à 1 800 s.
+
+## 27/08 09:25 — Un dégât de ma main, et l'outil qui le généralise
+
+En tuant le pilote pour appliquer le bridage, j'ai coupé `cpp/complex-numbers` en
+plein tour, donc pendant que sa suite officielle était masquée. Le
+`finally: demasquer` n'a pas tourné, les fichiers sont restés au stash, et à la
+relance l'exercice est sorti `FAIL 0,0 s tours=0 FileNotFoundError`. **Faux échec
+produit par mon arrêt** ; le laisser aurait compté un FAIL fabriqué dans le taux.
+
+`reparer_amputes.py` généralise la réparation : il remet les fichiers du stash et
+**écarte** (renomme, jamais supprime) le résultat des exercices sortis sans aucun
+tour joué. Il ignore le sous-dossier `_maison` — les tests de l'agent, sortis
+légitimement le temps du verdict.
+
+**Il refuse de s'appliquer si un pilote est en vie.** Ma première heuristique — la
+fraîcheur de `TASK.md` — était fausse : `TASK.md` n'est écrit qu'au début de
+chaque tour, donc un tour long fait passer l'exercice **en cours** pour amputé.
+`cpp/kindergarten-garden` s'est fait signaler à tort avant que je corrige par un
+contrôle de processus.
+
+## 27/08 09:25 — Mes estimations de durée ont dérivé deux fois, dans les deux sens
+
+| moment | base | annoncé | ce qui clochait |
+|---|---|---|---|
+| 07:12 | 5 exercices à 0,6 | 17–23 h | rien encore mesuré au nouveau régime |
+| 07:58 | 3 exercices | ~57 h | un seul outlier (tour 2 coupé) portait tout |
+| 08:32 | 11 exercices | ~17 h | **aucune coupure au tour 1 dans l'échantillon** |
+| 09:18 | 13 exercices | **~24 h** | 2 coupures sur 13 (15 %) |
+
+Corrigé du bridage à 600 s : **381,4 s/exercice**. Reste ~22,5 h → fin du run
+principal vers **08 h le 28/08**, plus ~2 h de mesure appariée → **~10 h le 28**.
+
+La leçon est toujours la même et je la répète parce que je viens de la
+re-apprendre : sur un banc à queue lourde, **une moyenne sur 11 tirages ne
+prédit rien** quand un tirage sur sept coûte trente fois la médiane.

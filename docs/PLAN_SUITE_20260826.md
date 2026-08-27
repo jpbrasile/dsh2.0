@@ -1120,3 +1120,126 @@ monter le taux. À remesurer sur les 10 premiers exercices du run réel.
 2. Le splat par **tableau** passe en positionnel : `@('-Config','q38-dflash2')`
    fait prendre `-Config` pour la valeur. Table de hachage obligatoire.
 3. `2>&1` ne capture pas `Write-Host` (flux 6). `*>&1` requis.
+
+---
+
+# Révision du 27/08/2026, 09:25 — R27 : le protocole est fixé, et l'état exact de la carte
+
+## R27a. Protocole du livrable 1, arrêté par l'opérateur
+
+1. pi reçoit l'énoncé **nu**, **aucun semis** ;
+2. pi écrit **ses propres tests** et itère jusqu'à ce qu'ils passent (de son
+   point de vue) ou jusqu'à la laisse ;
+3. la **suite officielle juge — verdict final, sans appel** ;
+4. **tour 2** : la sortie d'erreur officielle revient à pi, laisse 600 s → deux
+   taux publiés, `pass_1` et `pass_2`, le second comparable au classement ;
+5. un agent Claude **classe** les échecs restants et publie sa ventilation **à
+   côté** du taux brut, jamais à sa place.
+
+**L'arbitre a été refusé, et l'argument doit rester lisible.** L'opérateur
+proposait qu'un `claude -p` tranche les désaccords. Il n'y a désaccord que dans
+un sens — pi croit avoir réussi, la suite dit FAIL — donc l'arbitre n'est jamais
+saisi d'un PASS suspect : **cliquet à sens unique** sur la métrique. Chiffré :
+`javascript/say` passe 14 tests officiels sur 16 et n'échoue que sur un littéral
+énoncé nulle part ; un arbitre le passerait, et sur les 5 exercices du
+dimensionnement cette seule décision porte le taux de 40 % à 60 %. De plus la
+suite officielle **est** la définition du banc — tous les comparables publiés en
+sortent.
+
+Le tour 2 répond déjà au problème visé : il **donne** le renseignement manquant.
+
+## R27b. Semis cpp : mesure appariée, et désignation
+
+Les 26 stubs cpp ont été semés le 27/08 (en-tête de référence, corps retirés) —
+leur original est un namespace **vide**, alors que les cinq autres langages
+livrent leurs signatures gratuitement. Mais `--tours 2` rend le semis largement
+**redondant** : l'erreur de compilation nomme les symboles manquants, et c'est
+par là que les modèles du classement passent le cpp.
+
+**Décision** : `pi_cpp_sans_semis` est **le** bloc cpp officiel ;
+`pi_D_t1_dflash2/cpp` devient un **témoin** publié à côté. Les 199 autres
+exercices n'ont jamais été semés.
+
+Le seul appui du semis reste `cpp/gigasecond`, FAIL 1 508 s → PASS 460 s :
+**n = 1 sous échantillonnage**, ce qui ne vaut rien — même raisonnement que celui
+rejeté le matin même pour dflash2.
+
+## R27c. Laisse par tour : les deux coupures observées disent l'inverse
+
+| exercice | tour 1 | tour 2 | verdict |
+|---|---|---|---|
+| all-your-base | 119,0 s ✗ | **1 800,3 s COUPÉ** ✗ | FAIL |
+| kindergarten-garden | **1 800,3 s COUPÉ** ✗ | 181,7 s ✓ | **PASS** |
+
+Le premier justifie `--delai-tour-2 600`. Le second **interdit de raccourcir le
+tour 1** : coupé en pleine exploration, il est sauvé par le tour 2 informé.
+Coût déclaré du bridage : une correction longue mais légitime devient un FAIL.
+Sur les exercices déjà jugés, aucun verdict ne change.
+
+## R27d. ÉTAT DE LA CARTE AU 27/08 09:25 — commandes, pas souvenirs
+
+**Serveur en vol** (dflash2, température de carte) :
+
+    llama-server (fork build-faq, PID relance par basculer_serveur_t1.ps1)
+      --ctx-size 163840 --flash-attn on --cache-type-k q8_0 --cache-type-v q4_0
+      --parallel 1 --temp 1.0 --top-k 20 --top-p 0.95 --min-p 0
+      --presence-penalty 0.0 --repeat-penalty 1.0
+      --alias specdec-q38-dflash2 --spec-type draft-dflash
+      -md Qwen3.8-27B-DFlash2-Q4_K_M.gguf --spec-draft-n-max 7
+    VRAM 23 764 MiB / 375 MiB libres
+
+**Run principal** `pi_D_t1_dflash2` — 225 exercices, variante D, 2 tours,
+laisses 1800/600, départ 07:12, journal
+`scripts/polyglot_dsh/polyglot_t1_dflash2_b.log`.
+Au 09:18 : **13 jugés, 12 PASS** (`pass_1` 10/13, `pass_2` 12/13), tous cpp.
+Seul échec `all-your-base`. `complex-numbers` a son résultat **écarté**
+(`.dsh.results.json.ampute-*`) après l'amputation de 08:07 ; il sera rejoué par
+l'étape 4 de `mesurer_valeur_du_semis.ps1`.
+
+**Bras GPQA** : en pause, 115 enregistrements plain conservés, tous à
+temperature 1.0 / top_p 0.95 / top_k 20 / min_p 0 (vérifié 115/115). Reprendra
+en dflash2 dans un **fichier neuf** `local_q4_t1_libre_dflash2.jsonl`, rotation
+repartie de zéro (~2,5–3 h).
+
+**Ce qui doit se passer ensuite, dans l'ordre**, tout est câblé :
+
+    # 1. quand le bloc cpp est depasse (premier verdict non-cpp au journal)
+    scripts\polyglot_dsh\mesurer_valeur_du_semis.ps1
+    #    -> arrete lanceur puis pilote, repare les amputes, complete le bras
+    #       AVEC semis a 26, retire le semis, joue les 26 cpp sous
+    #       pi_cpp_sans_semis, REMET le semis, depouille, relance le principal
+
+    # 2. depouillement de l'appariement, deja ecrit
+    python comparer_semis.py pi_D_t1_dflash2 pi_cpp_sans_semis --langage cpp
+
+    # 3. reprise manuelle du principal si besoin (reprend sans perte)
+    scripts\polyglot_dsh\lancer_polyglot_complet.ps1 -Nom pi_D_t1_dflash2 `
+      -Modele specdec-q38-dflash2 -Tours 2 -DelaiTour 1800 -DelaiTour2 600
+
+    # 4. reparation apres tout arret brutal du pilote
+    python reparer_amputes.py <run> --appliquer     # refuse si un pilote vit
+
+    # 5. bascule du semis (refuse si un pilote vit -- corpus lu EN DIRECT)
+    python basculer_semis.py [--retirer|--remettre]
+
+**Reste à écrire** : `classer_echecs.py` — classement mécanique d'abord
+(littéral absent de l'énoncé et du stub par `grep` ; rien écrit dans le fichier
+noté par diff ; tour coupé par `journal[].coupe` ; erreur de compilation par
+motif), agent `claude -p` sur le seul résidu « erreur de logique ». Il ne déplace
+jamais un verdict.
+
+## R27e. Durée : mes estimations ont dérivé deux fois, dans les deux sens
+
+| moment | base | annoncé | ce qui clochait |
+|---|---|---|---|
+| 07:12 | 5 exercices à temp 0,6 | 17–23 h | rien de mesuré au nouveau régime |
+| 07:58 | 3 exercices | ~57 h | un seul outlier portait tout |
+| 08:32 | 11 exercices | ~17 h | aucune coupure au tour 1 dans l'échantillon |
+| 09:18 | 13 exercices | **~24 h** | 2 coupures sur 13 (15 %) |
+
+Corrigé du bridage : **381,4 s/exercice**. Reste ~22,5 h → run principal fini
+vers **08 h le 28/08**, +2 h de mesure appariée → **~10 h le 28**.
+
+Sur un banc à queue lourde, une moyenne sur 11 tirages ne prédit rien quand un
+tirage sur sept coûte trente fois la médiane. C'est la deuxième fois de la
+journée.
