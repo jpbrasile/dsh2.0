@@ -49,6 +49,13 @@
       "mecanisme_signature": "Non signale, et c'est coherent : PREDICTION_LIBELLES_ERREUR.md soutient qu'aucun detecteur par exercice n'est possible pour cette famille. Rien dans l'enonce ni dans le stub ne distingue « une erreur » de « une erreur dont le texte sera compare au caractere pres ».",
       "preuve": "7 tests passent, et ce sont TOUS les cas de chainage positif : nineElements, separateLoops, needBacktrack, canReverseDominoes, threeElements, singleton, empty. L'algorithme marche. Les 6 qui tombent sont les cas de REJET, et ils portent tous la meme forme -- 6 occurrences de « Expecting message to be » et ZERO comparaison de valeur dans la sortie entiere (compte le 27/08) : attendu « No domino chain found. », obtenu « not all vertices have even degree ». L'agent detecte donc correctement l'impossibilite -- son propre test MaisonTest > oddDegreeFails PASSE -- et se trompe uniquement de redaction. La chaine « No domino chain » est ABSENTE de .docs/ et du stub, verifie par grep recursif."
     },
+    "java/house": {
+      "classe": "ambiguite",
+      "signature": "S2",
+      "divergence": "separateur_interne",
+      "mecanisme_signature": "FAMILLE oui, POSITION non, et la nuance vaut d'etre gardee. S2 dit « un separateur TERMINAL y est invisible » ; ici les separateurs sont INTERNES, et ils ne sont pas invisibles -- ils sont VISIBLES et l'agent les a copies. La claim profonde de S2 tient pourtant entierement : un bloc de sortie rendue ne specifie pas la vraie structure de la chaine. Elle la contredit meme. Enregistre tel quel, et GARDE dans le decompte : la pre-inscription annonce que les signales echouent plus, pas par quel mecanisme.",
+      "preuve": "Le contenu est identique CARACTERE POUR CARACTERE : joindre la sortie de l'agent par une espace au lieu d'un saut de ligne donne exactement l'attendu. Juge sur verseSix -- attendu « This is the cow with the crumpled horn that tossed the dog that worried the cat that killed the rat that ate the malt that lay in the house that Jack built. » sur UNE ligne ; obtenu les memes mots, meme ordre, meme ponctuation, repartis sur six lignes. Tout l'enchassement cumulatif, qui est le sujet de l'exercice, est donc juste. Et l'element divergent n'est pas seulement absent de l'enonce : L'ENONCE MONTRE LE CONTRAIRE. Son bloc ```text affiche « This is the rat / that ate the malt / that lay in the house that Jack built. » avec exactement les sauts de ligne que l'agent a produits. L'agent a reproduit fidelement le seul exemple qu'il pouvait voir. 13 des 14 tests tombent, tous sur ce seul point."
+    },
     "java/go-counting": {
       "classe": "ambiguite",
       "signature": "S2",
