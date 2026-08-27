@@ -4334,3 +4334,85 @@ compteur de suspects ne compte que ceux-là.
 `lancer_polyglot_complet.ps1` appelle `auditer_pass.py` **après les 225 et avant
 de rendre la carte au bras GPQA**. Le taux ne sera donc jamais publié sans que
 chacun de ses succès ait été passé aux cinq contrôles.
+
+## 27/08 06:50 — « Divergent » n'est pas « dégradé » : je l'avais confondu, et l'expérience part
+
+### La question de l'opérateur était juste, et elle corrige une formulation à moi
+
+« Mais avec dflash les perf ne sont pas dégradées ? » — j'avais écarté dflash2 en
+disant qu'« il ne dit pas la même chose », ce qui laisse entendre *moins bien*.
+Ce n'est pas ce qui a été mesuré.
+
+**Ce qui est mesuré (B1)** : en glouton, graine fixe, même binaire, plain contre
+dflash2 rend **12/12 sorties divergentes**, avec deux témoins muets. En
+température 0 il n'existe qu'une seule suite correcte, donc un spéculateur
+correct **doit** la reproduire à l'octet près. Le nôtre ne le fait pas : il
+accepte des jetons qui ne sont pas l'argmax du modèle. C'est un **défaut
+d'implémentation**, cohérent avec la dette déclarée du fork (« Revert draft
+sampling in rejection sampling »).
+
+**Ce qui n'est PAS mesuré** : l'effet sur la **justesse**. Jamais.
+
+**Et le seul point de qualité qu'on possède a été obtenu AVEC dflash2** : le
+`pass_rate_2 = 52,0 %` de la fenêtre 7quater, au-dessus de Qwen3 32B (40,0) et
+sous Qwen3 235B-A22B (59,6). Pas d'effondrement visible.
+
+La vraie raison d'écarter dflash2 du bras GPQA n'était donc pas « ça dégrade »,
+c'était **l'attribution** : avec un décodeur qui modifie la sortie, on ne peut
+pas dire si le chiffre appartient au modèle ou au couple modèle+brouillon. Pour
+un chiffre censé caractériser le modèle contre des publications faites sur
+décodeur nu, ça reste disqualifiant. Pour le polyglot, c'est une autre question —
+voir la règle ci-dessous.
+
+### L'expérience, et sa règle de décision ÉCRITE AVANT LE RÉSULTAT
+
+Ordre : « refais simplement les runs déjà faits ici avec dflash2 ».
+
+Mêmes 5 exercices (`--pas 45 --decalage 10`), même variante D, même laisse, même
+corpus (stubs cpp semés des deux côtés). Serveur : argv **identique** au bras
+plain — binaire `build-faq`, `--ctx-size 163840`, KV `q8_0/q4_0`, `--parallel 1`
+— plus `--spec-type draft-dflash`, `-md <brouillon>`, `--spec-draft-n-max 7`.
+**Un facteur.** Le lanceur refuse de partir si le serveur vivant ne porte pas
+exactement ça (leçon du bras mal étiqueté du 26/08, cette fois câblée).
+
+**Référence plain (`pi_dimD2`)** : cpp/gigasecond PASS 459,7 · go/simple-linked-list
+FAIL 141,1 · java/sgf-parsing FAIL 372,4 · javascript/say FAIL 105,2 ·
+python/two-bucket PASS 495,7.
+
+**Confondant déclaré, sur 1 exercice sur 5** : `CMakeLists.txt` est éditable en
+cpp depuis 05:55, donc **après** le bras plain. Pour `cpp/gigasecond` deux
+facteurs bougent ; sa comparaison ne conclut rien seule. Les 4 autres sont
+propres — `CONSTRUCTION` ne contient que `.cpp`.
+
+**Règle, posée maintenant :**
+
+1. **Un seul verdict qui bascule** parmi les 4 propres ⇒ dflash2 **refusé** pour
+   B6. Sur n=4, un basculement est un signal fort.
+2. **Aucun basculement + durée nettement plus basse** ⇒ ce n'est **pas** une
+   preuve de neutralité. Quatre exercices ne détectent qu'un effet **grossier** ;
+   une perte de quelques points passerait sous le radar, et ce sera écrit tel
+   quel.
+3. **Partage tranché entre les deux livrables**, et il ne se décide pas au
+   résultat :
+   * **GPQA reste plain.** Le chiffre doit caractériser le modèle, pas le couple.
+   * **Le polyglot peut prendre dflash2** — et c'est même le choix *cohérent* :
+     le comparable maison (`pass_rate_2 = 52,0 %`, 7quater) a été mesuré avec
+     dflash2. L'y remettre rend les deux chiffres comparables au lieu de créer
+     un troisième régime. Condition : la config est **déclarée** à la
+     publication, comme elle l'était en 7quater.
+
+Ce qui trancherait vraiment la question de justesse est un banc apparié bien plus
+large. On ne le fait pas, et on ne prétendra pas l'avoir fait.
+
+### État de la carte
+
+B6 arrêté à **4 exercices sur 225** (cpp : all-your-base FAIL 205,0 ; allergies
+PASS 88,8 ; bank-account PASS 425,3 ; binary-search-tree PASS 548,5 — 3 PASS sur
+4, le semis tient). Reprise **sans perte** : `pilote.py:1044` saute tout exercice
+qui porte déjà son `.dsh.results.json`. Le lanceur a été tué **avant** le pilote,
+pour qu'il ne rallume pas le bras GPQA.
+
+**Et une mesure qui ferme une porte** : avec le brouillon chargé, la carte passe
+à **23 793 MiB utilisés, 346 MiB libres**. dflash2 consomme exactement les 3 GiB
+qu'on envisageait pour du CUDA en cohabitation. **Les deux idées s'excluent** sur
+cette carte — c'est l'un ou l'autre, et ça n'avait pas été vu avant de charger.

@@ -939,3 +939,77 @@ desserrée, pas mesure.
 3. **Ordre** : B6 après le bras GPQA, tranché par l'opérateur. Le bras est reparti
    (PID 37012, 114 enregistrements conservés) ; il lui reste ~84 appels, soit
    ~7 h. B6 démarrerait donc vers 13 h pour finir vers 9 h le lendemain.
+
+---
+
+# Révision du 27/08/2026, 06:50 — R25 : dflash2 remis en question, et la règle est écrite avant le résultat
+
+## R25a. Rétractation partielle : « divergent » n'est pas « dégradé »
+
+R21/R24 écartaient dflash2 en disant qu'il « change la sortie », formule qui
+laisse entendre *moins bien*. **Ce n'est pas ce qui a été mesuré.**
+
+| affirmation | statut |
+|---|---|
+| dflash2 n'est pas sans perte (12/12 divergents en glouton, 2 témoins muets) | **mesuré** |
+| dflash2 dégrade la justesse | **NON mesuré** |
+| le seul point de qualité connu (`pass_rate_2 = 52,0 %`, 7quater) est **avec** dflash2 | **mesuré** |
+
+La divergence en glouton reste un défaut réel — à température 0 une seule suite
+est correcte, donc un spéculateur correct doit la reproduire ; le nôtre accepte
+des jetons qui ne sont pas l'argmax. C'est cohérent avec la dette déclarée du
+fork (« Revert draft sampling in rejection sampling »). Mais la conséquence sur
+un taux n'a jamais été chiffrée.
+
+## R25b. L'expérience en cours, et sa règle de décision PRÉ-ENREGISTRÉE
+
+Mêmes 5 exercices que `pi_dimD2`, même variante D, même corpus. Serveur d'argv
+identique au bras plain (binaire `build-faq`, ctx 163840, KV q8_0/q4_0,
+`--parallel 1`) plus `--spec-type draft-dflash -md <brouillon>
+--spec-draft-n-max 7`. **Un facteur.** Le lanceur `rejouer_dflash2.ps1` refuse de
+partir (exit 6) si le serveur vivant ne porte pas exactement cette configuration.
+
+Référence plain : cpp/gigasecond **PASS** 459,7 · go/simple-linked-list FAIL
+141,1 · java/sgf-parsing FAIL 372,4 · javascript/say FAIL 105,2 ·
+python/two-bucket **PASS** 495,7.
+
+**Confondant déclaré, 1 exercice sur 5** : `CMakeLists.txt` est éditable en cpp
+depuis R24c (05:55), donc après le bras plain. `cpp/gigasecond` porte deux
+facteurs et ne conclut rien seul. Les 4 autres sont propres.
+
+**Règle, posée avant de voir le résultat :**
+
+1. **Un basculement de verdict** parmi les 4 propres ⇒ dflash2 **refusé** pour B6.
+2. **Aucun basculement + durée nettement plus basse** ⇒ **pas une preuve de
+   neutralité**. Quatre exercices ne détectent qu'un effet grossier ; une perte
+   de quelques points resterait invisible. Ce sera écrit tel quel.
+3. **Le partage entre livrables ne se décide pas au résultat** :
+   * **GPQA reste plain** — ce chiffre doit caractériser le modèle, pas le
+     couple modèle+brouillon, et il se compare à des publications faites sur
+     décodeur nu.
+   * **Le polyglot peut prendre dflash2**, et c'est le choix *cohérent* : le
+     comparable maison (`pass_rate_2 = 52,0 %`) a été mesuré avec dflash2 ; l'y
+     remettre rend les deux chiffres comparables au lieu de créer un troisième
+     régime. Condition : configuration **déclarée** à la publication.
+
+## R25c. dflash2 et la cohabitation CUDA s'excluent
+
+Mesure au chargement : **23 793 MiB utilisés, 346 MiB libres**. Le brouillon
+consomme exactement les 3 048 MiB que R21 avait relevés comme libres. La piste
+« utiliser le reste de VRAM pour du CUDA » et la piste dflash2 ne peuvent pas
+coexister sur cette carte. À arbitrer explicitement, jamais par défaut.
+
+## R25d. État de B6 et conditions de reprise
+
+B6 arrêté à **4/225** — cpp uniquement : all-your-base FAIL 205,0 ; allergies
+PASS 88,8 ; bank-account PASS 425,3 ; binary-search-tree PASS 548,5. **3 PASS sur
+4 en cpp**, le langage injouable il y a deux heures : le semis (R20) tient.
+
+Reprise **sans perte** : `pilote.py:1044` saute tout exercice portant déjà son
+`.dsh.results.json`. Le lanceur a été tué avant le pilote pour qu'il ne rallume
+pas le bras GPQA.
+
+**Conséquence sur l'estimation** : si dflash2 est retenu, les ~20 h de B6
+tombent à ~9–10 h au débit de 2,2×, et B6 finirait dans l'après-midi du 27 au
+lieu de la nuit du 28. Cette accélération ne sera annoncée qu'une fois mesurée
+sur le rejeu — le 2,2× vient du banc de débit, pas du banc agentique.
