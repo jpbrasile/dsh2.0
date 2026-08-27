@@ -4847,3 +4847,48 @@ propre.
 réelles.** Le correctif est mesuré, compilé, éprouvé sur banc — mais tant que le
 journal du run ne porte pas sa première ligne `COUPE : silence` ou
 `BOITE DE DIALOGUE tuée`, c'est une hypothèse outillée, pas un fait.
+
+### 27/08 10:43 — Première coupure en conditions réelles : c'est la laisse, pas le chien
+
+R28e disait : « aucune coupure sur silence ni boîte tuée n'est encore survenue
+en conditions réelles ». La première coupure est tombée à **10:42:52**. **Ce
+n'est pas le chien.**
+
+    ligne 34 :    COUPE : laisse 600s (apres 601.5 s)
+    cpp   parallel-letter-frequency   FAIL  1150.0s  tours=2
+
+Le tour 2 de `parallel-letter-frequency` : agent démarré **10:32:51**, dernier
+appel au modèle **10:33:00**, tué **10:42:52**. **592 s de silence sur 601,5 s
+de paroi — 98 %.** Le diagnostic R28a se vérifie une quatrième fois ; c'est le
+mors du tour 2 (R27) qui a mordu, huit secondes avant le chien.
+
+#### Le trou, et il est structurel
+
+Au tour 2, `--veille-silence 600` **ne peut jamais** se déclencher avant
+`--delai-tour-2 600` : la laisse compte depuis le début du tour, le silence
+depuis le dernier appel, qui est forcément **après**. Le chien est donc un
+no-op au tour 2 **par construction**, quelle que soit la pendaison. Il ne mord
+qu'au tour 1, où la laisse vaut 1 800 s.
+
+Coût mesuré du trou : ce tour a brûlé 601 s là où un chien à 300 s aurait coupé
+vers 310 s. **Non corrigé pour l'instant** : corriger impose d'arrêter le run,
+et l'arrêt coûte plus que les ~290 s qu'il rendrait. À reprendre au prochain
+arrêt naturel, en posant `--veille-silence` **strictement inférieur** au délai
+du tour 2.
+
+#### Ce qui, lui, est prouvé en conditions réelles
+
+Le `find / -name "parallel_letter_frequency_test.cpp"` non borné (PID 61680),
+descendant de l'agent coupé, **est mort avec lui** — `tuer_arbre` fait ce qu'on
+lui demande sur un descendant réel. Le run a enchaîné seul : agent suivant à
+**10:43:04**, appel au modèle à **10:43:07**, 18 cpp jugés.
+
+#### Ce qui reste non prouvé
+
+Toujours **aucune** ligne `COUPE : silence` ni `BOITE DE DIALOGUE tuée`. Le
+chien et le tueur restent éprouvés au banc seulement.
+
+*Correction* : les deux `find /` vus vivants à 08:44:05 ne sont **pas** des
+commandes d'agent — ce sont mes propres guetteurs en `sleep 60`, parent
+`claude`, 0 s de CPU, sur un journal `..._b.log` qui n'existe plus. Sans effet
+sur la mesure.
