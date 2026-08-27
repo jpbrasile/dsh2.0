@@ -603,7 +603,7 @@ def consigne_initiale(ex_hote, editables):
 # ---------------------------------------------------------------------------
 def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
                 stash_ex=None, sans_tests=False, sans_corriges=False,
-                tests_maison=False):
+                tests_maison=False, delai_tour_2=0):
     cfg = lire_config(ex_hote)
     editables = fichiers_editables(ex_hote, cfg)
     fichiers_test = cfg.get("files", {}).get("test", [])
@@ -650,9 +650,22 @@ def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
         # heriter du cache cmake Linux laisse par le juge du tour precedent.
         nettoyes += nettoyer_artefacts(ex_hote, ex_vierge)
         try:
+            # LAISSE PAR TOUR. Le tour 1 explore ; les tours suivants
+            # corrigent avec l'erreur du juge en main, et cette
+            # correction est BON MARCHE quand elle converge (mesure du
+            # 27/08 : cpp/bank-account, tour 1 194,7 s echoue, tour 2
+            # 31,8 s passe). Quand elle ne converge pas, elle brule la
+            # laisse entiere pour rien : cpp/all-your-base, tour 2 coupe
+            # a 1 800,3 s, verdict FAIL de toute facon -- 77 % du temps
+            # du run consomme par un seul tour sans effet sur le taux.
+            # D'ou une laisse courte au-dela du tour 1. Zero = meme
+            # laisse partout, comportement d'avant inchange.
+            laisse = delai_tour
+            if tour > 1 and delai_tour_2:
+                laisse = delai_tour_2
             rc, sortie, secondes, coupe = lancer_dsh(
                 cmd_dsh + [CONSIGNE],
-                ex_hote, env, delai_tour)
+                ex_hote, env, laisse)
         finally:
             if sortis:
                 demasquer(ex_hote, stash_ex, sortis)
@@ -855,6 +868,8 @@ def main():
     ap.add_argument("--fournisseur", default="local-think")
     ap.add_argument("--dsh", default=os.environ.get("DSH_BIN", DSH_DEFAUT))
     ap.add_argument("--delai-tour", type=int, default=900)
+    # Laisse des tours 2+. 0 = identique a --delai-tour.
+    ap.add_argument("--delai-tour-2", type=int, default=0)
     args = ap.parse_args()
 
     vierge = os.path.join(BENCH_HOTE, ORIGINAL)
@@ -991,6 +1006,9 @@ def main():
         liste = liste[:args.limite]
     dire("exercices a jouer : %d   tours : %d   delai/tour : %d s"
          % (len(liste), args.tours, args.delai_tour))
+    if args.delai_tour_2:
+        dire("  laisse des tours 2+ : %d s (le tour 1 garde %d s)"
+             % (args.delai_tour_2, args.delai_tour))
     if args.tests_maison:
         dire("VARIANTE D : l'agent ECRIT ses propres tests.")
         dire("  la suite d'acceptation est masquee ; les tests de l'agent")
@@ -1048,6 +1066,7 @@ def main():
             res = un_exercice(ex_hote, ex_vierge, cmd_dsh, env,
                               args.tours, args.delai_tour,
                               stash_ex=stash_ex,
+                              delai_tour_2=args.delai_tour_2,
                               sans_tests=args.sans_tests or args.tests_maison,
                               sans_corriges=args.sans_corriges or args.tests_maison,
                               tests_maison=args.tests_maison)

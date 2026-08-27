@@ -68,10 +68,22 @@
 # au tour 2 l'agent lit le litteral dans l'erreur et corrige. Ce qui echoue
 # APRES avoir vu l'erreur n'a plus d'excuse de protocole.
 
+# LAISSE COURTE AU TOUR 2, ordre operateur du 27/08 08:05. Mesure des 3
+# premiers exercices du run : le tour 2 corrige en 31,8 s quand il converge
+# (cpp/bank-account, tour 1 194,7 s echoue), et brule 1 800,3 s pour rien quand
+# il ne converge pas (cpp/all-your-base, coupe, FAIL de toute facon) -- 77 % du
+# temps consomme par un seul tour sans effet sur le taux. 600 s borne la casse.
+#
+# CE QUE CE BRIDAGE PEUT COUTER, et il faut le dire : une correction longue mais
+# LEGITIME au tour 2 devient un FAIL. Sur les 3 exercices deja juges, aucun
+# verdict ne change -- le seul tour 2 au-dela de 600 s echouait deja a 1 800 s.
+
 param(
     [string]$Nom = 'pi_D_complet',
     [string]$Modele = 'specdec-q38-plain',
-    [int]$Tours = 2
+    [int]$Tours = 2,
+    [int]$DelaiTour = 1800,
+    [int]$DelaiTour2 = 600
 )
 
 $ErrorActionPreference = 'Stop'
@@ -127,10 +139,10 @@ Start-Process -FilePath 'node' -ArgumentList 'proxy.mjs' `
 Start-Sleep -Seconds 3
 
 Write-Output ''
-Write-Output "=== LIVRABLE 1 : 225 exercices, VARIANTE D, $Tours tour(s), laisse 1800 s ==="
+Write-Output "=== LIVRABLE 1 : 225 exercices, VARIANTE D, $Tours tour(s), laisse $DelaiTour s (tour 2+ : $DelaiTour2 s) ==="
 python pilote.py $Nom --agent pi --accueil-pi $accueilPi --dotenv $dotenv `
     --tests-maison --conteneur pi-polyglot-tests `
-    --tours $Tours --delai-tour 1800 --effort medium `
+    --tours $Tours --delai-tour $DelaiTour --delai-tour-2 $DelaiTour2 --effort medium `
     --fournisseur local-mesure --modele $Modele
 
 Write-Output ''
