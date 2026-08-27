@@ -49,6 +49,21 @@
       "mecanisme_signature": "Non signale, et c'est coherent : PREDICTION_LIBELLES_ERREUR.md soutient qu'aucun detecteur par exercice n'est possible pour cette famille. Rien dans l'enonce ni dans le stub ne distingue « une erreur » de « une erreur dont le texte sera compare au caractere pres ».",
       "preuve": "7 tests passent, et ce sont TOUS les cas de chainage positif : nineElements, separateLoops, needBacktrack, canReverseDominoes, threeElements, singleton, empty. L'algorithme marche. Les 6 qui tombent sont les cas de REJET, et ils portent tous la meme forme -- 6 occurrences de « Expecting message to be » et ZERO comparaison de valeur dans la sortie entiere (compte le 27/08) : attendu « No domino chain found. », obtenu « not all vertices have even degree ». L'agent detecte donc correctement l'impossibilite -- son propre test MaisonTest > oddDegreeFails PASSE -- et se trompe uniquement de redaction. La chaine « No domino chain » est ABSENTE de .docs/ et du stub, verifie par grep recursif."
     },
+    "java/go-counting": {
+      "classe": "ambiguite",
+      "signature": "S2",
+      "divergence": "exigence_de_rejet",
+      "mecanisme_signature": "NON. S2 signale un bloc de sortie rendue sur 6 lignes et son separateur terminal ; l'echec porte sur le REJET de coordonnees hors plateau. La signature a designe le bon exercice pour la mauvaise raison, et le decompte le garde tel quel -- la pre-inscription annonce que les exercices signales ECHOUENT PLUS, pas par quel mecanisme. S4, elle, ne pouvait pas tirer : elle exige un retour d'erreur DECLARE, or le stub ne porte aucun `throws` (`Set<Point> getTerritory(int x, int y)`). Meme angle mort que go/trinary et go/octal, nomme et non comble apres coup.",
+      "preuve": "Toute la logique de comptage passe : whiteCenter5x5BoardTest, blackCorner5x5BoardTest, stoneNotTerritory5x5Board, twoRegionRectangularBoardTest. Les 4 qui tombent sont exactement les 4 cas de coordonnee hors plateau -- invalidXTooHigh, invalidXTooLow, invalidYTooHigh, invalidYTooLow -- et tous avec le meme message, « Expecting code to raise a throwable ». L'enonce fait 1 207 caracteres et ne contient AUCUNE occurrence de « error », « invalid », « must », « cannot », « exception », « throw », « outside » ni « range » -- verifie par grep le 27/08. Le stub ne declare pas d'erreur. Rien de visible n'annonce ce rejet. Meme phenomene que go/tree-building."
+    },
+    "java/forth": {
+      "classe": "fond",
+      "signature": "aucune",
+      "divergence": "contrat_d_entree_mal_lu",
+      "attention_ce_classement_arrange_la_prediction": "forth n'etait PAS signale. Le classer `fond` le RETIRE de la colonne des echecs non signales, donc cela sert la prediction. C'est pourquoi le critere lui est applique strictement et la preuve porte sur ce que l'agent POUVAIT LIRE, pas sur le compte d'echecs.",
+      "preuve": "Cause unique, ForthEvaluator.java:26 : `for (String token : input)`. `input` est un List<String> de LIGNES -- la suite passe Collections.singletonList(\"1 dup\") -- et l'agent traite la ligne entiere comme UN SEUL jeton. Il ne decoupe jamais sur les espaces. D'ou 46 « IllegalArgumentException: Unknown command » sur 54 echecs, et 54 tests sur 55 qui tombent. La condition (1) du critere -- la logique passe les cas voisins -- n'est donc pas remplie, et on ne peut nommer aucun cas officiel qui passe. Surtout, l'element divergent N'ETAIT PAS cache : l'enonce donne les regles de lexing (« a number is a sequence of one or more (ASCII) digits, a word is a sequence of one or more letters, digits, symbols or punctuation that is not a number ») et la syntaxe « : word-name definition ; ». Ces regles n'ont de sens que si l'agent decoupe lui-meme. Le reste de son code est complet et correct d'aspect -- pile, mots, definitions, garde de recursion.",
+      "lecon_variante_D": "L'agent a ecrit 35 tests maison, et LES 35 PASSENT, pendant que 54 des 55 tests officiels tombent. Des tests ecrits par l'agent confirment sa lecture du contrat au lieu de l'eprouver. C'est le risque propre de la variante D, et il ne se voit que parce que le juge est independant."
+    },
     "java/food-chain": {
       "classe": "ambiguite",
       "signature": "S2",
