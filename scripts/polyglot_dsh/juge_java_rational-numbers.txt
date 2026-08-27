@@ -1,0 +1,199 @@
+juge     : ./gradlew test
+conteneur: pi-polyglot-tests
+repertoire: /benchmarks/pi_D_t1_dflash2/java/exercises/practice/rational-numbers
+tests remis a neuf, @Disabled retires : src/test/java/RationalTest.java
+
+code de retour : 1   (6637 caracteres -> juge_java_rational-numbers.txt)
+est > testSubtractTwoNegativeRationalNumbers() PASSED
+
+RationalTest > testRaiseANegativeRationalNumberToAPositiveIntegerPower() PASSED
+
+RationalTest > testReducePlacesTheMinusSignOnTheNumerator() PASSED
+
+RationalTest > testMultiplyARationalNumberByZero() PASSED
+
+RationalTest > testAbsoluteValueOfAPositiveRationalNumberWithNegativeNumeratorAndDenominator() PASSED
+
+RationalTest > testAbsoluteValueOfANegativeRationalNumber() PASSED
+
+RationalTest > testAddARationalNumberToItsAdditiveInverse() PASSED
+
+RationalTest > testRaiseZeroToAnIntegerPower() PASSED
+
+RationalTest > testRaiseANegativeRationalNumberToAnEvenNegativeIntegerPower() PASSED
+
+RationalTest > testReduceOneToLowestTerms() PASSED
+
+RationalTest > testMultiplyARationalNumberByItsReciprocal() PASSED
+
+RationalTest > testDivideAPositiveRationalNumberByANegativeRationalNumber() PASSED
+
+RationalTest > testRaiseAPositiveRationalNumberToANegativeIntegerPower() PASSED
+
+RationalTest > testReduceANegativeRationalNumberToLowestTerms() PASSED
+
+RationalTest > testRaiseOneToAnIntegerPower() PASSED
+
+RationalTest > testRaiseANegativeRationalNumberToAnOddNegativeIntegerPower() PASSED
+
+RationalTest > testAddTwoPositiveRationalNumbers() PASSED
+
+RationalTest > testDivideTwoPositiveRationalNumbers() PASSED
+
+RationalTest > testAddAPositiveRationalNumberAndANegativeRationalNumber() PASSED
+
+RationalTest > testRaiseARealNumberToAPositiveRationalNumber() FAILED
+    java.lang.AssertionError: 
+    Expecting actual:
+      16.0
+    to be close to:
+      9.988721231519586
+    by less than 1.0E-15 but difference was 6.011278768480414.
+    (a difference of exactly 1.0E-15 being considered valid)
+        at RationalTest.assertDoublesEqual(RationalTest.java:14)
+        at RationalTest.testRaiseARealNumberToAPositiveRationalNumber(RationalTest.java:247)
+
+RationalTest > testDivideARationalNumberByOne() PASSED
+
+RationalTest > testSubtractARationalNumberFromItself() PASSED
+
+RationalTest > testMultiplyTwoPositiveRationalNumbers() PASSED
+
+RationalTest > testAbsoluteValueOfZero() PASSED
+
+RationalTest > testRaiseARealNumberToANegativeRationalNumber() FAILED
+    java.lang.AssertionError: 
+    Expecting actual:
+      0.3333333333333333
+    to be close to:
+      -0.001953125
+    by less than 1.0E-15 but difference was 0.3352864583333333.
+    (a difference of exactly 1.0E-15 being considered valid)
+        at RationalTest.assertDoublesEqual(RationalTest.java:14)
+        at RationalTest.testRaiseARealNumberToANegativeRationalNumber(RationalTest.java:254)
+
+RationalTest > testReduceAPositiveRationalNumberToLowestTerms() PASSED
+
+RationalTest > testMultiplyANegativeRationalNumberByAPositiveRationalNumber() PASSED
+
+RationalTest > testSubtractTwoPositiveRationalNumbers() PASSED
+
+RationalTest > testAbsoluteValueOfARationalNumberIsReducedToLowestTerms() PASSED
+
+RationalTest > testMultiplyARationalNumberByOne() PASSED
+
+RationalTest > testAbsoluteValueOfANegativeRationalNumberWithNegativeDenominator() PASSED
+
+RationalTest > testAddTwoNegativeRationalNumbers() PASSED
+
+RationalTest > testDivideTwoNegativeRationalNumbers() PASSED
+
+RationalTest > testRaiseAPositiveRationalNumberToAPositiveIntegerPower() PASSED
+
+RationalTest > testAbsoluteValueOfAPositiveRationalNumber() PASSED
+
+RationalTest > testMultiplyTwoNegativeRationalNumbers() PASSED
+
+RationalTest > testRaiseAPositiveRationalNumberToThePowerOfZero() PASSED
+
+RationalTest > testReduceAnIntegerToLowestTerms() PASSED
+
+RationalTest > testSubtractAPositiveRationalNumberAndANegativeRationalNumber() PASSED
+
+RationalTest > testReduceZeroToLowestTerms() PASSED
+
+MaisonTest > multiplyNegativeRationalNumbers() PASSED
+
+MaisonTest > raiseRationalToPositiveIntegerPower() PASSED
+
+MaisonTest > realNumberExponentiatedToARationalNumber() PASSED
+
+MaisonTest > divideByNegativeRational() PASSED
+
+MaisonTest > raiseRationalToIntegerPower0() PASSED
+
+MaisonTest > absoluteValueOfNegativeRational() PASSED
+
+MaisonTest > subtractNegativeRationalNumbers() PASSED
+
+MaisonTest > newRationalHasIntegerNumerator() PASSED
+
+MaisonTest > subtractRationalNumbersFromUncommonDenominator() PASSED
+
+MaisonTest > addRationalNumberAndIntegerIsTreatedAsRational() PASSED
+
+MaisonTest > reduceRationalToLowestTerms() PASSED
+
+MaisonTest > divideRationalNumbers() PASSED
+
+MaisonTest > raiseNegativeRationalToNegativePower() PASSED
+
+MaisonTest > raiseRationalToNegativeIntegerPower() PASSED
+
+MaisonTest > bothNegativeStandardForm() PASSED
+
+MaisonTest > raiseToRealPowerTwo() PASSED
+
+MaisonTest > zeroHasDenominator1() PASSED
+
+MaisonTest > absoluteValueOfPositiveRational() PASSED
+
+MaisonTest > subtractRationalNumbers() PASSED
+
+MaisonTest > absoluteValueOfNegativeRationalWithNegativeDenominator() PASSED
+
+MaisonTest > addRationalNumbers() PASSED
+
+MaisonTest > newRationalHasIntegerDenominator() PASSED
+
+MaisonTest > raiseZeroToPower() PASSED
+
+MaisonTest > multiplyByZero() PASSED
+
+MaisonTest > realNumberExponentiatedToARationalNumberCubeRoot() PASSED
+
+MaisonTest > reduceRationalNumeratorIs1ByDefault() PASSED
+
+MaisonTest > addNegativeRationalNumbers() PASSED
+
+MaisonTest > addRationalNumbersToUncommonDenominator() PASSED
+
+MaisonTest > raiseToRealPower() PASSED
+
+MaisonTest > subtractIntegerAndRational() PASSED
+
+MaisonTest > standardFormDenominatorIsPositive() PASSED
+
+MaisonTest > raiseNegativeRationalToIntegerPower() PASSED
+
+MaisonTest > divideRationalNumbersByInteger() PASSED
+
+MaisonTest > negativeRational() PASSED
+
+MaisonTest > multiplyRationalNumbers() PASSED
+
+MaisonTest > multiplyRationalNumbersByInteger() PASSED
+
+MaisonTest > absoluteValueOfZero() PASSED
+
+> Task :test FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 2 executed, 1 up-to-date
+
+78 tests completed, 2 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/pi_D_t1_dflash2/java/exercises/practice/rational-numbers/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 3s

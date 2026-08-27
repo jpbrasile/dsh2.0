@@ -1,0 +1,133 @@
+juge     : ./gradlew test
+conteneur: pi-polyglot-tests
+repertoire: /benchmarks/pi_D_t1_dflash2/java/exercises/practice/protein-translation
+tests remis a neuf, @Disabled retires : src/test/java/ProteinTranslatorTest.java
+
+code de retour : 1   (4456 caracteres -> juge_java_protein-translation.txt)
+inList() PASSED
+
+ProteinTranslatorTest > testSequenceOfTwoProteinCodonsTranslatesIntoProteins() PASSED
+
+ProteinTranslatorTest > testMethionineRnaSequence() PASSED
+
+ProteinTranslatorTest > testSequenceOfTwoNonStopCodonsDoNotTranslateToAStopCodon() PASSED
+
+ProteinTranslatorTest > testTranslationStopsIfStopCodonInMiddle1() PASSED
+
+ProteinTranslatorTest > testTranslationStopsIfStopCodonInMiddle2() PASSED
+
+ProteinTranslatorTest > testEmptyRnaSequenceResultInNoproteins() PASSED
+
+ProteinTranslatorTest > testSequenceOfTwoDifferentProteinCodonsTranslatesIntoProteins() PASSED
+
+ProteinTranslatorTest > testTyrosineRnaSequence1() PASSED
+
+ProteinTranslatorTest > testTyrosineRnaSequence2() PASSED
+
+ProteinTranslatorTest > testNonExistingCodonCantTranslate() FAILED
+    java.lang.AssertionError: 
+    Expecting code to raise a throwable.
+        at ProteinTranslatorTest.testNonExistingCodonCantTranslate(ProteinTranslatorTest.java:158)
+
+ProteinTranslatorTest > testIncompleteRnaSequenceCanTranslateIfValidUntilAStopCodon() FAILED
+    java.lang.IllegalArgumentException: Invalid codon
+        at ProteinTranslator.translate(ProteinTranslator.java:48)
+        at ProteinTranslatorTest.testIncompleteRnaSequenceCanTranslateIfValidUntilAStopCodon(ProteinTranslatorTest.java:178)
+
+ProteinTranslatorTest > testTranslationStopsIfStopCodonAtEnd1() PASSED
+
+ProteinTranslatorTest > testTranslationStopsIfStopCodonAtEnd2() PASSED
+
+ProteinTranslatorTest > testLeucineRnaSequence1() PASSED
+
+ProteinTranslatorTest > testLeucineRnaSequence2() PASSED
+
+ProteinTranslatorTest > testStopRnaSequence1() PASSED
+
+ProteinTranslatorTest > testStopRnaSequence2() PASSED
+
+ProteinTranslatorTest > testStopRnaSequence3() PASSED
+
+ProteinTranslatorTest > testPhenylalanineRnaSequence1() PASSED
+
+ProteinTranslatorTest > testPhenylalanineRnaSequence2() PASSED
+
+ProteinTranslatorTest > testUnknownAminoAcidsNotPartOfACodonCantTranslate() PASSED
+
+ProteinTranslatorTest > testSerineRnaSequence1() PASSED
+
+ProteinTranslatorTest > testSerineRnaSequence2() PASSED
+
+ProteinTranslatorTest > testSerineRnaSequence3() PASSED
+
+ProteinTranslatorTest > testSerineRnaSequence4() PASSED
+
+ProteinTranslatorTest > testTranslationStopsIfStopCodonAtBeginning() PASSED
+
+ProteinTranslatorTest > testIncompleteRnaSequenceCantTranslate() PASSED
+
+ProteinTranslatorTest > testCysteineRnaSequence1() PASSED
+
+ProteinTranslatorTest > testCysteineRnaSequence2() PASSED
+
+MaisonTest > cysteineVariants() PASSED
+
+MaisonTest > stopCodonTerminatesTranslationAndIgnoresRest() PASSED
+
+MaisonTest > invalidCodonThrowsIllegalArgumentException() PASSED
+
+MaisonTest > tryptophan() PASSED
+
+MaisonTest > methionine() PASSED
+
+MaisonTest > exampleFromInstructions() PASSED
+
+MaisonTest > codonsOfWrongLengthAreInvalid() PASSED
+
+MaisonTest > invalidCodonAfterStopIsIgnored() PASSED
+
+MaisonTest > stopAtBeginningTerminatesImmediately() PASSED
+
+MaisonTest > sequenceOfTwoCodons() PASSED
+
+MaisonTest > invalidCodonAfterValidCodonsThrows() PASSED
+
+MaisonTest > stopInMiddleOfSequence() PASSED
+
+MaisonTest > phenylalanineUUC() PASSED
+
+MaisonTest > phenylalanineUUU() PASSED
+
+MaisonTest > leucineUUA() PASSED
+
+MaisonTest > leucineUUG() PASSED
+
+MaisonTest > emptyRnaSequenceYieldsEmptyProtein() PASSED
+
+MaisonTest > serineVariants() PASSED
+
+MaisonTest > stopCodonsProduceEmptyProtein() PASSED
+
+MaisonTest > tyrosineVariants() PASSED
+
+> Task :test FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 2 executed, 1 up-to-date
+
+51 tests completed, 2 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/pi_D_t1_dflash2/java/exercises/practice/protein-translation/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 3s
