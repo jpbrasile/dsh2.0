@@ -5183,3 +5183,92 @@ repasse `auditer_pass.py --tous` — l'audit du lanceur aura tourné sans cet
 exercice.
 
 Journal : `scripts/polyglot_dsh/rejeu_alphametics.log`.
+
+---
+
+### R28k — l'agent n'a PAS de chaîne d'outils pour go ni java : 86 exercices sur 225 sont mesurés hors variante D
+
+#### Comment l'outil bloquant a été nommé
+
+R28j laissait la question ouverte : `go/bottle-song` coupé sur 601 s de
+silence, appel précédent `status 200` / `fin_raison: tool_calls` — donc l'agent
+bloqué **dans** un outil, mais lequel ? Le journal de fil ne porte que des
+compteurs (`ms`, `sent`, `servi`), pi ne laisse pas de transcription, aucune
+trace disque ne nomme la commande. Réponse honnête sur pièces : indéterminable.
+
+`echantillonner_outils.ps1` (externe, lecture seule, ne tue rien) échantillonne
+l'arbre de processus sous le pilote toutes les 20 s et écrit toute commande qui
+vit depuis plus de 45 s. **Premier tick, coupable nommé** :
+
+```
+bash.exe -c "echo HOME=$HOME; ls -d ~/go* 2>/dev/null;
+             ls \"$HOME\"/go/bin 2>/dev/null;
+             find / -maxdepth 5 -name \"gofmt\" 2>/dev/null | head;
+             ls /opt 2>/dev/null"                          age 336 s
+```
+
+Ce n'est pas un test qui tourne. C'est un agent qui **cherche sa chaîne
+d'outils**, avec un `find /` sur tout le disque. Même signature que
+bottle-song.
+
+#### La cause, et elle vaut pour 38 % du corpus
+
+L'agent tourne sur l'**hôte**. Le juge tourne dans le **conteneur**. Les deux
+n'ont pas les mêmes outils :
+
+| chaîne | PATH de l'agent (hôte) | conteneur (juge) |
+|---|---|---|
+| cmake | `C:\Program Files\CMake\bin` | `/usr/bin/cmake` |
+| node / npm | `C:\Program Files\nodejs` | `/usr/bin/node` |
+| python | `…\anaconda3\python.exe` | `/usr/bin/python3` |
+| cargo | `…\.cargo\bin\cargo.exe` | `/root/.cargo/bin/cargo` |
+| **go** | **ABSENT du PATH** | `/usr/local/go/bin/go` |
+| **java** | **ABSENT** | `/usr/bin/java` |
+| **gradle** | **ABSENT** | absent aussi (le juge passe par `gradlew`) |
+
+Le binaire go **existe pourtant et fonctionne** : `C:\Users\test\go\bin\go.exe`,
+`go version go1.22.5 windows/amd64`, GOROOT `C:\Users\test\go`. Il n'est
+simplement sur le PATH d'aucun shell. Java, lui, est absent du disque
+(`.gradle/jdks` ne contient qu'un `CACHEDIR.TAG`).
+
+#### Pourquoi c'est un défaut de MESURE, pas un défaut de confort
+
+La consigne de la variante D dit, mot pour mot :
+
+> *Before writing the solution, write your OWN tests from the instructions
+> above. **Run them. Iterate until they pass. Your tests are your only
+> feedback.***
+
+Sur cpp, javascript, python et rust, l'agent peut le faire : la chaîne est là.
+Sur **go (39 exercices) et java (47)**, il ne le peut pas. Il écrit des tests
+qu'il ne peut jamais exécuter, puis part en chasse de l'outil manquant — et
+paie ce temps sur sa laisse.
+
+**86 exercices sur 225 (38 %) sont donc mesurés sous un régime différent des
+139 autres.** Ce n'est pas un biais qu'on corrige au dépouillement : c'est
+deux protocoles dans un même chiffre.
+
+Le coût est déjà visible. Depuis la relance :
+
+```
+cpp   n=26   pass_1 80,8 %
+go    n= 6   pass_1 50,0 %   (alphametics compté PASS, cf. R28i)
+   beer-song FAIL  · bottle-song FAIL (coupé sur silence) · connect FAIL
+```
+
+Réserve, à dire nettement : **la chaîne manquante n'explique pas tous les
+échecs go**. `beer-song` échoue sur un `\n` final que ses propres tests
+n'auraient pas attrapé non plus — l'énoncé ne le dit pas (R28i). L'effet est
+réel mais non quantifié ; il ne le sera que par comparaison avec un run où la
+chaîne est présente.
+
+#### Ce qui est fait, et ce qui attend une décision
+
+Fait : l'échantillonneur tourne (PID 17628) et nommera tout futur blocage.
+`outils_lents.jsonl` s'écrit à côté du journal du run.
+
+Non fait, et délibérément : **rien n'a été changé au PATH du run en cours**.
+Corriger demanderait d'arrêter le pilote 64844, et surtout de rejouer les
+exercices go déjà jugés sous l'ancien régime — sinon on mélangerait dans une
+même colonne des exercices avec et sans chaîne d'outils, ce qui est exactement
+le défaut qu'on vient de nommer. Le choix revient à l'opérateur.
