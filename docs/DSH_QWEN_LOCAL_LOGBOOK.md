@@ -5272,3 +5272,60 @@ Corriger demanderait d'arrêter le pilote 64844, et surtout de rejouer les
 exercices go déjà jugés sous l'ancien régime — sinon on mélangerait dans une
 même colonne des exercices avec et sans chaîne d'outils, ce qui est exactement
 le défaut qu'on vient de nommer. Le choix revient à l'opérateur.
+
+---
+
+### R28l — relance outillée : go et java ont enfin leur chaîne, les 8 go du régime précédent sont retirés
+
+Décision de l'opérateur, 27/08 12:2x : arrêter, outiller, rejouer les go déjà
+jugés. Fait dans cet ordre, chaque étape vérifiée.
+
+**Les preuves accumulées avant d'arrêter.** L'échantillonneur a capté **deux
+chasses distinctes à l'outil** sur la fin du run :
+
+```
+find / -maxdepth 5 -name "go" -type f ...                     366 s
+ls ~/go*; ls $HOME/go/bin; find / -maxdepth 5 -name "gofmt"   603 s
+```
+
+Sur une veille de silence à 600 s. C'est le mécanisme exact qui a tué
+`go/bottle-song` (R28j, R28k), et il n'était pas isolé.
+
+**Séquence exécutée.**
+
+1. Veilleur de rejeu d'alphametics (66776) arrêté — alphametics repasse dans
+   le lot général, son rejeu séparé n'a plus d'objet.
+2. Pilote 64844 et lanceur 62028 arrêtés en arbre. Contrôle : aucun pilote
+   résiduel.
+3. `preparer_relance_outillee.py --appliquer` — **8** exercices go (et non 7 :
+   `crypto-square` et `dnd-character` ont été jugés pendant la préparation).
+   15 fichiers **déplacés**, rien détruit. Contrôle intégré : les tests
+   officiels des 8 sont **tous identiques au corpus vierge**. Verdicts go
+   restants : 0.
+4. `reparer_amputes.py --appliquer` — `go/dominoes`, interrompu en vol,
+   5 fichiers remis depuis son stash. Deuxième passe : aucun exercice amputé.
+   Le script avait d'abord **refusé** d'y toucher, son `TASK.md` ayant moins
+   de deux minutes : le garde-fou a fonctionné.
+5. Relance. En-tête du journal :
+
+```
+chaine ajoutee au PATH de l'agent : C:\Users\test\go\bin
+chaine ajoutee au PATH de l'agent : C:\Users\test\jdk21\jdk-21.0.12.1+1\bin
+```
+
+Et **aucune ligne « CHAINE D'OUTILS ABSENTE »** : le garde-fou ajouté au
+pilote s'est tu parce que les six chaînes résolvent. Pilote **16168**.
+
+**Ce que le run porte maintenant.** Les 26 cpp sont conservés et sautés — ils
+sont valides, `cmake` était présent. Les 199 autres, go et java compris,
+seront mesurés avec la chaîne. Une seule colonne, un seul protocole.
+
+**Ce que ça ne rachète pas.** Les 8 verdicts go retirés ne sont pas effacés de
+l'histoire : ils sont au bac à sable et restent citables comme mesure du coût
+d'une chaîne absente — 3 FAIL sur 8, dont un par coupure sur silence, et deux
+chasses de 366 s et 603 s facturées à la laisse. C'est le chiffre qui donne sa
+valeur au garde-fou.
+
+**Réserve tenue depuis R28i** : `go/beer-song` échouait sur un `\n` final que
+la chaîne d'outils ne lui aurait pas appris — son énoncé ne le dit pas. Si le
+rejeu le refait échouer, ce n'est pas l'outillage qu'il faudra accuser.
