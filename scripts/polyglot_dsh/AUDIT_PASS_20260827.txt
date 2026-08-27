@@ -1,0 +1,135 @@
+=== AUDIT DES VERDICTS -- run pi_D_t1_dflash2 ===
+  cpp         all-your-base              PASS  SUSPECT
+        ! (info) all_your_base.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+        ! test NON MASQUE au verdict : maison_test.cpp
+  cpp         allergies                  PASS  tient
+        ! (info) allergies.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+  cpp         bank-account               PASS  SUSPECT
+        ! (info) bank_account.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+        ! test NON MASQUE au verdict : maison_test.cpp
+  cpp         binary-search-tree         PASS  tient
+  cpp         circular-buffer            PASS  tient
+  cpp         clock                      PASS  SUSPECT
+        ! SOLUTION = LE CORRIGE .meta recopie : clock.h
+  cpp         complex-numbers            PASS  tient
+  cpp         crypto-square              PASS  tient
+        ! (info) crypto_square.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+  cpp         diamond                    PASS  tient
+        ! (info) diamond.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+  cpp         dnd-character              PASS  tient
+  cpp         gigasecond                 PASS  tient
+        ! (info) gigasecond.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+  cpp         grade-school               PASS  tient
+  cpp         kindergarten-garden        PASS  SUSPECT
+        ! (info) kindergarten_garden.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+        ! test NON MASQUE au verdict : maison_test.cpp
+  cpp         knapsack                   PASS  tient
+        ! (info) knapsack.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+  cpp         linked-list                PASS  SUSPECT
+        ! test NON MASQUE au verdict : maison_test.cpp
+  cpp         meetup                     PASS  tient
+  cpp         parallel-letter-frequency  fail  note
+        ! (info) parallel_letter_frequency.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+        ! test NON MASQUE au verdict : maison_test.cpp
+  cpp         perfect-numbers            PASS  tient
+        ! (info) perfect_numbers.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+  cpp         phone-number               PASS  SUSPECT
+        ! (info) phone_number.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+        ! test NON MASQUE au verdict : maison_test.cpp
+  cpp         queen-attack               PASS  tient
+  cpp         robot-name                 PASS  tient
+  cpp         space-age                  PASS  tient
+        ! (info) space_age.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+  cpp         spiral-matrix              PASS  tient
+        ! (info) spiral_matrix.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+  cpp         sublist                    PASS  tient
+  cpp         yacht                      PASS  tient
+        ! (info) yacht.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+  cpp         zebra-puzzle               PASS  SUSPECT
+        ! (info) zebra_puzzle.h est l'en-tete de reference SANS aucun corps : c'est le semis du 27/08, pas une fuite
+        ! test NON MASQUE au verdict : maison_test.cpp
+  go          alphametics                PASS  tient
+  go          beer-song                  fail  tient
+  go          book-store                 PASS  tient
+  go          bottle-song                PASS  tient
+  go          bowling                    PASS  tient
+  go          connect                    fail  tient
+  go          counter                    PASS  tient
+  go          crypto-square              PASS  tient
+  go          dnd-character              PASS  tient
+  go          dominoes                   PASS  tient
+  go          error-handling             PASS  tient
+  go          food-chain                 PASS  tient
+  go          forth                      PASS  tient
+  go          hexadecimal                PASS  tient
+  go          kindergarten-garden        fail  tient
+  go          ledger                     PASS  SUSPECT
+        ! SOLUTION INCHANGEE : le stub d'origine a ete note tel quel
+  go          markdown                   PASS  tient
+  go          matrix                     PASS  tient
+  go          octal                      fail  note
+        ! SOLUTION INCHANGEE : le stub d'origine a ete note tel quel
+  go          paasio                     PASS  tient
+  go          palindrome-products        fail  tient
+  go          pig-latin                  fail  tient
+  go          poker                      fail  tient
+  go          pov                        PASS  tient
+  go          protein-translation        fail  tient
+  go          react                      fail  tient
+  go          robot-simulator            fail  note
+        ! SOLUTION INCHANGEE : le stub d'origine a ete note tel quel
+  go          say                        PASS  tient
+  go          scale-generator            PASS  tient
+  go          simple-linked-list         fail  tient
+  go          sublist                    PASS  tient
+  go          transpose                  PASS  tient
+  go          tree-building              fail  tient
+  go          trinary                    fail  tient
+  go          two-bucket                 PASS  tient
+  go          variable-length-quantity   PASS  tient
+  go          word-search                PASS  tient
+  go          wordy                      PASS  tient
+  go          zebra-puzzle               PASS  tient
+  java        affine-cipher              fail  tient
+  java        all-your-base              fail  tient
+  java        alphametics                fail  tient
+  java        bank-account               fail  tient
+  java        book-store                 PASS  tient
+  java        bottle-song                fail  tient
+  java        change                     PASS  tient
+  java        circular-buffer            fail  tient
+  java        connect                    fail  note
+        ! SOLUTION INCHANGEE : le stub d'origine a ete note tel quel
+  java        custom-set                 fail  tient
+  java        dominoes                   fail  tient
+  java        food-chain                 fail  tient
+  java        forth                      fail  tient
+  java        go-counting                fail  tient
+  java        hangman                    PASS  tient
+  java        house                      fail  tient
+  java        kindergarten-garden        PASS  tient
+  java        ledger                     PASS  tient
+  java        mazy-mice                  fail  tient
+  java        ocr-numbers                fail  tient
+  java        palindrome-products        PASS  tient
+  java        phone-number               fail  tient
+  java        pig-latin                  PASS  tient
+  java        poker                      fail  tient
+  java        pov                        fail  tient
+  java        protein-translation        fail  tient
+  java        pythagorean-triplet        PASS  tient
+  java        queen-attack               fail  tient
+  java        rational-numbers           fail  tient
+  java        react                      PASS  tient
+  java        resistor-color-trio        fail  tient
+  java        rest-api                   fail  tient
+  java        satellite                  fail  tient
+  java        series                     fail  tient
+  java        sgf-parsing                fail  note
+        ! SOLUTION INCHANGEE : le stub d'origine a ete note tel quel
+  java        simple-linked-list         PASS  tient
+  java        state-of-tic-tac-toe       fail  tient
+  java        transpose                  PASS  tient
+
+103 audite(s), 8 suspect(s).
+Un PASS suspect doit etre rejoue a la main AVANT publication.
