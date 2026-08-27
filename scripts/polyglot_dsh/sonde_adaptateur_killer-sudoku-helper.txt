@@ -1,0 +1,218 @@
+
+> test
+> jest ./*
+
+PASS ./killer-sudoku-helper.spec.js
+FAIL ./maison.test.js
+  ● Killer Sudoku Helper › cage with 1 possible combination: 3-cell cage summing to 7 -> 124
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 7
+    + Received  + 1
+
+    - Array [
+    -   Array [
+    -     1,
+    -     2,
+    -     4,
+    -   ],
+    - ]
+    + Array []
+
+      3 | describe('Killer Sudoku Helper', () => {
+      4 |   test('cage with 1 possible combination: 3-cell cage summing to 7 -> 124', () => {
+    > 5 |     expect(combinations([7, 3])).toEqual([[1, 2, 4]]);
+        |                                  ^
+      6 |   });
+      7 |
+      8 |   test('cage with several combinations: 2-cell cage summing to 10', () => {
+
+      at Object.toEqual (maison.test.js:5:34)
+
+  ● Killer Sudoku Helper › cage with several combinations: 2-cell cage summing to 10
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 18
+    + Received  +  1
+
+    - Array [
+    -   Array [
+    -     1,
+    -     9,
+    -   ],
+    -   Array [
+    -     2,
+    -     8,
+    -   ],
+    -   Array [
+    -     3,
+    -     7,
+    -   ],
+    -   Array [
+    -     4,
+    -     6,
+    -   ],
+    - ]
+    + Array []
+
+       7 |
+       8 |   test('cage with several combinations: 2-cell cage summing to 10', () => {
+    >  9 |     expect(combinations([10, 2])).toEqual([
+         |                                   ^
+      10 |       [1, 9],
+      11 |       [2, 8],
+      12 |       [3, 7],
+
+      at Object.toEqual (maison.test.js:9:35)
+
+  ● Killer Sudoku Helper › restricted cage: 2-cell cage summing to 10, column has 1 and 4
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 10
+    + Received  +  1
+
+    - Array [
+    -   Array [
+    -     2,
+    -     8,
+    -   ],
+    -   Array [
+    -     3,
+    -     7,
+    -   ],
+    - ]
+    + Array []
+
+      16 |
+      17 |   test('restricted cage: 2-cell cage summing to 10, column has 1 and 4', () => {
+    > 18 |     expect(combinations([10, 2], [1, 4])).toEqual([
+         |                                           ^
+      19 |       [2, 8],
+      20 |       [3, 7],
+      21 |     ]);
+
+      at Object.toEqual (maison.test.js:18:43)
+
+  ● Killer Sudoku Helper › larger cage: 5 cells summing to 27, excluding 3 and 9
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 16
+    + Received  +  1
+
+    - Array [
+    -   Array [
+    -     1,
+    -     5,
+    -     6,
+    -     7,
+    -     8,
+    -   ],
+    -   Array [
+    -     2,
+    -     4,
+    -     6,
+    -     7,
+    -     8,
+    -   ],
+    - ]
+    + Array []
+
+      31 |
+      32 |   test('larger cage: 5 cells summing to 27, excluding 3 and 9', () => {
+    > 33 |     expect(combinations([27, 5], [3, 9])).toEqual([
+         |                                           ^
+      34 |       [1, 5, 6, 7, 8],
+      35 |       [2, 4, 6, 7, 8],
+      36 |     ]);
+
+      at Object.toEqual (maison.test.js:33:43)
+
+  ● Killer Sudoku Helper › single-cell cage
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 1
+
+    - Array [
+    -   Array [
+    -     5,
+    -   ],
+    - ]
+    + Array []
+
+      38 |
+      39 |   test('single-cell cage', () => {
+    > 40 |     expect(combinations([5, 1])).toEqual([[5]]);
+         |                                  ^
+      41 |   });
+      42 |
+      43 |   test('single-cell cage with exclusion', () => {
+
+      at Object.toEqual (maison.test.js:40:34)
+
+  ● Killer Sudoku Helper › combinations are sorted
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 37
+    + Received  +  1
+
+    - Array [
+    -   Array [
+    -     1,
+    -     7,
+    -     9,
+    -   ],
+    -   Array [
+    -     2,
+    -     6,
+    -     9,
+    -   ],
+    -   Array [
+    -     2,
+    -     7,
+    -     8,
+    -   ],
+    -   Array [
+    -     3,
+    -     5,
+    -     9,
+    -   ],
+    -   Array [
+    -     3,
+    -     6,
+    -     8,
+    -   ],
+    -   Array [
+    -     4,
+    -     5,
+    -     8,
+    -   ],
+    -   Array [
+    -     4,
+    -     6,
+    -     7,
+    -   ],
+    - ]
+    + Array []
+
+      46 |
+      47 |   test('combinations are sorted', () => {
+    > 48 |     expect(combinations([17, 3])).toEqual([
+         |                                   ^
+      49 |       [1, 7, 9],
+      50 |       [2, 6, 9],
+      51 |       [2, 7, 8],
+
+      at Object.toEqual (maison.test.js:48:35)
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       6 failed, 17 passed, 23 total
+Snapshots:   0 total
+Time:        2.853 s
+Ran all test suites matching ./LICENSE|./TASK.md|./babel.config.js|./killer-sudoku-helper.js|./killer-sudoku-helper.spec.js|./maison.test.js|./node_modules|./package-lock.json|./package.json.

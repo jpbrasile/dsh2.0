@@ -1,0 +1,704 @@
+
+> test
+> jest ./*
+
+FAIL ./maison.test.js (15.324 s)
+  ● Palindrome Products › find the smallest palindrome from 1 to 9
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 7
+    + Received  + 2
+
+      Object {
+    -   "factors": Array [
+    -     Array [
+    -       1,
+    -       1,
+    -     ],
+    -   ],
+    -   "value": 1,
+    +   "factors": Array [],
+    +   "value": null,
+      }
+
+      4 |   test('find the smallest palindrome from 1 to 9', () => {
+      5 |     const result = Palindromes.generate({ min: 1, max: 9 });
+    > 6 |     expect(result.smallest).toEqual({ value: 1, factors: [[1, 1]] });
+        |                             ^
+      7 |   });
+      8 |
+      9 |   test('find the largest palindrome from 1 to 9', () => {
+
+      at Object.toEqual (maison.test.js:6:29)
+
+  ● Palindrome Products › find the largest palindrome from 1 to 9
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 11
+    + Received  +  2
+
+      Object {
+    -   "factors": Array [
+    -     Array [
+    -       1,
+    -       9,
+    -     ],
+    -     Array [
+    -       3,
+    -       3,
+    -     ],
+    -   ],
+    -   "value": 9,
+    +   "factors": Array [],
+    +   "value": null,
+      }
+
+       9 |   test('find the largest palindrome from 1 to 9', () => {
+      10 |     const result = Palindromes.generate({ min: 1, max: 9 });
+    > 11 |     expect(result.largest).toEqual({ value: 9, factors: [[1, 9], [3, 3]] });
+         |                            ^
+      12 |   });
+      13 |
+      14 |   test('find the smallest palindrome from 10 to 99', () => {
+
+      at Object.toEqual (maison.test.js:11:28)
+
+  ● Palindrome Products › find the smallest palindrome from 10 to 99
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 7
+    + Received  + 2
+
+      Object {
+    -   "factors": Array [
+    -     Array [
+    -       11,
+    -       11,
+    -     ],
+    -   ],
+    -   "value": 121,
+    +   "factors": Array [],
+    +   "value": null,
+      }
+
+      14 |   test('find the smallest palindrome from 10 to 99', () => {
+      15 |     const result = Palindromes.generate({ min: 10, max: 99 });
+    > 16 |     expect(result.smallest).toEqual({ value: 121, factors: [[11, 11]] });
+         |                             ^
+      17 |   });
+      18 |
+      19 |   test('find the largest palindrome from 10 to 99', () => {
+
+      at Object.toEqual (maison.test.js:16:29)
+
+  ● Palindrome Products › find the largest palindrome from 10 to 99
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 7
+    + Received  + 2
+
+      Object {
+    -   "factors": Array [
+    -     Array [
+    -       91,
+    -       99,
+    -     ],
+    -   ],
+    -   "value": 9009,
+    +   "factors": Array [],
+    +   "value": null,
+      }
+
+      19 |   test('find the largest palindrome from 10 to 99', () => {
+      20 |     const result = Palindromes.generate({ min: 10, max: 99 });
+    > 21 |     expect(result.largest).toEqual({ value: 9009, factors: [[91, 99]] });
+         |                            ^
+      22 |   });
+      23 |
+      24 |   test('find the smallest palindrome from 0 to 99 (value 0, all [0,b] pairs)', () => {
+
+      at Object.toEqual (maison.test.js:21:28)
+
+  ● Palindrome Products › find the smallest palindrome from 0 to 99 (value 0, all [0,b] pairs)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 403
+    + Received  +   2
+
+      Object {
+    -   "factors": Array [
+    -     Array [
+    -       0,
+    -       0,
+    -     ],
+    -     Array [
+    -       0,
+    -       1,
+    -     ],
+    -     Array [
+    -       0,
+    -       2,
+    -     ],
+    -     Array [
+    -       0,
+    -       3,
+    -     ],
+    -     Array [
+    -       0,
+    -       4,
+    -     ],
+    -     Array [
+    -       0,
+    -       5,
+    -     ],
+    -     Array [
+    -       0,
+    -       6,
+    -     ],
+    -     Array [
+    -       0,
+    -       7,
+    -     ],
+    -     Array [
+    -       0,
+    -       8,
+    -     ],
+    -     Array [
+    -       0,
+    -       9,
+    -     ],
+    -     Array [
+    -       0,
+    -       10,
+    -     ],
+    -     Array [
+    -       0,
+    -       11,
+    -     ],
+    -     Array [
+    -       0,
+    -       12,
+    -     ],
+    -     Array [
+    -       0,
+    -       13,
+    -     ],
+    -     Array [
+    -       0,
+    -       14,
+    -     ],
+    -     Array [
+    -       0,
+    -       15,
+    -     ],
+    -     Array [
+    -       0,
+    -       16,
+    -     ],
+    -     Array [
+    -       0,
+    -       17,
+    -     ],
+    -     Array [
+    -       0,
+    -       18,
+    -     ],
+    -     Array [
+    -       0,
+    -       19,
+    -     ],
+    -     Array [
+    -       0,
+    -       20,
+    -     ],
+    -     Array [
+    -       0,
+    -       21,
+    -     ],
+    -     Array [
+    -       0,
+    -       22,
+    -     ],
+    -     Array [
+    -       0,
+    -       23,
+    -     ],
+    -     Array [
+    -       0,
+    -       24,
+    -     ],
+    -     Array [
+    -       0,
+    -       25,
+    -     ],
+    -     Array [
+    -       0,
+    -       26,
+    -     ],
+    -     Array [
+    -       0,
+    -       27,
+    -     ],
+    -     Array [
+    -       0,
+    -       28,
+    -     ],
+    -     Array [
+    -       0,
+    -       29,
+    -     ],
+    -     Array [
+    -       0,
+    -       30,
+    -     ],
+    -     Array [
+    -       0,
+    -       31,
+    -     ],
+    -     Array [
+    -       0,
+    -       32,
+    -     ],
+    -     Array [
+    -       0,
+    -       33,
+    -     ],
+    -     Array [
+    -       0,
+    -       34,
+    -     ],
+    -     Array [
+    -       0,
+    -       35,
+    -     ],
+    -     Array [
+    -       0,
+    -       36,
+    -     ],
+    -     Array [
+    -       0,
+    -       37,
+    -     ],
+    -     Array [
+    -       0,
+    -       38,
+    -     ],
+    -     Array [
+    -       0,
+    -       39,
+    -     ],
+    -     Array [
+    -       0,
+    -       40,
+    -     ],
+    -     Array [
+    -       0,
+    -       41,
+    -     ],
+    -     Array [
+    -       0,
+    -       42,
+    -     ],
+    -     Array [
+    -       0,
+    -       43,
+    -     ],
+    -     Array [
+    -       0,
+    -       44,
+    -     ],
+    -     Array [
+    -       0,
+    -       45,
+    -     ],
+    -     Array [
+    -       0,
+    -       46,
+    -     ],
+    -     Array [
+    -       0,
+    -       47,
+    -     ],
+    -     Array [
+    -       0,
+    -       48,
+    -     ],
+    -     Array [
+    -       0,
+    -       49,
+    -     ],
+    -     Array [
+    -       0,
+    -       50,
+    -     ],
+    -     Array [
+    -       0,
+    -       51,
+    -     ],
+    -     Array [
+    -       0,
+    -       52,
+    -     ],
+    -     Array [
+    -       0,
+    -       53,
+    -     ],
+    -     Array [
+    -       0,
+    -       54,
+    -     ],
+    -     Array [
+    -       0,
+    -       55,
+    -     ],
+    -     Array [
+    -       0,
+    -       56,
+    -     ],
+    -     Array [
+    -       0,
+    -       57,
+    -     ],
+    -     Array [
+    -       0,
+    -       58,
+    -     ],
+    -     Array [
+    -       0,
+    -       59,
+    -     ],
+    -     Array [
+    -       0,
+    -       60,
+    -     ],
+    -     Array [
+    -       0,
+    -       61,
+    -     ],
+    -     Array [
+    -       0,
+    -       62,
+    -     ],
+    -     Array [
+    -       0,
+    -       63,
+    -     ],
+    -     Array [
+    -       0,
+    -       64,
+    -     ],
+    -     Array [
+    -       0,
+    -       65,
+    -     ],
+    -     Array [
+    -       0,
+    -       66,
+    -     ],
+    -     Array [
+    -       0,
+    -       67,
+    -     ],
+    -     Array [
+    -       0,
+    -       68,
+    -     ],
+    -     Array [
+    -       0,
+    -       69,
+    -     ],
+    -     Array [
+    -       0,
+    -       70,
+    -     ],
+    -     Array [
+    -       0,
+    -       71,
+    -     ],
+    -     Array [
+    -       0,
+    -       72,
+    -     ],
+    -     Array [
+    -       0,
+    -       73,
+    -     ],
+    -     Array [
+    -       0,
+    -       74,
+    -     ],
+    -     Array [
+    -       0,
+    -       75,
+    -     ],
+    -     Array [
+    -       0,
+    -       76,
+    -     ],
+    -     Array [
+    -       0,
+    -       77,
+    -     ],
+    -     Array [
+    -       0,
+    -       78,
+    -     ],
+    -     Array [
+    -       0,
+    -       79,
+    -     ],
+    -     Array [
+    -       0,
+    -       80,
+    -     ],
+    -     Array [
+    -       0,
+    -       81,
+    -     ],
+    -     Array [
+    -       0,
+    -       82,
+    -     ],
+    -     Array [
+    -       0,
+    -       83,
+    -     ],
+    -     Array [
+    -       0,
+    -       84,
+    -     ],
+    -     Array [
+    -       0,
+    -       85,
+    -     ],
+    -     Array [
+    -       0,
+    -       86,
+    -     ],
+    -     Array [
+    -       0,
+    -       87,
+    -     ],
+    -     Array [
+    -       0,
+    -       88,
+    -     ],
+    -     Array [
+    -       0,
+    -       89,
+    -     ],
+    -     Array [
+    -       0,
+    -       90,
+    -     ],
+    -     Array [
+    -       0,
+    -       91,
+    -     ],
+    -     Array [
+    -       0,
+    -       92,
+    -     ],
+    -     Array [
+    -       0,
+    -       93,
+    -     ],
+    -     Array [
+    -       0,
+    -       94,
+    -     ],
+    -     Array [
+    -       0,
+    -       95,
+    -     ],
+    -     Array [
+    -       0,
+    -       96,
+    -     ],
+    -     Array [
+    -       0,
+    -       97,
+    -     ],
+    -     Array [
+    -       0,
+    -       98,
+    -     ],
+    -     Array [
+    -       0,
+    -       99,
+    -     ],
+    -   ],
+    -   "value": 0,
+    +   "factors": Array [],
+    +   "value": null,
+      }
+
+      26 |     const expectedFactors = [];
+      27 |     for (let b = 0; b <= 99; b++) expectedFactors.push([0, b]);
+    > 28 |     expect(result.smallest).toEqual({ value: 0, factors: expectedFactors });
+         |                             ^
+      29 |     expect(result.largest).toEqual({ value: 9009, factors: [[91, 99]] });
+      30 |   });
+      31 |
+
+      at Object.toEqual (maison.test.js:28:29)
+
+  ● Palindrome Products › find the smallest palindrome from 100 to 999
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 7
+    + Received  + 2
+
+      Object {
+    -   "factors": Array [
+    -     Array [
+    -       101,
+    -       101,
+    -     ],
+    -   ],
+    -   "value": 10201,
+    +   "factors": Array [],
+    +   "value": null,
+      }
+
+      32 |   test('find the smallest palindrome from 100 to 999', () => {
+      33 |     const result = Palindromes.generate({ min: 100, max: 999 });
+    > 34 |     expect(result.smallest).toEqual({ value: 10201, factors: [[101, 101]] });
+         |                             ^
+      35 |   });
+      36 |
+      37 |   test('find the largest palindrome from 100 to 999', () => {
+
+      at Object.toEqual (maison.test.js:34:29)
+
+  ● Palindrome Products › find the largest palindrome from 100 to 999
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 7
+    + Received  + 2
+
+      Object {
+    -   "factors": Array [
+    -     Array [
+    -       913,
+    -       993,
+    -     ],
+    -   ],
+    -   "value": 906609,
+    +   "factors": Array [],
+    +   "value": null,
+      }
+
+      37 |   test('find the largest palindrome from 100 to 999', () => {
+      38 |     const result = Palindromes.generate({ min: 100, max: 999 });
+    > 39 |     expect(result.largest).toEqual({ value: 906609, factors: [[913, 993]] });
+         |                            ^
+      40 |   });
+      41 |
+      42 |   test('find the largest palindrome from 100 to 1000', () => {
+
+      at Object.toEqual (maison.test.js:39:28)
+
+  ● Palindrome Products › find the largest palindrome from 100 to 1000
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 7
+    + Received  + 2
+
+      Object {
+    -   "factors": Array [
+    -     Array [
+    -       913,
+    -       993,
+    -     ],
+    -   ],
+    -   "value": 906609,
+    +   "factors": Array [],
+    +   "value": null,
+      }
+
+      42 |   test('find the largest palindrome from 100 to 1000', () => {
+      43 |     const result = Palindromes.generate({ min: 100, max: 1000 });
+    > 44 |     expect(result.largest).toEqual({ value: 906609, factors: [[913, 993]] });
+         |                            ^
+      45 |   });
+      46 |
+      47 |   test('works with a single number (no palindrome possible)', () => {
+
+      at Object.toEqual (maison.test.js:44:28)
+
+  ● Palindrome Products › single number that is itself a palindrome
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 14
+    + Received  +  4
+
+      Object {
+        "largest": Object {
+    -     "factors": Array [
+    -       Array [
+    -         11,
+    -         11,
+    -       ],
+    -     ],
+    -     "value": 121,
+    +     "factors": Array [],
+    +     "value": null,
+        },
+        "smallest": Object {
+    -     "factors": Array [
+    -       Array [
+    -         11,
+    -         11,
+    -       ],
+    -     ],
+    -     "value": 121,
+    +     "factors": Array [],
+    +     "value": null,
+        },
+      }
+
+      55 |   test('single number that is itself a palindrome', () => {
+      56 |     const result = Palindromes.generate({ min: 11, max: 11 });
+    > 57 |     expect(result).toEqual({
+         |                    ^
+      58 |       largest: { value: 121, factors: [[11, 11]] },
+      59 |       smallest: { value: 121, factors: [[11, 11]] },
+      60 |     });
+
+      at Object.toEqual (maison.test.js:57:20)
+
+  ● Palindrome Products › min must be <= max
+
+    expect(received).toThrow(expected)
+
+    Expected message: "min must be <= max"
+
+    Received function did not throw
+
+      69 |
+      70 |   test('min must be <= max', () => {
+    > 71 |     expect(() => Palindromes.generate({ min: 6, max: 5 })).toThrow(
+         |                                                            ^
+      72 |       new Error('min must be <= max'),
+      73 |     );
+      74 |   });
+
+      at Object.toThrow (maison.test.js:71:60)
+
+PASS ./palindrome-products.spec.js (20.214 s)
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       10 failed, 1 skipped, 14 passed, 25 total
+Snapshots:   0 total
+Time:        23.554 s
+Ran all test suites matching /.\/LICENSE|.\/TASK.md|.\/babel.config.js|.\/maison.test.js|.\/node_modules|.\/package-lock.json|.\/package.json|.\/palindrome-products.js|.\/palindrome-products.spec.js/i.
