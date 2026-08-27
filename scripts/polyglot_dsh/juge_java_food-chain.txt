@@ -1,0 +1,345 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+
+> Task :test FAILED
+
+FoodChainTest > spider() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a spider.
+      It wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die."
+     but was: 
+      "I know an old lady who swallowed a spider.
+      It wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.spider(FoodChainTest.java:32)
+
+FoodChainTest > wholeSong() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+  
+      I know an old lady who swallowed a spider.
+      It wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+  
+      I know an old lady who swallowed a bird.
+      How absurd to swallow a bird!
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+  
+      I know an old lady who swallowed a cat.
+      Imagine that, to swallow a cat!
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+  
+      I know an old lady who swallowed a dog.
+      What a hog, to swallow a dog!
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+  
+      I know an old lady who swallowed a goat.
+      Just opened her throat and swallowed a goat!
+      She swallowed the goat to catch the dog.
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+  
+      I know an old lady who swallowed a cow.
+      I don't know how she swallowed a cow!
+      She swallowed the cow to catch the goat.
+      She swallowed the goat to catch the dog.
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+  
+      I know an old lady who swallowed a horse.
+      She's dead, of course!"
+     but was: 
+      "I know an old lady who swallowed a fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      I know an old lady who swallowed a spider.
+      It wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      I know an old lady who swallowed a bird.
+      How absurd to swallow a bird!
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      I know an old lady who swallowed a cat.
+      Imagine that, to swallow a cat!
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      I know an old lady who swallowed a dog.
+      What a hog, to swallow a dog!
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      I know an old lady who swallowed a goat.
+      Just opened her throat and swallowed a goat!
+      She swallowed the goat to catch the dog.
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      I know an old lady who swallowed a cow.
+      I don't know how she swallowed a cow!
+      She swallowed the cow to catch the goat.
+      She swallowed the goat to catch the dog.
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      I know an old lady who swallowed a horse.
+      She's dead, of course!
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.wholeSong(FoodChainTest.java:204)
+
+FoodChainTest > cat() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a cat.
+      Imagine that, to swallow a cat!
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die."
+     but was: 
+      "I know an old lady who swallowed a cat.
+      Imagine that, to swallow a cat!
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.cat(FoodChainTest.java:59)
+
+FoodChainTest > cow() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a cow.
+      I don't know how she swallowed a cow!
+      She swallowed the cow to catch the goat.
+      She swallowed the goat to catch the dog.
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die."
+     but was: 
+      "I know an old lady who swallowed a cow.
+      I don't know how she swallowed a cow!
+      She swallowed the cow to catch the goat.
+      She swallowed the goat to catch the dog.
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.cow(FoodChainTest.java:108)
+
+FoodChainTest > dog() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a dog.
+      What a hog, to swallow a dog!
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die."
+     but was: 
+      "I know an old lady who swallowed a dog.
+      What a hog, to swallow a dog!
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.dog(FoodChainTest.java:75)
+
+FoodChainTest > fly() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a fly.
+      I don't know why she swallowed the fly. Perhaps she'll die."
+     but was: 
+      "I know an old lady who swallowed a fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.fly(FoodChainTest.java:21)
+
+FoodChainTest > bird() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a bird.
+      How absurd to swallow a bird!
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die."
+     but was: 
+      "I know an old lady who swallowed a bird.
+      How absurd to swallow a bird!
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.bird(FoodChainTest.java:45)
+
+FoodChainTest > goat() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a goat.
+      Just opened her throat and swallowed a goat!
+      She swallowed the goat to catch the dog.
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die."
+     but was: 
+      "I know an old lady who swallowed a goat.
+      Just opened her throat and swallowed a goat!
+      She swallowed the goat to catch the dog.
+      She swallowed the dog to catch the cat.
+      She swallowed the cat to catch the bird.
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.goat(FoodChainTest.java:91)
+
+FoodChainTest > horse() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a horse.
+      She's dead, of course!"
+     but was: 
+      "I know an old lady who swallowed a horse.
+      She's dead, of course!
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.horse(FoodChainTest.java:117)
+
+FoodChainTest > multipleVerses() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "I know an old lady who swallowed a fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+  
+      I know an old lady who swallowed a spider.
+      It wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+  
+      I know an old lady who swallowed a bird.
+      How absurd to swallow a bird!
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die."
+     but was: 
+      "I know an old lady who swallowed a fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      I know an old lady who swallowed a spider.
+      It wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      I know an old lady who swallowed a bird.
+      How absurd to swallow a bird!
+      She swallowed the bird to catch the spider that wriggled and jiggled and tickled inside her.
+      She swallowed the spider to catch the fly.
+      I don't know why she swallowed the fly. Perhaps she'll die.
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//FoodChainTest.multipleVerses(FoodChainTest.java:140)
+
+MaisonTest > verse_one() PASSED
+
+MaisonTest > verse_six() PASSED
+
+MaisonTest > verse_two() PASSED
+
+MaisonTest > verses_four_to_eight() PASSED
+
+MaisonTest > verse_five() PASSED
+
+MaisonTest > verse_four() PASSED
+
+MaisonTest > single_verse_range() PASSED
+
+MaisonTest > verse_eight() PASSED
+
+MaisonTest > verse_seven() PASSED
+
+MaisonTest > verse_three() PASSED
+
+MaisonTest > all_verses() PASSED
+
+MaisonTest > verses_one_to_three() PASSED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 2 executed, 1 up-to-date
+
+22 tests completed, 10 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/pi_D_t1_dflash2/java/exercises/practice/food-chain/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 3s

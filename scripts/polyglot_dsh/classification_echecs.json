@@ -42,6 +42,20 @@
       "mecanisme_signature": "S4 a RENONCE, correctement : le stub declare bien `T read() throws BufferIOException` et `void write(T) throws BufferIOException`, mais l'enonce n'est pas muet sur l'erreur -- ligne 37 : « When the buffer is full an error will be raised ». Comme pour affine-cipher, l'enonce annonce l'erreur et tait son TEXTE. C'est la famille de PREDICTION_LIBELLES_ERREUR.md, pas celle de S4.",
       "preuve": "9 des 14 tests passent -- lecture, ecriture, ecrasement force, enroulement, effacement. Les 5 qui tombent portent TOUS la meme forme, « Expecting message to be », et rien d'autre : attendu « Tried to read from empty buffer », obtenu « Read from empty buffer » ; attendu « Tried to write to full buffer », obtenu « Write to full buffer ». La bonne exception, au bon moment, avec un message de meme sens -- seule la redaction differe, et c'est le mot « Tried to ». La chaine « Tried to » est ABSENTE de .docs/ ET du stub, verifie par grep recursif le 27/08. Sortie complete obtenue par rejuger.py : la queue de 3 000 caracteres du pilote ne portait que « 14 tests completed, 5 failed »."
     },
+    "java/dominoes": {
+      "classe": "ambiguite",
+      "signature": "aucune",
+      "divergence": "libelle_seul",
+      "mecanisme_signature": "Non signale, et c'est coherent : PREDICTION_LIBELLES_ERREUR.md soutient qu'aucun detecteur par exercice n'est possible pour cette famille. Rien dans l'enonce ni dans le stub ne distingue « une erreur » de « une erreur dont le texte sera compare au caractere pres ».",
+      "preuve": "7 tests passent, et ce sont TOUS les cas de chainage positif : nineElements, separateLoops, needBacktrack, canReverseDominoes, threeElements, singleton, empty. L'algorithme marche. Les 6 qui tombent sont les cas de REJET, et ils portent tous la meme forme -- 6 occurrences de « Expecting message to be » et ZERO comparaison de valeur dans la sortie entiere (compte le 27/08) : attendu « No domino chain found. », obtenu « not all vertices have even degree ». L'agent detecte donc correctement l'impossibilite -- son propre test MaisonTest > oddDegreeFails PASSE -- et se trompe uniquement de redaction. La chaine « No domino chain » est ABSENTE de .docs/ et du stub, verifie par grep recursif."
+    },
+    "java/food-chain": {
+      "classe": "ambiguite",
+      "signature": "S2",
+      "divergence": "separateur_terminal",
+      "mecanisme_signature": "OUI, au libelle pres, et c'est la DEUXIEME touche S2 exacte en java apres bottle-song. La pre-inscription annonce pour cet exercice : « bloc de sortie rendue sur 43 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible ». L'echec porte sur exactement un separateur terminal. Signale avant que java commence, et ce n'est pas un cas fondateur.",
+      "preuve": "10 tests sur 10 tombent, y compris le plus simple, fly(). Le juge sur fly() : attendu « ...I don't know why she swallowed the fly. Perhaps she'll die.\" » -- la chaine se ferme immediatement apres le point ; obtenu la meme chose SUIVIE D'UN SAUT DE LIGNE avant la fermeture. Verifie octet a octet (cat -A) sur juge_java_food-chain.txt le 27/08. Meme mecanisme que java/bottle-song et que go/beer-song : un separateur terminal est invisible dans un exemple rendu."
+    },
     "java/custom-set": {
       "classe": "ambiguite",
       "signature": "aucune",
