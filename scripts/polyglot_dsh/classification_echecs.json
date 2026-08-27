@@ -40,9 +40,21 @@
       "mecanisme_signature": "NON -- S4 signale le contrat d'erreur de Pop() (int, error) ; l'echec porte sur le BOUT sur lequel Push et Pop agissent. La signature a designe le bon exercice pour la mauvaise raison, et le decompte le garde tel quel.",
       "preuve": "L'enonce parle d'un lecteur de musique, demande « create a singly linked list » et « reverse the list », et ne nomme JAMAIS Push, Pop, Size ni Array -- verifie sur .docs/instructions.md entier. Ces quatre-la n'existent que comme signatures nues dans le stub, sans un mot de semantique : ni le bout sur lequel Push/Pop agissent, ni l'ordre que rend Array. Le juge : « Push to non empty list: [4 1 2 3], want [1 2 3 4] » et « Pop from non empty list: 1, want 3 »."
     },
+    "go/tree-building": {
+      "classe": "ambiguite",
+      "signature": "S4",
+      "mecanisme_signature": "oui -- les trois cas qui tombent sont TROIS validations que l'enonce ne demande jamais",
+      "preuve": "L'enonce fait 24 lignes et ne contient AUCUNE occurrence de « error », « invalid », « cycle », « continuous », « must » ni « fail » -- verifie par grep le 27/08. Le stub declare Build(records []Record) (*Node, error). Le juge : « non-continuous », « cycle indirectly » et « higher id parent of lower id » « returned ... but was expected to fail ». Meme phenomene que go/kindergarten-garden 3b."
+    },
     "go/pig-latin": {
       "classe": "ambiguite",
       "preuve": "xray, yttria, my, rhythm, quick, square passent tous ; seul yellow tombe. L'enonce ne dit nulle part si un « y » initial est voyelle ou consonne : il ne donne que l'exception de prefixe « yt »."
+    },
+    "go/trinary": {
+      "classe": "ambiguite",
+      "signature": "aucune",
+      "mecanisme_signature": "raté du detecteur -- S4 exige que le stub DECLARE un retour d'erreur ; ici le stub n'a pas de retour du tout, sa signature est cassee. Angle mort nomme, pas comble apres coup.",
+      "preuve": "LE STUB VIERGE EST FAUX : `func ParseTrinary(arg string, want int64, ok bool)`. Ce ne sont pas des parametres, ce sont les CHAMPS DE LA TABLE DE CAS DE TEST. L'agent doit donc inventer la signature. Tout ce qu'il voit pointe au mauvais endroit : le stub suggere un `ok bool`, et l'enonce (lignes 6-7) dit « strings specifying an invalid trinary as the value 0 », donc PAS d'erreur. La suite, elle, exige un `error` : « cannot use err (variable of type bool) as error value ». Deux exercices du corpus entier portent ce defaut -- octal et trinary, verifie par balayage des 225 le 27/08 -- et LES DEUX ont echoue."
     },
     "go/react": {
       "classe": "fond",

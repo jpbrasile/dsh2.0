@@ -5995,3 +5995,77 @@ négatifs ne disent pas qu'elles se trompent, seulement qu'aucun des exercices
 qu'elles désignent n'a encore échoué.
 
 État : 54 verdicts, 51 dépouillés, 8 échecs jugés, go 28/39.
+
+---
+
+### R28u — le stub lui-même peut être faux, et le p qui traverse le seuil dans les deux sens
+
+#### `go/tree-building` — troisième confirmation S4, mécanisme exact
+
+L'énoncé fait **24 lignes** et ne contient **aucune** occurrence de « error »,
+« invalid », « cycle », « continuous », « must » ni « fail ». Le stub déclare
+`Build(records []Record) (*Node, error)`. La suite exige le rejet de trois
+classes d'entrées : `non-continuous`, `cycle indirectly`,
+`higher id parent of lower id` — toutes trois « returned … but was expected to
+fail ». C'est le phénomène de `go/kindergarten-garden` 3b, à l'identique.
+
+#### `go/trinary` — et une correction de ce que j'avais dit d'`octal`
+
+Le stub **vierge** est :
+
+```go
+func ParseTrinary(arg string, want int64, ok bool)
+```
+
+Ce ne sont pas des paramètres : ce sont les **champs de la table de cas de
+test**. Le stub est faux à la livraison. J'avais attribué la signature bizarre
+d'`go/octal` à l'agent coupé en cours de travail — **c'était le stub**, qui
+porte `ParseOctal(input string, expectedNum int64, expectErr bool)`.
+
+L'agent doit donc inventer la signature, et tout ce qu'il voit pointe au
+mauvais endroit : le stub suggère un `ok bool`, l'énoncé dit *« strings
+specifying an invalid trinary as the value 0 »* — donc pas d'erreur du tout —
+et la suite exige un `error` : `cannot use err (variable of type bool) as
+error value`.
+
+**Ampleur mesurée, pas supposée** : balayage des 225 exercices des six langues,
+signature dont un paramètre porte `want` / `expected*` / `ok bool`. **Deux
+cas** : `octal` et `trinary`, tous deux en go, **tous deux en échec**. Rien à
+pré-enregistrer là-dessus pour les pistes restantes — aucun exercice non joué
+ne porte le défaut. La pathologie est réelle, fatale à 2/2, et épuisée.
+
+S4 ne l'avait pas signalé, et c'est un **angle mort nommé** : S4 exige que le
+stub *déclare* un retour d'erreur ; ici le stub n'a aucun retour. Je ne le
+comble pas après coup.
+
+#### Deux fautes de méthode que je devais, et la preuve qu'elles mordent
+
+À 60 verdicts, S4 en lecture fine donnait **p = 0,038**. Deux minutes plus
+tard, un exercice signalé ayant réussi entre-temps : **p = 0,056**. Le seuil
+a été franchi puis refranchi dans l'autre sens, sans qu'aucune signature ne
+change.
+
+C'est l'illustration exacte des deux fautes que je n'avais pas payées :
+
+1. **Multiplicité.** Quatre signatures sont testées. Rapporter celle qui passe
+   le seuil, c'est se donner quatre tirages. Le dépouilleur imprime désormais
+   une colonne **`p*4`** (Bonferroni) à côté de `p`, et c'est elle qui se cite :
+   à p = 0,038, `p*4 = 0,152`. **Rien n'est significatif.**
+2. **Regards répétés.** J'ai relancé le dépouillement à chaque nouvel échec.
+   Regarder des données qui s'accumulent et s'arrêter quand le chiffre plaît
+   gonfle le taux de faux positifs bien au-delà de 5 %. Le pré-enregistrement
+   avait figé la **liste**, pas la **règle d'arrêt**.
+
+**Règle d'arrêt, posée maintenant et imprimée par le script** : l'analyse fait
+foi **une seule fois**, sur les 225 verdicts du run terminé. Les lectures
+intermédiaires pilotent le travail, jamais la conclusion. Tant que le run n'est
+pas fini, le script encadre sa sortie d'un bandeau
+« **LECTURE INTERMÉDIAIRE — NE PAS PUBLIER CE p** ».
+
+#### Où en est le run
+
+60 verdicts, 11 échecs jugés, go 34/39. Les quatre touches S4 hors cas
+fondateurs sont `poker`, `protein-translation`, `tree-building` (mécanisme
+exact) et `simple-linked-list` (mécanisme fortuit, enregistré comme tel).
+Tout cela est **go seul** : java et rust, les deux autres langues du périmètre
+de S4, n'ont pas commencé.

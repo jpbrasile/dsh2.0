@@ -173,9 +173,14 @@ def main():
             ts = 100.0 * a / len(sig)
             tn = 100.0 * c / len(non) if non else float("nan")
             p = fisher_unilateral(a, b, c, d)
-            print("  %-5s %-16s %2d/%-3d = %5.1f %%   %3d/%-3d = %5.1f %%   %+6.1f pt   p = %.3f%s"
+            # p CORRIGE : quatre signatures sont testees, et publier celle qui
+            # passe sans correction est la faute de multiplicite classique.
+            # Bonferroni sur les 4 -- conservateur, et c'est le but.
+            print("  %-5s %-16s %2d/%-3d = %5.1f %%   %3d/%-3d = %5.1f %%   "
+                  "%+6.1f pt   p = %.3f   p*4 = %.3f%s"
                   % (s, "%d joues" % len(champ), a, len(sig), ts,
                      c, len(non), tn, ts - tn, p,
+                     min(1.0, p * len(SIGNATURES)),
                      "" if len(sig) >= 5 else "   (n<5)"))
         for s, pourquoi in vides:
             print("  %-5s non depouillable : %s" % (s, pourquoi))
@@ -224,6 +229,26 @@ def main():
             table([k for k in hors if k not in fonds],
                   "HORS fondateurs ET hors echecs de FOND -- lecture la plus fine")
 
+    if len(v) < pred["total_corpus"]:
+        print("+" + "-" * 70 + "+")
+        print("| LECTURE INTERMEDIAIRE -- NE PAS PUBLIER CE p                          |")
+        print("+" + "-" * 70 + "+")
+        print("  Deux raisons, et elles sont cumulatives :")
+        print("")
+        print("  1. MULTIPLICITE. Quatre signatures sont testees. Rapporter")
+        print("     celle qui passe le seuil sans correction, c'est se donner")
+        print("     quatre chances de tirer un 0,05. La colonne p*4 (Bonferroni)")
+        print("     est celle qui se cite.")
+        print("  2. REGARDS REPETES. Ce depouillement a ete relance a chaque")
+        print("     nouvel echec pendant que le run avance. Regarder des donnees")
+        print("     qui s'accumulent et s'arreter quand le chiffre plait gonfle")
+        print("     le taux de faux positifs bien au-dela de 5 %. Le")
+        print("     pre-enregistrement a fige la LISTE, pas la regle d'arret.")
+        print("")
+        print("  REGLE D'ARRET, posee maintenant : l'analyse fait foi une seule")
+        print("  fois, sur les %d verdicts du run TERMINE. Les lectures" % pred["total_corpus"])
+        print("  intermediaires servent a piloter le travail, jamais a conclure.")
+        print("")
     print("LECTURE. Un ecart positif dit que la signature separe ; p dit si la")
     print("separation survit au hasard aux effectifs atteints. Un ecart de")
     print("+40 points sur 3 exercices signales ne conclut rien -- regarder p,")
