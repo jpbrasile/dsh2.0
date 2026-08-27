@@ -5755,3 +5755,64 @@ chose a priori. S4 ne couvre que 116 exercices sur 225.
 l'**écart** entre le taux d'échec des signalés et celui des autres. Une
 signature n'est pas une cause. `verifier_prediction.py` reste à écrire ; il
 dépouillera après coup, sur la liste figée ici.
+
+#### Addendum R28r — le dépouilleur, et ce qu'il a trouvé en tournant
+
+`verifier_prediction.py` écrit dans la foulée. Il ne compte pas les signalés qui
+échouent : il calcule l'**écart** entre le taux d'échec des signalés et celui
+des non signalés, avec un **Fisher unilatéral exact** à côté — parce que S1 ne
+porte que 3 exercices et qu'un « 50 % contre 5 % » sur 2 cas ne prouve rien.
+
+Trois choses sont sorties de sa première exécution, et aucune n'était cherchée.
+
+**1. `go/octal` n'est pas un échec de convention — c'est une coupure.**
+`tours_coupes: 1` sur `num_turns: 1`, 635,6 s, et `octal.go` porte encore
+`panic("Please implement the ParseOctal function")`. L'agent n'avait pas rendu ;
+la laisse de silence l'a arrêté. Ce verdict mesure la laisse, pas l'énoncé.
+
+**2. `cpp/parallel-letter-frequency`, « cause non déterminée » depuis R28q, est
+déterminée** : coupure elle aussi, à 1 150 s. La question ouverte se ferme sans
+avoir eu besoin du rejeu.
+
+**3. Cinq verdicts sur 46 portent une coupure — mais trois d'entre eux ont
+PASSÉ.** `cpp/zebra-puzzle` (843,5 s), `go/crypto-square` (710,6 s),
+`go/ledger` (855,7 s) : l'agent avait fini, la coupure l'a pris pendant une
+vérification. D'où la règle exacte, qui n'est pas celle que j'avais écrite en
+premier : **on n'écarte que les coupures qui ont échoué**. Une coupure qui passe
+reste un PASS — la laisse ne peut que nuire, jamais aider. Les écarter aurait
+retiré trois succès du dénominateur et gonflé le taux d'échec des deux colonnes.
+
+**La laisse ne bouge pas pour autant.** Elle a coupé cpp et go ; la relever
+maintenant réglerait un paramètre en cours de route pour obtenir des PASS, et
+rendrait java, javascript, python et rust incomparables aux 65 déjà joués. Les
+deux coupures se rejouent à la fin, **bras séparé, D pur**.
+
+`preparer_rejeu_reformule.py` sépare donc désormais **deux populations** :
+
+| bras | contenu | degré | ce que son résultat dit |
+|---|---|---|---|
+| 1 | échecs **jugés** | B | le coût de l'ambiguïté de l'énoncé |
+| 2 | tours **coupés** | **aucun** — D pur | ce que la laisse a coûté |
+
+Les mélanger aurait fait passer des timeouts pour du coût d'ambiguïté : une
+coupure qui passe au rejeu passe parce qu'elle a eu le temps, pas parce que
+l'énoncé était plus clair.
+
+#### Ce que le dépouilleur dit aujourd'hui : rien, et il le dit
+
+```
+depouilles      : 44   (46 verdicts - 2 coupures en echec)
+echecs          : 3  (6.8 %)
+
+=== HORS cas fondateurs -- c'est CE tableau qui teste la prediction ===
+  NON CONCLUANT : 41 exercice(s) depouille(s), AUCUN echec.
+```
+
+Les **trois seuls** échecs jugés du run sont `beer-song`, `connect` et
+`kindergarten-garden` — exactement les trois dont S1 à S4 ont été tirées. Un
+tableau qui les inclut donne S4 à +42,9 points, p = 0,036 : **circulaire**. Une
+règle retrouve toujours les exemples qui l'ont produite. Le script imprime donc
+deux tableaux, marque le premier « à ne pas publier seul », et refuse de
+conclure sur le second tant qu'il ne contient aucun échec.
+
+État : **41 PASS sur 44 jugés** (cpp + go partiel), plus 2 coupures à rejouer.

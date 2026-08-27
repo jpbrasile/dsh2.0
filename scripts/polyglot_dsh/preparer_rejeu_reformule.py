@@ -47,6 +47,12 @@ def verdicts(run):
             continue
         out[cle] = {"ok": bool(any(d.get("tests_outcomes") or [])),
                     "duree": d.get("duration", 0.0),
+                    # Un tour coupe (silence trop long) n'a pas produit un
+                    # verdict sur l'ENONCE : l'agent n'avait pas fini. Le champ
+                    # est expose ici pour que chaque depouilleur decide s'il
+                    # doit l'ecarter -- le rejeu, lui, le rejoue comme les
+                    # autres, c'est justement une chance de le finir.
+                    "coupe": bool(d.get("tours_coupes")),
                     "reformulations": d.get("reformulations", [])}
     return out
 
@@ -77,12 +83,24 @@ def main():
         return 2
 
     fini = len(v) >= total
-    echecs = sorted(k for k, d in v.items() if not d["ok"])
+    # DEUX POPULATIONS, ET ELLES NE SE REJOUENT PAS PAREIL.
+    #   juges   l'agent a rendu, le juge a dit non -> le rejeu degre B teste si
+    #           l'ambiguite de l'enonce expliquait le non.
+    #   coupes  la laisse de silence a arrete l'agent avant qu'il rende ; le
+    #           fichier porte encore le stub. Les mettre dans le bras « avec
+    #           reformulation » ferait passer des timeouts pour du cout
+    #           d'ambiguite : une coupure qui passe au rejeu passe parce
+    #           qu'elle a eu le temps, pas parce que l'enonce etait plus clair.
+    echecs = sorted(k for k, d in v.items() if not d["ok"] and not d["coupe"])
+    coupes = sorted(k for k, d in v.items() if not d["ok"] and d["coupe"])
     print("run de reference : %s" % run)
     print("  verdicts   : %d / %d%s" % (len(v), total,
                                         "" if fini else "  -- NON TERMINE"))
-    print("  echecs     : %d" % len(echecs))
+    print("  echecs juges : %d" % len(echecs))
     for k in echecs:
+        print("      %-34s %7.1f s" % (k, v[k]["duree"]))
+    print("  tours coupes : %d  (bras SEPARE, sans reformulation)" % len(coupes))
+    for k in coupes:
         print("      %-34s %7.1f s" % (k, v[k]["duree"]))
     print("")
 
@@ -92,7 +110,7 @@ def main():
               "colonne partielle. Attendre, ou assumer avec --partiel."
               % (len(v), total))
         return 1
-    if not echecs:
+    if not echecs and not coupes:
         print("Rien a rejouer : aucun echec.")
         return 0
 
@@ -104,20 +122,38 @@ def main():
         "partiel_assume": bool(partiel and not fini),
         "echecs": echecs,
         "exercices": ",".join(echecs),
+        "coupes": coupes,
+        "exercices_coupes": ",".join(coupes),
     }
     chemin = os.path.join(ICI, "rejeu_%s.json" % run)
     io.open(chemin, "w", encoding="utf-8", newline="\n").write(
         json.dumps(doc, ensure_ascii=False, indent=2))
     print("ecrit -> %s" % os.path.basename(chemin))
     print("")
-    print("Pour lancer le rejeu, une fois le run de reference ARRETE :")
+    print("Pour lancer le rejeu, une fois le run de reference ARRETE.")
     print("")
-    print("  .\\lancer_polyglot_complet.ps1 -Nom %s_reformB `" % run)
-    print("      -Modele specdec-q38-dflash2 -Tours 1 `")
-    print("      -Degres B -Exercices (Get-Content rejeu_%s.json |" % run)
-    print("          ConvertFrom-Json).exercices")
-    print("")
-    print("Puis comparer avec comparer_reformulation.py.")
+    if echecs:
+        print("  BRAS 1 -- les %d echecs JUGES, avec reformulation degre B :" % len(echecs))
+        print("")
+        print("  .\\lancer_polyglot_complet.ps1 -Nom %s_reformB `" % run)
+        print("      -Modele specdec-q38-dflash2 -Tours 1 `")
+        print("      -Degres B -Exercices (Get-Content rejeu_%s.json |" % run)
+        print("          ConvertFrom-Json).exercices")
+        print("")
+    if coupes:
+        print("  BRAS 2 -- les %d tours COUPES, D PUR, SANS -Degres :" % len(coupes))
+        print("")
+        print("  .\\lancer_polyglot_complet.ps1 -Nom %s_coupes `" % run)
+        print("      -Modele specdec-q38-dflash2 -Tours 1 `")
+        print("      -Exercices (Get-Content rejeu_%s.json |" % run)
+        print("          ConvertFrom-Json).exercices_coupes")
+        print("")
+        print("  Ce bras-la ne mesure PAS l'ambiguite : il mesure ce que la")
+        print("  laisse de silence a coute. Son resultat s'ajoute au taux D,")
+        print("  il n'entre jamais dans la colonne « avec reformulation ».")
+        print("")
+    print("Puis comparer avec comparer_reformulation.py -- qui ne doit voir")
+    print("que le BRAS 1.")
     return 0
 
 
