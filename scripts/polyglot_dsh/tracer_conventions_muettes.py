@@ -78,6 +78,71 @@ MOTIFS = [
 
 BLANCS = re.compile(r"\s+")
 
+# ECHEC DE CONTRAT : la suite officielle ne COMPILE PAS contre la solution.
+# L'agent a invente une API -- autre nom, autre arite, autre type -- alors que
+# le stub la declarait. C'est une famille distincte de l'echec de forme : la
+# forme se corrige au dernier caractere, le contrat invalide tout le fichier.
+# Le libelle dit ce qu'il faut retenir, pas ce que le juge attendait.
+SIGNATURES = [
+    (re.compile(r"undefined:\s*(\w+)"),
+     "identifiant %s absent : la suite officielle l'appelle, la solution ne "
+     "l'exporte pas (nom, casse, ou fonction jamais ecrite)"),
+    (re.compile(r"cannot find symbol\s*\n?\s*symbol:\s*\w+\s+(\w+)"),
+     "symbole %s introuvable cote java : signature publique differente de "
+     "celle du stub"),
+    (re.compile(r"no member named '(\w+)'"),
+     "membre %s absent de la classe : la suite officielle l'appelle"),
+    (re.compile(r"no method named `(\w+)`"),
+     "methode %s absente : la suite officielle l'appelle"),
+    (re.compile(r"(?:too many|not enough) arguments (?:in call )?to (\S+)"),
+     "arite de %s differente de celle que la suite officielle appelle"),
+    (re.compile(r"cannot use .+ as (\S+) value"),
+     "type de retour ou de parametre incompatible : la suite attend %s"),
+    (re.compile(r"is not a type|expected type, found"),
+     "type public attendu par la suite officielle, non declare"),
+]
+
+
+# REJET UNIFORME : la solution a refuse TOUTES les entrees officielles avec le
+# MEME message, sorti de sa propre validation. Elle n'a pas calcule faux, elle
+# n'a pas su LIRE -- la convention d'ENTREE differe de celle qu'elle attend.
+# C'est une troisieme famille, distincte de la forme du RESULTAT (blancs,
+# casse, ordre) et du CONTRAT public (signature).
+REJETS = [
+    re.compile(r"returned error\s+(?P<msg>.+?)\s*$", re.M),        # go
+    re.compile(r"unexpected exception:?\s*(?P<msg>.+?)\s*$", re.M),  # junit
+    re.compile(r"^E\s+(?P<msg>\w*Error:.+?)\s*$", re.M),           # pytest
+    re.compile(r"panicked at [`'\"](?P<msg>.+?)[`'\"]", re.M),     # rust
+    re.compile(r"^\s*(?P<msg>\w*Error:.+?)\s*$", re.M),            # jest
+]
+
+
+def rejet_uniforme(texte):
+    """Rend (message, nombre) quand au moins TROIS cas ont ete refuses avec le
+    MEME message, ou None.
+
+    Le seuil de trois et l'unicite du message sont ce qui rend l'inference
+    defendable : un bug de logique produit des ecarts VARIES ; un refus
+    identique sur tous les cas, y compris les triviaux, ne peut venir que de
+    la lecture de l'entree. En dessous de trois cas, on ne conclut pas.
+    """
+    for motif in REJETS:
+        msgs = [m.group("msg").strip() for m in motif.finditer(texte)]
+        if len(msgs) >= 3 and len(set(msgs)) == 1:
+            return msgs[0], len(msgs)
+    return None
+
+
+def contrat_rompu(texte):
+    """Nomme la rupture de contrat, ou None. Ne devine pas : si aucun motif ne
+    mord, on ne dit rien plutot que d'inventer une cause."""
+    for motif, libelle in SIGNATURES:
+        m = motif.search(texte)
+        if m:
+            return libelle % (m.group(1) if m.groups() else "") if "%s" \
+                in libelle else libelle
+    return None
+
 
 def deguillemete(s):
     """Rend le texte que le motif a capture, guillemets et echappements go/rust
@@ -154,6 +219,45 @@ def injectable(classe, got, want):
     return None
 
 
+# La bonne pratique attachee a chaque verdict. Elle vise l'AGENT dans un futur
+# bras -- jamais le run en cours -- et ne cite aucune valeur attendue.
+LECONS = {
+    "blancs": "Separateur ou blanc terminal : quand une fonction assemble N "
+              "elements, « separateur ENTRE » et « separateur APRES CHACUN » "
+              "sont deux contrats differents, et un exemple rendu ne les "
+              "distingue pas. Sans test, c'est pile ou face.",
+    "casse": "Casse du resultat : un exemple d'enonce montre souvent une "
+             "phrase, pas la convention. Se caler sur la casse des donnees "
+             "d'entree plutot que sur celle de la prose.",
+    "ordre": "Ordre du resultat : une collection rendue peut etre attendue "
+             "triee ou dans l'ordre de rencontre. L'enonce montre un ordre "
+             "sans dire s'il est signifiant.",
+    "entree": "Convention d'ENTREE : la solution a refuse tous les cas avec "
+              "son propre message, sans rien calculer -- l'ecart est dans la "
+              "LECTURE, pas dans le calcul. Deux pieges cumules : l'enonce "
+              "montre l'entree RENDUE (alignee, espacee pour l'oeil) alors "
+              "que la suite peut PASSER une forme canonique differente ; et "
+              "le message d'un test en echec affiche souvent la donnee "
+              "d'ORIGINE, pas celle qui a ete transmise. Ecrire un lecteur "
+              "tolerant -- separateurs optionnels, indentation ignoree -- et "
+              "ne jamais rejeter une entree qu'on n'a pas su lire.",
+    "contrat": "Contrat public : la suite officielle compile contre le STUB. "
+               "Ne jamais renommer, re-typer ni changer l'arite de ce que le "
+               "stub declare, meme si un autre nom parait meilleur. Ajouter a "
+               "cote, jamais remplacer.",
+    "delai": "Delai : une solution correcte mais non bornee echoue comme une "
+             "fausse. Verifier qu'aucune boucle ne depend d'une donnee de "
+             "taille inconnue.",
+    "compilation": "Compilation : la solution ne se construit pas avec la "
+                   "suite officielle. Compiler le fichier livre avant de "
+                   "conclure, pas seulement ses propres tests.",
+    "fond": "Logique : l'ecart n'est pas de forme. A traiter comme un vrai "
+            "echec, pas comme une ambiguite d'enonce.",
+    "illisible": "Sortie du juge non reconnue par les motifs : a lire a la "
+                 "main avant d'en tirer quoi que ce soit.",
+}
+
+
 def depouiller(run):
     racine = os.path.join(BENCH, run)
     sortie = {"run": run, "sans_champ_erreurs": [], "exercices": []}
@@ -191,8 +295,16 @@ def depouiller(run):
                 break
 
         comptes = collections.Counter(c["classe"] for c in cas)
+        rupture = contrat_rompu(texte)
+        rejet = rejet_uniforme(texte)
         if cas:
             verdict = min((c["classe"] for c in cas), key=lambda x: RANG[x])
+        elif rejet:
+            verdict = "entree"
+            rupture = ("%d cas refuses avec le MEME message, sorti de sa "
+                       "propre validation : %s" % (rejet[1], rejet[0]))
+        elif rupture:
+            verdict = "contrat"
         elif "TIMEOUT" in texte:
             verdict = "delai"
         elif re.search(r"redeclared|cannot find|error:|erreur|FAILED to compile"
@@ -205,6 +317,8 @@ def depouiller(run):
             "exercice": cle,
             "verdict": verdict,
             "motif": motif_vu,
+            "rupture": rupture,
+            "lecon": LECONS.get(verdict),
             "cas_par_classe": dict(comptes),
             "cas": cas[:6],
             "juge_extrait": texte[:600],
@@ -239,6 +353,45 @@ def main():
         print("  %-28s %-8s %s" % (e["exercice"], e["verdict"],
                                    e["cas"][0]["ecart"] if e["cas"] else ""))
     print("")
+    entrees = [e for e in ex if e["verdict"] == "entree"]
+    print("=== echecs de CONVENTION D'ENTREE : %d ===" % len(entrees))
+    for e in entrees:
+        print("  %-28s %s" % (e["exercice"], e["rupture"]))
+    print("")
+    contrats = [e for e in ex if e["verdict"] == "contrat"]
+    print("=== echecs de CONTRAT PUBLIC : %d ===" % len(contrats))
+    for e in contrats:
+        print("  %-28s %s" % (e["exercice"], e["rupture"]))
+    print("")
+    autres = [e for e in ex if e["verdict"] in ("fond", "delai", "compilation",
+                                                "illisible")]
+    print("=== autres echecs : %d ===" % len(autres))
+    for e in autres:
+        print("  %-28s %s" % (e["exercice"], e["verdict"]))
+    print("")
+
+    if "--markdown" in sys.argv:
+        # Ecrit un FICHIER UTF-8 plutot que d'imprimer : la console Windows est
+        # en cp1252 et mangeait les accents et les guillemets francais.
+        lignes = []
+        for e in ex:
+            lignes.append("### `%s` — %s\n" % (e["exercice"], e["verdict"]))
+            if e["rupture"]:
+                lignes.append("- **Rupture** : %s." % e["rupture"])
+            if e["cas"]:
+                lignes.append("- **Écart** : %s." % e["cas"][0]["ecart"])
+                if e["cas"][0]["injectable"]:
+                    lignes.append("- **Forme seule** : %s"
+                                  % e["cas"][0]["injectable"])
+            if e["lecon"]:
+                lignes.append("- **Bonne pratique** : %s" % e["lecon"])
+            lignes.append("")
+        chemin = os.path.join(ICI, "bonnes_pratiques_%s.md" % run)
+        io.open(chemin, "w", encoding="utf-8", newline="\n").write(
+            "\n".join(lignes))
+        print("markdown -> %s  (%d echec(s))"
+              % (os.path.basename(chemin), len(ex)))
+        return 0
     print("Ces echecs-la ont une LOGIQUE juste et une CONVENTION muette.")
     print("A reporter dans BONNES_PRATIQUES_CONVENTIONS.md, qui s'accumule A")
     print("COTE du banc. NE PAS les redonner a un run de la variante D : la")

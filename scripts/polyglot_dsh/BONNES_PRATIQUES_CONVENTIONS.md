@@ -59,26 +59,88 @@ chacun* ? » n'a pas de réponse par défaut, et un exemple rendu ne la tranche
 jamais. Produire les deux et choisir n'est possible qu'avec un test ; sans
 test, c'est un tirage à pile ou face à 50 %.
 
+### 2. `go/connect` — la forme *passée* n'est pas la forme *montrée*
+
+- **Relevé** : 27/08, run outillé. **8 cas sur 8** refusés, tous avec le même
+  message, sorti de la validation de la solution elle-même :
+  `invalid board: unknown cell`.
+- **Classe** : `entree`. La solution n'a **rien calculé** — elle n'a pas su
+  lire.
+- **Preuve, lue dans le harnais officiel** (`connect_test.go:8-16`) :
+
+  ```go
+  // Simply strip the spaces of all the strings to get a canonical
+  // input. The spaces are only for readability of the tests.
+  func prepare(lines []string) []string {
+      newLines[i] = strings.ReplaceAll(l, " ", "")
+  }
+  ```
+
+  Le harnais **retire tous les espaces** avant d'appeler `ResultOf` : il passe
+  `".....",` `"OOOX"`. L'agent, lui, avait écrit `strings.Fields(line)` —
+  correct sur `. . . . .`, mais sur `.....` cela rend **un seul champ**, qui
+  n'est ni `X`, ni `O`, ni `.` → rejet.
+
+- **Le second piège, et c'est le plus vicieux.** Le message d'erreur du test
+  affiche `strings.Join(tc.board, "\n")`, soit le plateau **d'origine, espacé**
+  — pas celui qui a été transmis. Un agent qui lit ce message en conclut que
+  son lecteur doit accepter les espaces. Il les accepte déjà. Le message
+  l'oriente à l'opposé de la cause.
+
+**Règles générales à en tirer** :
+
+1. **La forme montrée n'est pas la forme passée.** Un énoncé, et même le
+   message d'un test en échec, peuvent afficher la donnée *d'origine*, alignée
+   pour l'œil, quand la fonction reçoit une forme canonique différente.
+2. **Un lecteur tolérant coûte trois lignes et sauve l'exercice.** Accepter
+   séparateurs optionnels et indentation quelconque aurait fait passer les deux
+   formes.
+3. **Ne jamais rejeter une entrée qu'on n'a pas su lire.** Un `return error`
+   sur une entrée légitime transforme un exercice réussi en 8 échecs
+   identiques — et masque totalement la logique, qui était peut-être juste.
+
 ---
 
-## Les quatre conventions qu'un énoncé ne porte jamais
+## Les trois familles, et ce qui reste à observer
 
-Généralisation, à confirmer par de nouveaux relevés — trois des quatre n'ont
-pas encore de cas observé, c'est dit :
+Les deux premiers cas relevés tombent dans **deux familles différentes**, et
+c'est le résultat le plus utile à ce stade : l'ambiguïté d'un énoncé ne porte
+pas que sur le résultat.
 
-1. **Séparateur terminal** — *observé* (cas 1 ci-dessus).
-2. **Ordre du résultat** — une collection rendue triée, ou dans l'ordre de
-   rencontre ? *Non observé à ce jour.*
-3. **Casse** — initiale majuscule, tout en bas de casse ? *Non observé à ce
-   jour.*
-4. **Arrondi et forme des nombres** — troncature ou arrondi, nombre de
-   décimales, notation. *Non observé à ce jour.*
+| famille | ce qui diverge | cas observé |
+|---|---|---|
+| **sortie** | la forme de la valeur rendue | `go/beer-song` (séparateur terminal) |
+| **entrée** | la forme de la donnée reçue | `go/connect` (tokenisation) |
+| **contrat** | la signature publique attendue par la suite | *aucun à ce jour* |
 
-Ces quatre-là partagent un trait : **le critère de `sous_ensemble_autosuffisant.json`
+Sous-familles de **sortie**, généralisation à confirmer — trois des quatre
+n'ont **pas** de cas observé, et c'est dit ligne à ligne :
+
+1. **Séparateur terminal** — *observé* (cas 1).
+2. **Ordre du résultat** — trié, ou dans l'ordre de rencontre ? *Non observé.*
+3. **Casse** — initiale majuscule, tout en bas de casse ? *Non observé.*
+4. **Arrondi et forme des nombres** — troncature ou arrondi, décimales,
+   notation. *Non observé.*
+
+Toutes partagent un trait : **le critère de `sous_ensemble_autosuffisant.json`
 ne peut rien en dire**. Ce critère demande si l'énoncé cite les identifiants
-déclarés par le stub ; il regarde des *noms*, jamais la *forme d'une valeur de
-retour*. C'est le troisième biais nommé en R28i, et c'est ce fichier-ci qui le
-mesure au lieu de le supposer.
+déclarés par le stub ; il regarde des *noms*, jamais la *forme d'une valeur*,
+ni à l'entrée ni à la sortie. C'est le troisième biais nommé en R28i, et c'est
+ce fichier-ci qui le mesure au lieu de le supposer.
+
+## La règle qui couvre les trois familles
+
+Une seule phrase, et elle ne coûte rien à appliquer :
+
+> **Être tolérant à l'entrée, exact à la sortie, et fidèle au stub.**
+
+- **Tolérant à l'entrée** : accepter les formes voisines plutôt que rejeter.
+  Un `return error` sur une entrée légitime détruit l'exercice entier, même
+  quand la logique est juste (`go/connect` : 8 échecs identiques).
+- **Exact à la sortie** : un caractère de séparation suffit à faire échouer
+  (`go/beer-song` : 1 caractère sur des milliers).
+- **Fidèle au stub** : la suite officielle compile contre lui. Ajouter à côté,
+  jamais renommer ni re-typer.
 
 ---
 
@@ -97,10 +159,28 @@ Le jour où ce fichier sert :
 ## Entretien
 
 ```
-python tracer_conventions_muettes.py <nom-du-run> --ecrire
+python tracer_conventions_muettes.py <nom-du-run> --ecrire      # JSON complet
+python tracer_conventions_muettes.py <nom-du-run> --markdown    # brouillon .md
 ```
 
-À relancer en fin de run, puis reporter ici les cas neufs — un titre par
-convention, avec la date du relevé et la preuve que la logique était juste.
-Un cas sans cette preuve n'est pas une convention muette : c'est un échec de
-fond mal classé.
+`--markdown` écrit `bonnes_pratiques_<run>.md`, un brouillon UTF-8 d'une
+section par échec (rupture, écart, bonne pratique). Il ne remplace **pas** ce
+fichier-ci : il en donne la matière, à relire et à sourcer avant report.
+
+**Ce qu'un cas doit porter pour entrer ici** — la barre, et elle ne se desserre
+pas :
+
+1. la **date** du relevé et le run ;
+2. la **preuve sur pièces** que la logique était juste : cas voisins qui
+   passent, ou lecture du harnais officiel qui montre la divergence
+   (c'est ce qui a été fait pour `go/connect` : `connect_test.go:8-16`) ;
+3. la **forme** de l'écart, jamais la valeur attendue.
+
+Un cas sans le point 2 n'est pas une convention muette : c'est un échec de fond
+mal classé, et l'inscrire ici fabriquerait une bonne pratique fausse.
+
+**Restes à traiter** : `cpp/parallel-letter-frequency` a échoué **avant** le
+correctif qui journalise la sortie du juge — son `.dsh.results.json` n'a pas de
+champ `erreurs`, sa cause est donc **non déterminée**. La retrouver demanderait
+un rejeu du juge dans le conteneur, que le run en cours occupe : reporté, pas
+oublié.

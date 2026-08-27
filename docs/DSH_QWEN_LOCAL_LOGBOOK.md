@@ -5440,3 +5440,75 @@ le coût, enfin retiré, d'une chaîne d'outils absente.
 
 4 PASS sur 5 à ce stade, contre 5 sur 8 sous le régime précédent. Trop peu pour
 un taux ; assez pour dire que les deux régimes ne mesuraient pas la même chose.
+
+---
+
+### R28n — une deuxième famille : la forme *passée* n'est pas la forme *montrée*
+
+`go/connect` échoue, et il n'entre dans aucune case existante. Ce n'est ni un
+écart de forme du résultat, ni une signature inventée : **les 8 cas sur 8 sont
+refusés avec le même message**, sorti de la validation de la solution
+elle-même — `invalid board: unknown cell`. Elle n'a **rien calculé**. Elle n'a
+pas su **lire**.
+
+#### La cause, lue dans le harnais officiel et non supposée
+
+`connect_test.go:8-16` :
+
+```go
+// Simply strip the spaces of all the strings to get a canonical
+// input. The spaces are only for readability of the tests.
+func prepare(lines []string) []string {
+    newLines[i] = strings.ReplaceAll(l, " ", "")
+}
+```
+
+Le harnais **retire tous les espaces** avant d'appeler `ResultOf` : il passe
+`"....."`. L'agent avait écrit `strings.Fields(line)` — juste sur
+`. . . . .`, mais sur `.....` cela rend **un seul champ**, ni `X`, ni `O`, ni
+`.`. Rejet, huit fois.
+
+**Et le message d'erreur oriente à l'opposé de la cause.** Le test affiche
+`strings.Join(tc.board, "\n")`, c'est-à-dire le plateau **d'origine, espacé** —
+pas celui qu'il vient de transmettre. Un agent qui lit ce message conclut que
+son lecteur doit accepter les espaces. Il les accepte déjà. C'est le piège le
+plus coûteux du lot : l'indice fourni est faux.
+
+#### Ce que le traceur sait faire de plus
+
+Trois familles au lieu d'une, chacune détectée mécaniquement :
+
+| famille | signal | cas observé |
+|---|---|---|
+| **sortie** | couple got/want extrait, identiques aux blancs/casse/ordre près | `go/beer-song` |
+| **entrée** | ≥ 3 cas refusés avec un message **identique**, issu de la solution | `go/connect` |
+| **contrat** | la suite officielle ne compile pas : `undefined:`, `cannot find symbol`… | aucun à ce jour |
+
+Le seuil de trois et l'unicité du message sont ce qui rend l'inférence
+défendable : un bug de logique produit des écarts **variés** ; un refus
+identique sur tous les cas, y compris les triviaux, ne peut venir que de la
+lecture. En dessous de trois, le traceur ne conclut pas.
+
+#### La règle qui couvre les trois
+
+> **Tolérant à l'entrée, exact à la sortie, fidèle au stub.**
+
+Un caractère de trop à la sortie coûte l'exercice (`beer-song`, 1 caractère).
+Un rejet à l'entrée le coûte aussi, mais en masquant une logique peut-être
+juste (`connect`, 8 échecs identiques). Les deux se corrigent en trois lignes,
+et aucune des deux ne s'apprend de l'énoncé.
+
+#### État du run
+
+7 verdicts go sous le régime outillé : **5 PASS, 2 FAIL** (`beer-song`,
+`connect`). 33 verdicts au total avec les 26 cpp conservés.
+
+**Toujours pas de réinjection.** Ces deux bonnes pratiques vont dans
+`BONNES_PRATIQUES_CONVENTIONS.md`, à côté du banc. Les donner à l'agent
+pendant un run de la variante D supprimerait la question à laquelle ce run
+répond.
+
+**Non déterminé** : `cpp/parallel-letter-frequency` a échoué avant le
+correctif qui journalise la sortie du juge ; son `.dsh.results.json` n'a pas de
+champ `erreurs`. Retrouver sa cause demande un rejeu du juge dans le conteneur
+que le run occupe — reporté, pas oublié.
