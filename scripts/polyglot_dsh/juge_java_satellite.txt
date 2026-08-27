@@ -1,0 +1,76 @@
+juge     : ./gradlew test
+conteneur: pi-polyglot-tests
+repertoire: /benchmarks/pi_D_t1_dflash2/java/exercises/practice/satellite
+tests remis a neuf, @Disabled retires : src/test/java/SatelliteTest.java
+
+code de retour : 1   (2672 caracteres -> juge_java_satellite.txt)
+ror: 
+    Expecting code to raise a throwable.
+        at SatelliteTest.rejectTraversalsWithRepeatedItems(SatelliteTest.java:74)
+
+SatelliteTest > rejectInconsistentTraversalsOfSameLength() FAILED
+    java.lang.AssertionError: 
+    Expecting actual throwable to be an instance of:
+      java.lang.IllegalArgumentException
+    but was:
+      java.lang.ArrayIndexOutOfBoundsException: Index 3 out of bounds for length 3
+    	at java.base/java.util.ImmutableCollections$ListN.get(ImmutableCollections.java:687)
+    	at Satellite.build(Satellite.java:14)
+    	at Satellite.build(Satellite.java:20)
+    	...(87 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+        at SatelliteTest.rejectInconsistentTraversalsOfSameLength(SatelliteTest.java:64)
+
+SatelliteTest > emptyTree() PASSED
+
+SatelliteTest > treeWithOneItem() PASSED
+
+SatelliteTest > rejectTraversalsOfDifferentLengths() FAILED
+    java.lang.AssertionError: 
+    Expecting code to raise a throwable.
+        at SatelliteTest.rejectTraversalsOfDifferentLengths(SatelliteTest.java:53)
+
+SatelliteTest > treeWithManyItems() PASSED
+
+MaisonTest > treeFromExample() PASSED
+
+MaisonTest > treeFromSingleNode() PASSED
+
+MaisonTest > treeFromComplexTree() PASSED
+
+MaisonTest > treeFromLeftSkewedTree() PASSED
+
+MaisonTest > treeFromRootAndRightChild() PASSED
+
+MaisonTest > treeFromCompleteTree() PASSED
+
+MaisonTest > treeFromRightSkewedTree() PASSED
+
+MaisonTest > treeFromRootAndLeftChild() PASSED
+
+TreeTest > preorder() SKIPPED
+
+TreeTest > inorder() PASSED
+
+TreeTest > postorder() SKIPPED
+
+> Task :test FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 2 executed, 1 up-to-date
+
+17 tests completed, 3 failed, 2 skipped
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/pi_D_t1_dflash2/java/exercises/practice/satellite/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 3s

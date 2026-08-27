@@ -1,0 +1,131 @@
+juge     : ./gradlew test
+conteneur: pi-polyglot-tests
+repertoire: /benchmarks/pi_D_t1_dflash2/java/exercises/practice/sgf-parsing
+tests remis a neuf, @Disabled retires : src/test/java/SgfParsingTest.java
+
+code de retour : 1   (6800 caracteres -> juge_java_sgf-parsing.txt)
+nsupportedOperationException: Please implement the SgfParsing.parse method.
+        at SgfParsing.parse(SgfParsing.java:3)
+        at SgfParsingTest.multipleProperties(SgfParsingTest.java:55)
+
+SgfParsingTest > nodeWithoutTree() FAILED
+    java.lang.AssertionError: [tree missing] 
+    Expecting actual throwable to be an instance of:
+      SgfParsingException
+    but was:
+      java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+    	at SgfParsing.parse(SgfParsing.java:3)
+    	at SgfParsingTest.lambda$nodeWithoutTree$2(SgfParsingTest.java:31)
+    	at org.assertj.core.api.ThrowableAssert.catchThrowable(ThrowableAssert.java:63)
+    	...(82 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+        at SgfParsingTest.nodeWithoutTree(SgfParsingTest.java:31)
+
+SgfParsingTest > allLowercaseProperty() FAILED
+    java.lang.AssertionError: [property must be in uppercase] 
+    Expecting actual throwable to be an instance of:
+      SgfParsingException
+    but was:
+      java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+    	at SgfParsing.parse(SgfParsing.java:3)
+    	at SgfParsingTest.lambda$allLowercaseProperty$4(SgfParsingTest.java:70)
+    	at org.assertj.core.api.ThrowableAssert.catchThrowable(ThrowableAssert.java:63)
+    	...(82 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+        at SgfParsingTest.allLowercaseProperty(SgfParsingTest.java:70)
+
+SgfParsingTest > emptyInput() FAILED
+    java.lang.AssertionError: [tree missing] 
+    Expecting actual throwable to be an instance of:
+      SgfParsingException
+    but was:
+      java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+    	at SgfParsing.parse(SgfParsing.java:3)
+    	at SgfParsingTest.lambda$emptyInput$0(SgfParsingTest.java:16)
+    	at org.assertj.core.api.ThrowableAssert.catchThrowable(ThrowableAssert.java:63)
+    	...(82 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+        at SgfParsingTest.emptyInput(SgfParsingTest.java:16)
+
+SgfParsingTest > nodeWithoutProperties() FAILED
+    java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+        at SgfParsing.parse(SgfParsing.java:3)
+        at SgfParsingTest.nodeWithoutProperties(SgfParsingTest.java:38)
+
+SgfParsingTest > multiplePropertyValues() FAILED
+    java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+        at SgfParsing.parse(SgfParsing.java:3)
+        at SgfParsingTest.multiplePropertyValues(SgfParsingTest.java:107)
+
+SgfParsingTest > twoChildTrees() FAILED
+    java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+        at SgfParsing.parse(SgfParsing.java:3)
+        at SgfParsingTest.twoChildTrees(SgfParsingTest.java:99)
+
+SgfParsingTest > upperAndLowercaseProperty() FAILED
+    java.lang.AssertionError: [property must be in uppercase] 
+    Expecting actual throwable to be an instance of:
+      SgfParsingException
+    but was:
+      java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+    	at SgfParsing.parse(SgfParsing.java:3)
+    	at SgfParsingTest.lambda$upperAndLowercaseProperty$5(SgfParsingTest.java:77)
+    	at org.assertj.core.api.ThrowableAssert.catchThrowable(ThrowableAssert.java:63)
+    	...(82 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+        at SgfParsingTest.upperAndLowercaseProperty(SgfParsingTest.java:77)
+
+SgfParsingTest > escapedProperty() FAILED
+    java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+        at SgfParsing.parse(SgfParsing.java:3)
+        at SgfParsingTest.escapedProperty(SgfParsingTest.java:115)
+
+SgfParsingTest > singleNodeTree() FAILED
+    java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+        at SgfParsing.parse(SgfParsing.java:3)
+        at SgfParsingTest.singleNodeTree(SgfParsingTest.java:46)
+
+SgfParsingTest > twoNodes() FAILED
+    java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+        at SgfParsing.parse(SgfParsing.java:3)
+        at SgfParsingTest.twoNodes(SgfParsingTest.java:87)
+
+SgfParsingTest > propertiesWithoutDelimiter() FAILED
+    java.lang.AssertionError: [properties without delimiter] 
+    Expecting actual throwable to be an instance of:
+      SgfParsingException
+    but was:
+      java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+    	at SgfParsing.parse(SgfParsing.java:3)
+    	at SgfParsingTest.lambda$propertiesWithoutDelimiter$3(SgfParsingTest.java:63)
+    	at org.assertj.core.api.ThrowableAssert.catchThrowable(ThrowableAssert.java:63)
+    	...(82 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+        at SgfParsingTest.propertiesWithoutDelimiter(SgfParsingTest.java:63)
+
+SgfParsingTest > treeWithNoNodes() FAILED
+    java.lang.AssertionError: [tree with no nodes] 
+    Expecting actual throwable to be an instance of:
+      SgfParsingException
+    but was:
+      java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.
+    	at SgfParsing.parse(SgfParsing.java:3)
+    	at SgfParsingTest.lambda$treeWithNoNodes$1(SgfParsingTest.java:24)
+    	at org.assertj.core.api.ThrowableAssert.catchThrowable(ThrowableAssert.java:63)
+    	...(82 remaining lines not displayed - this can be changed with Assertions.setMaxStackTraceElementsDisplayed)
+        at SgfParsingTest.treeWithNoNodes(SgfParsingTest.java:24)
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 1 executed, 2 up-to-date
+
+13 tests completed, 13 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/pi_D_t1_dflash2/java/exercises/practice/sgf-parsing/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 2s
