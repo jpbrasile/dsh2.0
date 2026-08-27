@@ -1,0 +1,2 @@
+go: downloading go1.24 (linux/amd64)
+go: download go1.24 for linux/amd64: toolchain not available

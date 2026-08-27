@@ -1,0 +1,199 @@
+
+> test
+> jest ./*
+
+FAIL ./react.spec.js (10.712 s)
+  ● React module › allows setting compute cells
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: 2
+    Received: NaN
+
+      17 |     const fn = (inputCells) => inputCells[0].value + 1;
+      18 |     const computeCell = new ComputeCell([inputCell], fn);
+    > 19 |     expect(computeCell.value).toEqual(2);
+         |                               ^
+      20 |   });
+      21 |
+      22 |   test('compute cell takes inputs in correct order', () => {
+
+      at Object.toEqual (react.spec.js:19:31)
+
+  ● React module › compute cell takes inputs in correct order
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: 21
+    Received: NaN
+
+      28 |     );
+      29 |
+    > 30 |     expect(computeCell.value).toEqual(21);
+         |                               ^
+      31 |   });
+      32 |
+      33 |   test('compute cells update value when inputs are changed', () => {
+
+      at Object.toEqual (react.spec.js:30:31)
+
+  ● React module › compute cells update value when inputs are changed
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: 4
+    Received: NaN
+
+      38 |     );
+      39 |     inputCell.setValue(3);
+    > 40 |     expect(computeCell.value).toEqual(4);
+         |                               ^
+      41 |   });
+      42 |
+      43 |   test('compute cells can depend on other compute cells', () => {
+
+      at Object.toEqual (react.spec.js:40:31)
+
+  ● React module › compute cells can depend on other compute cells
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: 32
+    Received: NaN
+
+      58 |     );
+      59 |
+    > 60 |     expect(sum.value).toEqual(32);
+         |                       ^
+      61 |
+      62 |     inputCell.setValue(3);
+      63 |     expect(sum.value).toEqual(96);
+
+      at Object.toEqual (react.spec.js:60:23)
+
+  ● React module › compute cells fire callbacks
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: [4]
+    Received: undefined
+
+      75 |
+      76 |     inputCell.setValue(3);
+    > 77 |     expect(callback.values).toEqual([4]);
+         |                             ^
+      78 |   });
+      79 |
+      80 |   test('callbacks fire only when output values change', () => {
+
+      at Object.toEqual (react.spec.js:77:29)
+
+  ● React module › callbacks fire only when output values change
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: []
+    Received: undefined
+
+      88 |
+      89 |     inputCell.setValue(2);
+    > 90 |     expect(callback.values).toEqual([]);
+         |                             ^
+      91 |
+      92 |     inputCell.setValue(4);
+      93 |     expect(callback.values).toEqual([222]);
+
+      at Object.toEqual (react.spec.js:90:29)
+
+  ● React module › static callbacks fire even if their own value has not changed
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: []
+    Received: undefined
+
+      104 |
+      105 |     inputCell.setValue(2);
+    > 106 |     expect(callback.values).toEqual([]);
+          |                             ^
+      107 |
+      108 |     inputCell.setValue(4);
+      109 |     inputCell.setValue(2);
+
+      at Object.toEqual (react.spec.js:106:29)
+
+  ● React module › callbacks can be added and removed
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: [32]
+    Received: undefined
+
+      138 |     inputCell.setValue(41);
+      139 |
+    > 140 |     expect(callback1.values).toEqual([32]);
+          |                              ^
+      141 |     expect(callback2.values).toEqual([32, 42]);
+      142 |     expect(callback3.values).toEqual([42]);
+      143 |   });
+
+      at Object.toEqual (react.spec.js:140:30)
+
+  ● React module › removing a callback multiple times doesn't interfere with other callbacks
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: []
+    Received: undefined
+
+      162 |     inputCell.setValue(2);
+      163 |
+    > 164 |     expect(callback1.values).toEqual([]);
+          |                              ^
+      165 |     expect(callback2.values).toEqual([3]);
+      166 |   });
+      167 |
+
+      at Object.toEqual (react.spec.js:164:30)
+
+  ● React module › callbacks should only be called once, even if multiple dependencies change
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: [10]
+    Received: undefined
+
+      193 |     inputCell.setValue(4);
+      194 |
+    > 195 |     expect(callback1.values).toEqual([10]);
+          |                              ^
+      196 |   });
+      197 |
+      198 |   test("callbacks should not be called if dependencies change but output value doesn't change", () => {
+
+      at Object.toEqual (react.spec.js:195:30)
+
+  ● React module › callbacks should not be called if dependencies change but output value doesn't change
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: []
+    Received: undefined
+
+      221 |     inputCell.setValue(5);
+      222 |
+    > 223 |     expect(callback.values).toEqual([]);
+          |                             ^
+      224 |   });
+      225 | });
+      226 |
+
+      at Object.toEqual (react.spec.js:223:29)
+
+PASS ./maison.test.js (21.354 s)
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       11 failed, 20 passed, 31 total
+Snapshots:   0 total
+Time:        25.154 s
+Ran all test suites matching /.\/LICENSE|.\/TASK.md|.\/babel.config.js|.\/maison.test.js|.\/node_modules|.\/package-lock.json|.\/package.json|.\/react.js|.\/react.spec.js/i.

@@ -1,0 +1,234 @@
+
+> test
+> jest ./*
+
+FAIL ./queen-attack.spec.js (9.126 s)
+  ● Queens › Test creation of Queens with valid and invalid positions › queen must have positive row
+
+    expect(received).toThrow(expected)
+
+    Expected substring: "Queen must be placed on the board"
+    Received message:   "Imaginary position"
+
+          16 |
+          17 |     if (!inBounds([whiteRow, whiteColumn])) {
+        > 18 |       throw new Error('Imaginary position');
+             |             ^
+          19 |     }
+          20 |
+          21 |     if (
+
+      at new QueenAttack (queen-attack.js:18:13)
+      at queen-attack.spec.js:13:20
+      at Object.<anonymous> (node_modules/expect/build/toThrowMatchers.js:74:11)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:320:21)
+      at Object.toThrow (queen-attack.spec.js:13:50)
+      at Object.toThrow (queen-attack.spec.js:13:50)
+
+  ● Queens › Test creation of Queens with valid and invalid positions › queen must have row on board
+
+    expect(received).toThrow(expected)
+
+    Expected substring: "Queen must be placed on the board"
+    Received message:   "Imaginary position"
+
+          16 |
+          17 |     if (!inBounds([whiteRow, whiteColumn])) {
+        > 18 |       throw new Error('Imaginary position');
+             |             ^
+          19 |     }
+          20 |
+          21 |     if (
+
+      at new QueenAttack (queen-attack.js:18:13)
+      at queen-attack.spec.js:19:20
+      at Object.<anonymous> (node_modules/expect/build/toThrowMatchers.js:74:11)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:320:21)
+      at Object.toThrow (queen-attack.spec.js:19:50)
+      at Object.toThrow (queen-attack.spec.js:19:50)
+
+  ● Queens › Test creation of Queens with valid and invalid positions › queen must have positive column
+
+    expect(received).toThrow(expected)
+
+    Expected substring: "Queen must be placed on the board"
+    Received message:   "Imaginary position"
+
+          16 |
+          17 |     if (!inBounds([whiteRow, whiteColumn])) {
+        > 18 |       throw new Error('Imaginary position');
+             |             ^
+          19 |     }
+          20 |
+          21 |     if (
+
+      at new QueenAttack (queen-attack.js:18:13)
+      at queen-attack.spec.js:25:20
+      at Object.<anonymous> (node_modules/expect/build/toThrowMatchers.js:74:11)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:320:21)
+      at Object.toThrow (queen-attack.spec.js:25:50)
+      at Object.toThrow (queen-attack.spec.js:25:50)
+
+  ● Queens › Test creation of Queens with valid and invalid positions › queen must have column on board
+
+    expect(received).toThrow(expected)
+
+    Expected substring: "Queen must be placed on the board"
+    Received message:   "Imaginary position"
+
+          16 |
+          17 |     if (!inBounds([whiteRow, whiteColumn])) {
+        > 18 |       throw new Error('Imaginary position');
+             |             ^
+          19 |     }
+          20 |
+          21 |     if (
+
+      at new QueenAttack (queen-attack.js:18:13)
+      at queen-attack.spec.js:31:20
+      at Object.<anonymous> (node_modules/expect/build/toThrowMatchers.js:74:11)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:320:21)
+      at Object.toThrow (queen-attack.spec.js:31:50)
+      at Object.toThrow (queen-attack.spec.js:31:50)
+
+  ● Queens › Test creation of Queens with valid and invalid positions › two queens cannot occupy the same space
+
+    expect(received).toThrow(expected)
+
+    Expected substring: "Queens cannot share the same space"
+    Received message:   "Imaginary position"
+
+          23 |       blackColumn === whiteColumn
+          24 |     ) {
+        > 25 |       throw new Error('Imaginary position');
+             |             ^
+          26 |     }
+          27 |
+          28 |     this.black = [blackRow, blackColumn];
+
+      at new QueenAttack (queen-attack.js:25:13)
+      at queen-attack.spec.js:37:20
+      at Object.<anonymous> (node_modules/expect/build/toThrowMatchers.js:74:11)
+      at Object.throwingMatcher [as toThrow] (node_modules/expect/build/index.js:320:21)
+      at Object.toThrow (queen-attack.spec.js:37:50)
+      at Object.toThrow (queen-attack.spec.js:37:50)
+
+  ● Queens › Test the board visualisation › board
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+    - _ _ W _ _ _ _ _
+    + _ _ w _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+    - _ _ _ _ _ B _ _
+    + _ _ _ _ _ b _ _
+      _ _ _ _ _ _ _ _
+
+      100 |         '_ _ _ _ _ _ _ _',
+      101 |       ].join('\n');
+    > 102 |       expect(queens.toString()).toEqual(board);
+          |                                 ^
+      103 |     });
+      104 |
+      105 |     test('board with queens at their starting positions', () => {
+
+      at Object.toEqual (queen-attack.spec.js:102:33)
+
+  ● Queens › Test the board visualisation › board with queens at their starting positions
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+    - _ _ _ B _ _ _ _
+    + _ _ _ b _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+    - _ _ _ W _ _ _ _
+    + _ _ _ w _ _ _ _
+
+      115 |         '_ _ _ W _ _ _ _',
+      116 |       ].join('\n');
+    > 117 |       expect(queens.toString()).toEqual(board);
+          |                                 ^
+      118 |     });
+      119 |
+      120 |     test('board with the black queen at her starting positions', () => {
+
+      at Object.toEqual (queen-attack.spec.js:117:33)
+
+  ● Queens › Test the board visualisation › board with the black queen at her starting positions
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+    @@ -1,7 +1,7 @@
+    - _ _ _ B _ _ _ _
+    + _ _ _ b _ _ _ _
+    - _ _ _ _ _ _ W _
+    + _ _ _ _ _ _ w _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+
+      130 |         '_ _ _ _ _ _ _ _',
+      131 |       ].join('\n');
+    > 132 |       expect(queens.toString()).toEqual(board);
+          |                                 ^
+      133 |     });
+      134 |
+      135 |     test('board with queens at the edges', () => {
+
+      at Object.toEqual (queen-attack.spec.js:132:33)
+
+  ● Queens › Test the board visualisation › board with queens at the edges
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+    - W _ _ _ _ _ _ _
+    + w _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+      _ _ _ _ _ _ _ _
+    - _ _ _ _ _ _ _ B
+    + _ _ _ _ _ _ _ b
+
+      146 |         '_ _ _ _ _ _ _ B',
+      147 |       ].join('\n');
+    > 148 |       expect(queens.toString()).toEqual(board);
+          |                                 ^
+      149 |     });
+      150 |   });
+      151 | });
+
+      at Object.toEqual (queen-attack.spec.js:148:33)
+
+PASS ./maison.test.js (20.362 s)
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       9 failed, 27 passed, 36 total
+Snapshots:   0 total
+Time:        22.97 s
+Ran all test suites matching /.\/LICENSE|.\/TASK.md|.\/babel.config.js|.\/maison.test.js|.\/node_modules|.\/package-lock.json|.\/package.json|.\/queen-attack.js|.\/queen-attack.spec.js/i.

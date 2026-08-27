@@ -1,0 +1,150 @@
+
+> test
+> jest ./*
+
+FAIL ./rest-api.spec.js (5.278 s)
+  ● Rest API › iou › lender owes borrower
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 8
+
+      Object {
+        "users": Array [
+          Object {
+            "balance": -1,
+            "name": "Adam",
+    -       "owed_by": Object {},
+    +       "owed_by": Object {
+    +         "Bob": 2,
+    +       },
+            "owes": Object {
+    -         "Bob": 1,
+    +         "Bob": 3,
+            },
+          },
+          Object {
+            "balance": 1,
+            "name": "Bob",
+            "owed_by": Object {
+    -         "Adam": 1,
+    +         "Adam": 3,
+    +       },
+    +       "owes": Object {
+    +         "Adam": 2,
+            },
+    -       "owes": Object {},
+          },
+        ],
+      }
+
+      87 |         { name: 'Bob', owes: {}, owed_by: { Adam: 1 }, balance: 1 },
+      88 |       ];
+    > 89 |       expect(restAPI.post('/iou', payload)).toEqual({ users: expectedUsers });
+         |                                             ^
+      90 |     });
+      91 |
+      92 |     test('lender owes borrower less than new loan', () => {
+
+      at Object.toEqual (rest-api.spec.js:89:45)
+
+  ● Rest API › iou › lender owes borrower less than new loan
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 8
+
+    @@ -2,19 +2,23 @@
+        "users": Array [
+          Object {
+            "balance": 1,
+            "name": "Adam",
+            "owed_by": Object {
+    -         "Bob": 1,
+    +         "Bob": 4,
+            },
+    -       "owes": Object {},
+    +       "owes": Object {
+    +         "Bob": 3,
+    +       },
+          },
+          Object {
+            "balance": -1,
+            "name": "Bob",
+    -       "owed_by": Object {},
+    +       "owed_by": Object {
+    +         "Adam": 3,
+    +       },
+            "owes": Object {
+    -         "Adam": 1,
+    +         "Adam": 4,
+            },
+          },
+        ],
+      }
+
+      101 |         { name: 'Bob', owes: { Adam: 1 }, owed_by: {}, balance: -1 },
+      102 |       ];
+    > 103 |       expect(restAPI.post('/iou', payload)).toEqual({ users: expectedUsers });
+          |                                             ^
+      104 |     });
+      105 |
+      106 |     test('lender owes borrower same as new loan', () => {
+
+      at Object.toEqual (rest-api.spec.js:103:45)
+
+  ● Rest API › iou › lender owes borrower same as new loan
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  4
+    + Received  + 12
+
+      Object {
+        "users": Array [
+          Object {
+            "balance": 0,
+            "name": "Adam",
+    -       "owed_by": Object {},
+    -       "owes": Object {},
+    +       "owed_by": Object {
+    +         "Bob": 3,
+    +       },
+    +       "owes": Object {
+    +         "Bob": 3,
+    +       },
+          },
+          Object {
+            "balance": 0,
+            "name": "Bob",
+    -       "owed_by": Object {},
+    -       "owes": Object {},
+    +       "owed_by": Object {
+    +         "Adam": 3,
+    +       },
+    +       "owes": Object {
+    +         "Adam": 3,
+    +       },
+          },
+        ],
+      }
+
+      115 |         { name: 'Bob', owes: {}, owed_by: {}, balance: 0 },
+      116 |       ];
+    > 117 |       expect(restAPI.post('/iou', payload)).toEqual({ users: expectedUsers });
+          |                                             ^
+      118 |     });
+      119 |   });
+      120 | });
+
+      at Object.toEqual (rest-api.spec.js:117:45)
+
+PASS ./maison.test.js (14.201 s)
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       3 failed, 17 passed, 20 total
+Snapshots:   0 total
+Time:        15.783 s, estimated 17 s
+Ran all test suites matching /.\/LICENSE|.\/TASK.md|.\/babel.config.js|.\/maison.test.js|.\/node_modules|.\/package-lock.json|.\/package.json|.\/rest-api.js|.\/rest-api.spec.js/i.

@@ -1,0 +1,169 @@
+
+> test
+> jest ./*
+
+FAIL ./rational-numbers.spec.js (5.763 s)
+  ● Exponentiation of a real number to a rational number › Raise a real number to a positive rational number
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: 16
+    Received: 9.988721231519586
+
+      151 |   test('Raise a real number to a positive rational number', () => {
+      152 |     const expected = 16.0;
+    > 153 |     expect(new Rational(4, 3).expreal(8)).toEqual(expected);
+          |                                           ^
+      154 |   });
+      155 |
+      156 |   test('Raise a real number to a negative rational number', () => {
+
+      at Object.toEqual (rational-numbers.spec.js:153:43)
+
+  ● Exponentiation of a real number to a rational number › Raise a real number to a negative rational number
+
+    expect(received).toBeCloseTo(expected, precision)
+
+    Expected: 0.33
+    Received: -0.001953125
+
+    Expected precision:    2
+    Expected difference: < 0.005
+    Received difference:   0.331953125
+
+      155 |
+      156 |   test('Raise a real number to a negative rational number', () => {
+    > 157 |     expect(new Rational(-1, 2).expreal(9)).toBeCloseTo(0.33, 2);
+          |                                            ^
+      158 |   });
+      159 |
+      160 |   test('Raise a real number to a zero rational number', () => {
+
+      at Object.toBeCloseTo (rational-numbers.spec.js:157:44)
+
+  ● Exponentiation of a real number to a rational number › Raise a real number to a zero rational number
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: 1
+    Received: 0
+
+      160 |   test('Raise a real number to a zero rational number', () => {
+      161 |     const expected = 1.0;
+    > 162 |     expect(new Rational(0, 1).expreal(2)).toEqual(expected);
+          |                                           ^
+      163 |   });
+      164 | });
+      165 |
+
+      at Object.toEqual (rational-numbers.spec.js:162:43)
+
+  ● Reduction to lowest terms › Reduce a positive rational number to lowest terms
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: {"denominator": 2, "numerator": 1}
+    Received: "1/2"
+
+      167 |   test('Reduce a positive rational number to lowest terms', () => {
+      168 |     const expected = new Rational(1, 2);
+    > 169 |     expect(new Rational(2, 4).reduce()).toEqual(expected);
+          |                                         ^
+      170 |   });
+      171 |
+      172 |   test('Reduce a negative rational number to lowest terms', () => {
+
+      at Object.toEqual (rational-numbers.spec.js:169:41)
+
+  ● Reduction to lowest terms › Reduce a negative rational number to lowest terms
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: {"denominator": 3, "numerator": -2}
+    Received: "-2/3"
+
+      172 |   test('Reduce a negative rational number to lowest terms', () => {
+      173 |     const expected = new Rational(-2, 3);
+    > 174 |     expect(new Rational(-4, 6).reduce()).toEqual(expected);
+          |                                          ^
+      175 |   });
+      176 |
+      177 |   test('Reduce a rational number with a negative denominator to lowest terms', () => {
+
+      at Object.toEqual (rational-numbers.spec.js:174:42)
+
+  ● Reduction to lowest terms › Reduce a rational number with a negative denominator to lowest terms
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: {"denominator": 3, "numerator": -1}
+    Received: "-1/3"
+
+      177 |   test('Reduce a rational number with a negative denominator to lowest terms', () => {
+      178 |     const expected = new Rational(-1, 3);
+    > 179 |     expect(new Rational(3, -9).reduce()).toEqual(expected);
+          |                                          ^
+      180 |   });
+      181 |
+      182 |   test('Reduce zero to lowest terms', () => {
+
+      at Object.toEqual (rational-numbers.spec.js:179:42)
+
+  ● Reduction to lowest terms › Reduce zero to lowest terms
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: {"denominator": 1, "numerator": 0}
+    Received: "0/1"
+
+      182 |   test('Reduce zero to lowest terms', () => {
+      183 |     const expected = new Rational(0, 1);
+    > 184 |     expect(new Rational(0, 6).reduce()).toEqual(expected);
+          |                                         ^
+      185 |   });
+      186 |
+      187 |   test('Reduce an integer to lowest terms', () => {
+
+      at Object.toEqual (rational-numbers.spec.js:184:41)
+
+  ● Reduction to lowest terms › Reduce an integer to lowest terms
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: {"denominator": 1, "numerator": -2}
+    Received: "-2/1"
+
+      187 |   test('Reduce an integer to lowest terms', () => {
+      188 |     const expected = new Rational(-2, 1);
+    > 189 |     expect(new Rational(-14, 7).reduce()).toEqual(expected);
+          |                                           ^
+      190 |   });
+      191 |
+      192 |   test('Reduce one to lowest terms', () => {
+
+      at Object.toEqual (rational-numbers.spec.js:189:43)
+
+  ● Reduction to lowest terms › Reduce one to lowest terms
+
+    expect(received).toEqual(expected) // deep equality
+
+    Expected: {"denominator": 1, "numerator": 1}
+    Received: "1/1"
+
+      192 |   test('Reduce one to lowest terms', () => {
+      193 |     const expected = new Rational(1, 1);
+    > 194 |     expect(new Rational(13, 13).reduce()).toEqual(expected);
+          |                                           ^
+      195 |   });
+      196 | });
+      197 |
+
+      at Object.toEqual (rational-numbers.spec.js:194:43)
+
+PASS ./maison.test.js (17.535 s)
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       9 failed, 66 passed, 75 total
+Snapshots:   0 total
+Time:        19.431 s, estimated 20 s
+Ran all test suites matching /.\/LICENSE|.\/TASK.md|.\/babel.config.js|.\/maison.test.js|.\/node_modules|.\/package-lock.json|.\/package.json|.\/rational-numbers.js|.\/rational-numbers.spec.js/i.
