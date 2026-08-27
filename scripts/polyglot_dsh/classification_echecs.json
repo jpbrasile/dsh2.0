@@ -1,0 +1,45 @@
+{
+  "_lisez_moi": {
+    "a_quoi_ca_sert": "Le taux d'echec brut melange DEUX populations qui ne disent pas la meme chose : un echec d'AMBIGUITE (l'enonce ne dit pas ce que la suite exige) et un echec de FOND (l'agent a ecrit un bug). Aucune signature d'enonce ne peut attraper un echec de fond. Les laisser dans la colonne « non signales » dilue mecaniquement tout ecart mesure.",
+    "critere": "Il n'est PAS invente pour l'occasion : c'est la barre deja ecrite dans BONNES_PRATIQUES_CONVENTIONS.md le 27/08, avant ces echecs. Un echec est classe AMBIGUITE si et seulement si les DEUX conditions tiennent : (1) la logique passe les cas voisins -- on peut nommer quels cas passent ; (2) l'element divergent est ABSENT de l'enonce ET du stub, c'est-a-dire de tout ce que l'agent peut voir. Sinon : FOND.",
+    "regle_d_usage": "Le classement se fait en lisant la sortie du juge et l'enonce, JAMAIS en regardant si l'exercice etait signale par une signature. Le critere est symetrique : un exercice signale qui echoue sur un bug est classe FOND comme les autres, et sort du depouillement lui aussi. C'est ce qui empeche le classement de fabriquer l'ecart qu'il est cense mesurer.",
+    "chaque_entree_porte_sa_preuve": "Le champ `preuve` doit citer la piece : ligne de l'enonce, ligne du stub, ou cas voisins qui passent. Une entree sans preuve verifiable est a retirer, pas a garder par confort."
+  },
+  "echecs": {
+    "go/beer-song": {
+      "classe": "ambiguite",
+      "fondateur": true,
+      "preuve": "Les 5 cas de Verse et les 2 cas d'erreur passent ; seul l'assemblage echoue, et d'UN caractere. Un separateur terminal est invisible dans un exemple rendu."
+    },
+    "go/connect": {
+      "classe": "ambiguite",
+      "fondateur": true,
+      "preuve": "connect_test.go:8-16 retire tous les espaces avant l'appel mais AFFICHE le plateau espace dans son message d'erreur. La forme passee n'est ni dans l'enonce ni dans le stub."
+    },
+    "go/kindergarten-garden": {
+      "classe": "ambiguite",
+      "fondateur": true,
+      "preuve": "Le meme vocabulaire figure sous trois formes dans l'enonce (prose ligne 6, tableau lignes 19-22, liste ligne 58) ; rien ne dit laquelle fait foi. Et « error », « invalid », « duplicate », « odd » n'y figurent pas du tout."
+    },
+    "go/poker": {
+      "classe": "ambiguite",
+      "preuve": "Tous les cas de classement et de departage passent ; seul le rejet d'une main invalide tombe. Le stub declare ([]string, error) ; l'enonce fait 4 lignes et n'emploie ni « error », ni « invalid », ni « must »."
+    },
+    "go/protein-translation": {
+      "classe": "ambiguite",
+      "preuve": "ErrStop et ErrInvalidBase n'apparaissent NI dans .docs/, NI dans le stub -- verifie par grep le 27/08. La suite les exige par leur nom exact et verifie qu'ils ne sont pas nil."
+    },
+    "go/pig-latin": {
+      "classe": "ambiguite",
+      "preuve": "xray, yttria, my, rhythm, quick, square passent tous ; seul yellow tombe. L'enonce ne dit nulle part si un « y » initial est voyelle ou consonne : il ne donne que l'exception de prefixe « yt »."
+    },
+    "go/react": {
+      "classe": "fond",
+      "preuve": "react.go:119-122 : suppression par echange qui corrige l'index de l'entree RETIREE (e := cbs[c.idx]) au lieu de celle qui a BOUGE (cbs[last]). Le rescape garde un index perime -> index out of range [3] with length 2. Rien a voir avec l'enonce."
+    },
+    "go/robot-simulator": {
+      "classe": "fond",
+      "preuve": "Le stub NOMME ce qu'il faut definir (« Define N, E, S, W here. », « Define Action type here. ») et instructions.append.md:22 le redit. L'agent a utilise Action et Action3 dans ses signatures sans jamais declarer les types : build failed. Rien n'etait cache."
+    }
+  }
+}

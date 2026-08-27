@@ -181,6 +181,28 @@ def main():
             print("  %-5s non depouillable : %s" % (s, pourquoi))
         print("")
 
+    # TROISIEME LECTURE, si le classement a la main existe. Le taux brut melange
+    # les echecs d'AMBIGUITE et les echecs de FOND ; aucune signature d'enonce
+    # ne peut attraper un bug. Les laisser dans la colonne « non signales »
+    # dilue mecaniquement l'ecart. On les retire DES DEUX COTES -- le critere
+    # est symetrique et se lit sans regarder si l'exercice etait signale.
+    clf = os.path.join(ICI, "classification_echecs.json")
+    fonds = set()
+    if os.path.exists(clf):
+        doc = json.load(io.open(clf, encoding="utf-8"))
+        fonds = {k for k, e in doc.get("echecs", {}).items()
+                 if e.get("classe") == "fond"}
+        non_classes = sorted(k for k in joues
+                             if not v[k]["ok"] and k not in doc.get("echecs", {}))
+        if non_classes:
+            print("A CLASSER : %d echec(s) juge(s) absent(s) de "
+                  "classification_echecs.json -- ils comptent comme "
+                  "« ambiguite » par defaut, ce qui est le choix DEFAVORABLE "
+                  "a la prediction." % len(non_classes))
+            for k in non_classes:
+                print("    %s" % k)
+            print("")
+
     fond = [k for k in joues if k in FONDATRICES]
     hors = [k for k in joues if k not in FONDATRICES]
     table(joues, "TOUT, cas fondateurs compris -- A NE PAS PUBLIER SEUL")
@@ -191,6 +213,16 @@ def main():
         print("  exemples dont elle est tiree : le p ci-dessus est circulaire.")
         print("")
     table(hors, "HORS cas fondateurs -- c'est CE tableau qui teste la prediction")
+    if fonds:
+        vus = sorted(set(hors) & fonds)
+        if vus:
+            print("  %d echec(s) de FOND retire(s) des DEUX colonnes : %s"
+                  % (len(vus), ", ".join(vus)))
+            print("  Critere fixe dans classification_echecs.json, applique")
+            print("  sans regarder si l'exercice etait signale.")
+            print("")
+            table([k for k in hors if k not in fonds],
+                  "HORS fondateurs ET hors echecs de FOND -- lecture la plus fine")
 
     print("LECTURE. Un ecart positif dit que la signature separe ; p dit si la")
     print("separation survit au hasard aux effectifs atteints. Un ecart de")

@@ -5915,3 +5915,83 @@ publier seul ».
 
 État : 49 verdicts, 46 dépouillés (2 coupures + 1 infra écartées), 5 échecs
 jugés.
+
+---
+
+### R28t — deux bugs de fond diluaient la mesure ; le critère qui les sépare était déjà écrit
+
+Deux échecs de plus, et **aucun des deux** n'est une convention muette.
+
+**`go/react`** — panic `index out of range [3] with length 2`. Suppression par
+échange, à `react.go:119-122` :
+
+```go
+e := cbs[c.idx]        // l'entree RETIREE
+cbs[c.idx] = cbs[last] // le rescape arrive ici...
+e.can.idx = c.idx      // ...mais c'est l'index du RETIRE qu'on corrige
+```
+
+Il fallait `cbs[last].can.idx = c.idx`. Le rescapé garde un index périmé.
+Bug pur, rien à voir avec l'énoncé.
+
+**`go/robot-simulator`** — `build failed`, `undefined: Action`, `undefined: N`.
+Or le stub **nomme** ce qu'il faut définir : `// Define N, E, S, W here.`,
+`// Define Action type here.` — et `instructions.append.md:22` le redit. L'agent
+a utilisé `Action` et `Action3` dans ses signatures sans jamais déclarer les
+types. **Rien n'était caché.**
+
+Le contraste avec `go/protein-translation` est net et il fait la frontière de
+la famille **contrat** : là-bas `ErrStop` et `ErrInvalidBase` n'existaient ni
+dans l'énoncé ni dans le stub ; ici les noms étaient donnés deux fois.
+
+#### Le problème que ça pose à la mesure
+
+Le taux d'échec brut mélange deux populations : l'échec d'**ambiguïté**
+(l'énoncé ne dit pas ce que la suite exige) et l'échec de **fond** (l'agent a
+écrit un bug). **Aucune signature d'énoncé ne peut attraper un bug.** Les
+laisser dans la colonne « non signalés » dilue mécaniquement tout écart —
+c'est exactement ce qui a fait retomber S4 de +26,2 à +15,7 points en deux
+exercices.
+
+Les retirer parce que ça arrange la prédiction serait régler l'analyse pour
+obtenir un résultat. Ce qui l'évite, c'est que **le critère était déjà écrit,
+avant ces échecs** : c'est la barre du fichier des bonnes pratiques du 27/08,
+point 2 — *« la preuve sur pièces que la logique était juste »*.
+
+`classification_echecs.json` le fixe noir sur blanc :
+
+> Un échec est classé **ambiguïté** si et seulement si (1) la logique passe les
+> cas voisins — on peut nommer lesquels — **et** (2) l'élément divergent est
+> absent de l'énoncé **et** du stub, c'est-à-dire de tout ce que l'agent peut
+> voir. Sinon : **fond**.
+
+Trois garde-fous, sans lesquels le classement fabriquerait l'écart qu'il
+prétend mesurer :
+
+- le classement se lit **sans regarder** si l'exercice était signalé ;
+- il est **symétrique** — un exercice signalé qui échoue sur un bug sort du
+  dépouillement comme les autres ;
+- un échec **non classé** compte comme « ambiguïté » par défaut, donc du côté
+  **défavorable** à la prédiction, et le script le signale par son nom.
+
+#### Les trois lectures, à 54 verdicts
+
+```
+=== HORS cas fondateurs ===
+  S4    23 joues          2/6   =  33.3 %     3/17  =  17.6 %    +15.7 pt   p = 0.392
+
+  2 echec(s) de FOND retire(s) des DEUX colonnes : go/react, go/robot-simulator
+
+=== HORS fondateurs ET hors echecs de FOND -- lecture la plus fine ===
+  S1    46 joues          0/1   =   0.0 %     3/45  =   6.7 %     -6.7 pt   p = 1.000
+  S2    46 joues          0/10  =   0.0 %     3/36  =   8.3 %     -8.3 pt   p = 1.000
+  S3    46 joues          0/3   =   0.0 %     3/43  =   7.0 %     -7.0 pt   p = 1.000
+  S4    21 joues          2/6   =  33.3 %     1/15  =   6.7 %    +26.7 pt   p = 0.184
+```
+
+**S4 sépare, les trois autres non, et rien n'atteint le seuil.** S1, S2 et S3
+n'ont toujours **aucun** échec signalé hors cas fondateurs — leurs écarts
+négatifs ne disent pas qu'elles se trompent, seulement qu'aucun des exercices
+qu'elles désignent n'a encore échoué.
+
+État : 54 verdicts, 51 dépouillés, 8 échecs jugés, go 28/39.
