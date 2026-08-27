@@ -96,7 +96,18 @@ param(
     # On le PASSE explicitement au lieu de s'en remettre au defaut de
     # pilote.py : un defaut silencieux ne se retrouve pas dans le journal du
     # run, et devient une inconnue au depouillement.
-    [int]$VeilleSilence = 600
+    [int]$VeilleSilence = 600,
+    # REJEU AVEC ENONCE REFORMULE. Autorise le 27/08 -- « tu as le droit
+    # d'optimiser les questions a condition de tracer la raison, puis tu
+    # rejoues le test case », et l'operateur a tranche le creneau : « on le
+    # fera a la fin, cela donnera deux metriques avec et sans reformulation ».
+    # Vides = comportement d'avant, a l'octet pres.
+    #   -Exercices  liste « langue/exercice », separee par des virgules. La
+    #               produire avec preparer_rejeu_reformule.py, jamais a la main.
+    #   -Degres     A, B ou C (voir QUESTIONS_REFORMULEES.md). Sans ce
+    #               parametre, AUCUN texte n'est ajoute a l'enonce.
+    [string]$Exercices = '',
+    [string]$Degres = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -204,12 +215,24 @@ Start-Process -FilePath 'node' -ArgumentList 'proxy.mjs' `
 Start-Sleep -Seconds 3
 
 Write-Output ''
+$extra = @()
+if ($Exercices) {
+    $n = ($Exercices -split ',').Count
+    $extra += @('--exercices', $Exercices)
+    Write-Output "  liste EXPLICITE : $n exercice(s)"
+}
+if ($Degres) {
+    $extra += @('--questions', (Join-Path $PSScriptRoot 'questions_reformulees.json'),
+                '--degres', $Degres)
+    Write-Output "  ENONCE REFORMULE, degre(s) $Degres -- ce run n'est PAS la variante D pure."
+}
+
 Write-Output "=== LIVRABLE 1 : 225 exercices, VARIANTE D, $Tours tour(s), laisse $DelaiTour s (tour 2+ : $DelaiTour2 s), veille silence $VeilleSilence s ==="
 python pilote.py $Nom --agent pi --accueil-pi $accueilPi --dotenv $dotenv `
     --tests-maison --conteneur pi-polyglot-tests `
     --tours $Tours --delai-tour $DelaiTour --delai-tour-2 $DelaiTour2 `
     --veille-silence $VeilleSilence --effort medium `
-    --fournisseur local-mesure --modele $Modele
+    --fournisseur local-mesure --modele $Modele @extra
 
 Write-Output ''
 Write-Output "=== fin du polyglot $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="

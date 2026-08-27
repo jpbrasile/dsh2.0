@@ -5602,3 +5602,75 @@ du juge.
 Relancer avant que javascript commence coûte **zéro verdict** : le pilote saute
 tout exercice ayant déjà son `.dsh.results.json`. C'est la même manœuvre qu'en
 R28l, et elle est à décider avant, pas après.
+
+---
+
+### R28q — le rejeu reformulé est armé, et il partira à la fin
+
+Ordre de l'opérateur, 27/08 : *« tu as le droit d'optimiser les questions à
+condition de tracer la raison, puis tu rejoues le test case »*, puis, sur le
+créneau : *« on le fera à la fin, cela donnera deux métriques avec et sans
+reformulation and best practices »*, degré **B d'abord, C si B échoue**.
+
+**Pourquoi pas maintenant.** Le 4090 sert un slot. Un rejeu concurrent
+fausserait les durées **des deux côtés**, et la durée est une grandeur mesurée
+de ce banc. Le rejeu attend donc la fin du run, ce qui donne en prime la
+comparaison la plus propre : mêmes exercices, même modèle, deux énoncés.
+
+#### Trois degrés, parce que toutes les reformulations ne contaminent pas pareil
+
+| degré | ce que c'est | ce que ça coûte à la comparabilité |
+|---|---|---|
+| **A** | désambiguïsation interne — l'énoncé se contredit, on ne garde que la forme qui fait foi | **rien n'entre** : tout était déjà écrit dans l'énoncé |
+| **B** | mise en garde générique — une *classe* d'ambiguïté est signalée, sans dire de quel côté elle tombe ; ne cite aucun exercice | c'est une amélioration de **consigne**, pas une réponse |
+| **C** | révélation — la convention attendue est donnée | vient de la **suite cachée** ; contamination maximale |
+
+C'est la distinction qui manquait au projet initial. Le degré **B** est le seul
+qui pourrait légitimement devenir la consigne par défaut du banc : il n'apporte
+aucune information sur un exercice, seulement l'existence d'une ambiguïté. Si B
+suffit à faire passer les échecs de forme, c'est le résultat le plus fort du
+lot.
+
+`questions_reformulees.json` porte 4 ajouts génériques (B) et 3 visés (1 A,
+2 C), chacun avec son constat et sa raison sourcée. Le `.md` en est le rendu
+généré — éditer le `.md` à la main ferait diverger la raison publiée de celle
+qui a servi.
+
+#### Ce qui rend le chiffre lisible plus tard
+
+- `pilote.py --questions <f> --degres A,B,C`. **Sans `--degres`, rien n'est
+  ajouté** : la variante D reste le défaut, à l'octet près.
+- Chaque `.dsh.results.json` porte désormais `reformulations` — identifiant,
+  degré, **texte exact reçu**. Deux runs ne peuvent plus être comparés à
+  l'aveugle.
+- `preparer_rejeu_reformule.py` **refuse** de préparer tant que la référence
+  n'est pas terminée (comparer une colonne complète à une partielle), et
+  **refuse** si la référence porte déjà une reformulation (elle ne peut pas
+  tenir la colonne « sans »). `--partiel` lève le premier refus et l'écrit dans
+  le fichier produit.
+- `comparer_reformulation.py` **refuse** une colonne « avec » qui ne porte
+  aucune reformulation, ne compare que les exercices joués des deux côtés, et
+  distingue `FAIL→PASS` de `PASS→FAIL` — un ajout mal tourné peut détourner
+  l'agent d'une solution qu'il avait.
+
+#### Deux familles de plus au traceur, et un affichage qui ne cache plus rien
+
+`go/kindergarten-garden` a ouvert les deux :
+
+- **`lexique`** — mêmes mots, autre forme. Test volontairement étroit : même
+  nombre de mots, même ordre, préfixe commun d'au moins trois lettres.
+  `["Radish" "Clover"…]` contre `["radishes" "clover"…]`.
+- **`exigence`** — la suite attend une **erreur** que l'énoncé ne demande
+  jamais. Quatre cas ; les mots « error », « invalid », « duplicate », « odd »
+  ne figurent pas dans l'énoncé. Signal **additif** : un exercice peut cumuler.
+
+Et la sortie imprime maintenant la **répartition** des classes, pas seulement
+la plus favorable retenue. Sans elle, `kindergarten-garden` s'affichait
+« casse » alors que **6 de ses 7 cas sont `lexique`**, plus dur. Une classe
+retenue sans sa répartition trompe.
+
+#### État
+
+41 verdicts (26 cpp + 15 go). 4 échecs, dont un — `cpp/parallel-letter-frequency`
+— sans sortie du juge parce qu'antérieur au correctif : sa cause reste **non
+déterminée**, et le rejeu la retrouvera puisqu'il le rejouera.
