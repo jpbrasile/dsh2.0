@@ -1,0 +1,471 @@
+{
+  "total_corpus": 225,
+  "comptes": {
+    "S2": 55,
+    "S1": 3,
+    "S3": 21,
+    "S4": 21
+  },
+  "exercices": [
+    {
+      "exercice": "cpp/crypto-square",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 7 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "cpp/diamond",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "cpp/kindergarten-garden",
+      "signatures": {
+        "S1": "tableau code->libelle, et le libelle ailleurs sous une autre forme : Radish / radishes, Violet / violets"
+      }
+    },
+    {
+      "exercice": "cpp/meetup",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 8 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "cpp/spiral-matrix",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 4 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "go/alphametics",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 4 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (3 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "go/beer-song",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 200 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S4": "le stub beer_song.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/bottle-song",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 40 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "go/connect",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (5 ligne(s) concernee(s)) : sa tokenisation n'est pas dite",
+        "S4": "le stub connect.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/crypto-square",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 7 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "go/food-chain",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 43 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "go/forth",
+      "signatures": {
+        "S4": "le stub forth.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/kindergarten-garden",
+      "signatures": {
+        "S1": "tableau code->libelle, et le libelle ailleurs sous une autre forme : Radish / radishes, Violet / violets",
+        "S4": "le stub kindergarten_garden.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/ledger",
+      "signatures": {
+        "S4": "le stub ledger.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/matrix",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (3 ligne(s) concernee(s)) : sa tokenisation n'est pas dite",
+        "S4": "le stub matrix.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/paasio",
+      "signatures": {
+        "S4": "le stub paasio.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/palindrome-products",
+      "signatures": {
+        "S4": "le stub palindrome_products.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/poker",
+      "signatures": {
+        "S4": "le stub poker.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/pov",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (5 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "go/protein-translation",
+      "signatures": {
+        "S4": "le stub protein_translation.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/simple-linked-list",
+      "signatures": {
+        "S4": "le stub simple_linked_list.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/tree-building",
+      "signatures": {
+        "S4": "le stub tree_building.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/variable-length-quantity",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 13 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S4": "le stub variable_length_quantity.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "go/word-search",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 10 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S4": "le stub word_search.go declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "java/alphametics",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 4 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (3 ligne(s) concernee(s)) : sa tokenisation n'est pas dite",
+        "S4": "le stub src/main/java/Alphametics.java declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "java/bottle-song",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 40 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "java/connect",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (5 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "java/food-chain",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 43 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "java/go-counting",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 6 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "java/house",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 78 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "java/kindergarten-garden",
+      "signatures": {
+        "S1": "tableau code->libelle, et le libelle ailleurs sous une autre forme : Radish / radishes, Violet / violets"
+      }
+    },
+    {
+      "exercice": "java/ocr-numbers",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 4 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (4 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "java/pov",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (5 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "java/satellite",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (4 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "java/sgf-parsing",
+      "signatures": {
+        "S4": "le stub src/main/java/SgfParsing.java declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "java/state-of-tic-tac-toe",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 9 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (7 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "java/tree-building",
+      "signatures": {
+        "S4": "le stub src/main/java/BuildTree.java declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "java/twelve-days",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 12 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "java/variable-length-quantity",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 13 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "java/word-search",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 10 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/alphametics",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 4 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (3 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "javascript/beer-song",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 200 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/bottle-song",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 40 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/connect",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (5 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "javascript/food-chain",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 43 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/go-counting",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 6 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/house",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 78 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/meetup",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 8 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/ocr-numbers",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 4 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (4 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "javascript/queen-attack",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 10 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (10 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "javascript/rectangles",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (5 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "javascript/state-of-tic-tac-toe",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 9 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (7 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "javascript/tournament",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/triangle",
+      "signatures": {
+        "S3": "entree presentee alignee/espacee pour l'oeil (3 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "javascript/twelve-days",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 12 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/variable-length-quantity",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 13 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "javascript/word-search",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 10 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "python/beer-song",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 200 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "python/bottle-song",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 40 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "python/connect",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (5 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "python/food-chain",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 43 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "python/go-counting",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 6 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "python/pov",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 5 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (5 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "python/proverb",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 7 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "python/variable-length-quantity",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 13 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    },
+    {
+      "exercice": "rust/alphametics",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 4 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (3 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "rust/nucleotide-codons",
+      "signatures": {
+        "S4": "le stub src/lib.rs declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "rust/ocr-numbers",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 4 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S3": "entree presentee alignee/espacee pour l'oeil (4 ligne(s) concernee(s)) : sa tokenisation n'est pas dite"
+      }
+    },
+    {
+      "exercice": "rust/react",
+      "signatures": {
+        "S4": "le stub src/lib.rs declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "rust/scale-generator",
+      "signatures": {
+        "S4": "le stub src/lib.rs declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "rust/variable-length-quantity",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 13 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible",
+        "S4": "le stub src/lib.rs declare un retour d'erreur, et l'enonce n'emploie AUCUN mot du champ de l'erreur"
+      }
+    },
+    {
+      "exercice": "rust/word-count",
+      "signatures": {
+        "S2": "bloc de sortie rendue sur 10 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible"
+      }
+    }
+  ]
+}

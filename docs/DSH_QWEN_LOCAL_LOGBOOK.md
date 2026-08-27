@@ -5674,3 +5674,84 @@ retenue sans sa répartition trompe.
 41 verdicts (26 cpp + 15 go). 4 échecs, dont un — `cpp/parallel-letter-frequency`
 — sans sortie du juge parce qu'antérieur au correctif : sa cause reste **non
 déterminée**, et le rejeu la retrouvera puisqu'il le rejouera.
+
+---
+
+### R28r — une prédiction déposée avant que java tourne, et le défaut qu'elle a failli publier
+
+**La question de l'opérateur**, 27/08 : *« est-ce que pendant ton temps libre tu
+peux reformuler les questions mal posées, ou vaut-il mieux attendre les
+fails ? »*
+
+Ni l'un ni l'autre. **Reformuler d'avance** ferait de mon jugement le
+sélecteur : je choisirais quels énoncés sont « mal posés », et un score en
+hausse ne prouverait plus rien — 225 blocs de garde ajoutés font monter un taux
+sans qu'on sache lequel a servi. **Attendre** gaspille l'attente.
+
+Le troisième geste est de **déposer une prédiction**. Publier, avant que java,
+javascript, python et rust jouent, la liste des exercices qui portent les
+signatures structurelles des trois échecs déjà observés. Leurs échecs
+**testeront** la prédiction au lieu de l'illustrer après coup.
+
+État au dépôt : **44 verdicts** (cpp 26 + go 18). Les 181 restants n'ont pas été
+joués, dont **la totalité de java, javascript, python et rust**.
+
+#### Les quatre signatures, chacune tirée d'un échec réel
+
+| id | signature | tirée de |
+|---|---|---|
+| **S1** | un tableau `code → libellé`, et le libellé ailleurs dans la prose sous une autre forme | `go/kindergarten-garden` (`Radish` / `radishes`) |
+| **S2** | un bloc de sortie **rendue** sur plusieurs lignes, sans ponctuation de code — un séparateur terminal y est invisible | `go/beer-song` |
+| **S3** | une entrée **alignée pour l'œil**, espacée ou indentée | `go/connect` |
+| **S4** | le stub déclare un retour d'**erreur**, l'énoncé n'emploie aucun mot du champ de l'erreur | `go/kindergarten-garden` (4 validations muettes) |
+
+#### Le défaut, trouvé avant publication et pas après
+
+Première sortie : **118 exercices signalés sur 225**, dont S4 = 90, concentré
+sur java (38) et javascript (34). C'est ce déséquilibre qui a déclenché la
+vérification — et le détecteur mesurait **le gabarit du track, pas l'énoncé** :
+
+- **javascript** : 124 occurrences de `throw` dans les stubs. Les 124 sont la
+  **même** ligne — `throw new Error('Remove this statement and implement this
+  function')`. Les 34 signalements valaient zéro.
+- **java** : 46 stubs sur 47 portent `throw new UnsupportedOperationException`,
+  même gabarit. **6 seulement** portent un vrai `throws` : `alphametics`,
+  `bank-account`, `circular-buffer`, `dominoes`, `sgf-parsing`, `tree-building`.
+- **cpp** : aucun stub ne porte `throw`. **python** : aucune déclaration
+  d'erreur dans une signature.
+
+S4 est donc **aveugle** sur trois langues sur six. Le tableau y imprime « **-** »,
+jamais « 0 » : un zéro se lirait comme une absence de risque là où il n'y a
+qu'une absence de mesure.
+
+#### La prédiction déposée
+
+```
+=== PREDICTION : 72 exercice(s) signale(s) sur 225 ===
+  S1    3  (1 % de 225)
+  S2   55  (24 % de 225)
+  S3   21  (9 % de 225)
+  S4   21  (18 % de 116 -- go+java+rust seulement, S4 est aveugle ailleurs)
+
+  langue       S1    S2    S3    S4
+  cpp          1     4     0     -
+  go           1     10    4     14
+  java         1     13    6     3
+  javascript   0     16    7     -
+  python       0     8     2     -
+  rust         0     4     2     4
+```
+
+Contrôle sur les trois échecs connus : `beer-song` → S2, `connect` → S2+S3,
+`kindergarten-garden` → S1+S4. **Les trois sont retrouvés.** Une prédiction qui
+rate ce qui a déjà échoué ne vaut rien.
+
+**Ce que ces chiffres valent, dit franchement.** S1 (3 exercices, 1 %) et S3
+(21, 9 %) sont **serrés** : s'ils échouent plus que la moyenne, l'écart sera
+lisible. S2 (55, 24 %) est **large** — un quart du corpus signalé prédit peu de
+chose a priori. S4 ne couvre que 116 exercices sur 225.
+
+**Et comment elle se juge.** Pas au nombre de signalés qui échouent : à
+l'**écart** entre le taux d'échec des signalés et celui des autres. Une
+signature n'est pas une cause. `verifier_prediction.py` reste à écrire ; il
+dépouillera après coup, sur la liste figée ici.
