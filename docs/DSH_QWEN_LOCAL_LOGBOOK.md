@@ -3788,3 +3788,102 @@ J'ai repris un chiffre du plan sans vérifier qu'il portait sur le bras dont je
 parlais. Les deux bras ont le même modèle, le même serveur, le même nom de
 famille — et un facteur 3 sur la paroi. **Un chiffre n'appartient pas à une
 campagne, il appartient à une configuration.**
+
+---
+
+## 27/08 03:45 — Le bras GPQA à 100/198 : la troncature est un phénomène de chimie, et le vrai livrable est une comparaison, pas un score
+
+Analyse faite **sans toucher la carte** — que des fichiers déjà produits, pendant
+que le bras tourne. Quatre résultats, dont deux renversent ce que j'écrivais il
+y a quatre heures.
+
+### 1. La troncature n'est pas une queue lourde générique : c'est la chimie
+
+    Chemistry   17/49  =  34,7 %  tronqués
+    Physics      0/42  =   0,0 %
+    Biology      1/9   =  11,1 %
+    Fisher exact unilatéral : p = 5,7e-06
+
+Zéro sur quarante-deux en physique. Et même quand elle **finit**, la chimie pense
+4× plus long : médiane **8 939** jetons contre **2 274** en physique.
+
+**Je m'étais trompé de mécanisme.** Hier soir j'ai écrit que le plus long des
+libres s'arrêtait à 32 449 jetons, soit 319 sous le plafond, et j'en ai conclu à
+une queue continue coupée par le plafond. C'est vrai de la *forme* et faux de la
+*cause* : la distribution n'est pas une seule queue, c'est **deux populations**
+dont une seule court.
+
+### 2. La fugue appartient au MODÈLE, pas au déploiement local
+
+Le contrôle était déjà sur le disque : `or_bf16.jsonl`, même modèle en **BF16**,
+chez **OpenRouter**, harnais identique.
+
+| bras | chimie | physique |
+|---|---|---|
+| BF16 (OpenRouter) | **41/104 = 39,4 %** | 1/57 = 1,8 % |
+| Q4 local (4090) | **17/49 = 34,7 %** | 0/42 = 0,0 % |
+
+Même motif, deux fournisseurs, deux précisions. **Ni la quantification, ni le KV
+q8/q4, ni le 4090 n'y sont pour quoi que ce soit.**
+
+### 3. Monter le plafond n'achèterait rien — B2 n'a pas de bon plafond
+
+    plafond 16 384 (bras illimité)    5/30  = 16,7 % +/- 13,3 pt
+    plafond 32 768 (bras libre)      18/100 = 18,0 % +/-  7,5 pt
+    écart : +1,3 pt +/- 15,3 pt  ->  DANS LE BRUIT
+
+**Doubler le plafond n'a pas réduit la troncature d'un point mesurable**, alors
+qu'il double le coût de chaque fuite : un tronqué coûte déjà **736 s** contre
+170 s pour un libre, et absorbe **48,7 % de la paroi du bras** (13 255 s sur
+27 197) sans rendre une seule lettre analysable. À 65 536 on paierait ~1 470 s
+par fuite pour, selon toute apparence, le même taux.
+
+**Conclusion pour B2 : il n'existe pas de plafond raisonnable qui ferme
+l'encadrement.** La bonne réponse n'est pas un plafond plus haut, c'est de
+publier la troncature comme un résultat.
+
+### 4. Le vrai livrable : Q4 local reproduit BF16
+
+Et c'est immune au doute sur le niveau absolu, parce que c'est une **comparaison**.
+
+Attention au dénombrement : `or_bf16` a joué **37 questions × 4 rotations**. Une
+barre sur 133 appels serait fausse — les 4 appels d'une question ne sont pas
+indépendants. Agrégé par question :
+
+| | exactitude (libres) | n |
+|---|---|---|
+| BF16, OpenRouter | 89,2 % ± 9,2 pt | **37 questions** |
+| Q4 local, 4090 | 92,7 % ± 5,7 pt | **82 questions** |
+
+Écart **+3,5 pt**, très à l'intérieur des barres. **Le chemin local — Q4_K_M +
+KV q8_0/q4_0, sans specdec — reproduit la référence BF16.** C'est ce que la
+campagne avait besoin d'établir, et c'est établi dès maintenant, à 100/198.
+
+### 5. Ce qui NE se publie pas : le niveau absolu
+
+~90 % sur GPQA Diamond placerait un 27B au-dessus des modèles de frontière
+publiés. Ce n'est pas crédible. Et comme le chiffre **se reproduit en BF16 chez
+un autre fournisseur**, la cause est en amont du montage local — jeu de données,
+gabarit, ou contamination du corpus d'entraînement.
+
+**Non vérifié** : je n'ai pas mesuré la contamination, c'est l'hypothèse
+principale et rien de plus. Le harnais, lui, a été relu et il est hors de cause
+(`rotations()` mélange sur graine dérivée de l'id, `extraire()` garde la dernière
+occurrence hors `<think>`).
+
+**Donc : la comparaison Q4/BF16 se publie, le score GPQA absolu ne se publie
+pas.** Une contamination inflate les deux côtés de la même manière et laisse
+l'écart interprétable ; elle rend le niveau ininterprétable.
+
+### 6. Ce que valent les 8 h de carte restantes
+
+Le bras est à 100/198, **12,3 appels/h, ~8 h restantes**. Ce qu'elles achètent :
+la barre du Q4 passerait d'environ ±5,7 pt à ±4 pt. Elles n'achètent **ni** un
+score absolu publiable (§5), **ni** la fermeture de l'encadrement (§3). Le
+résultat structurel de §4 est déjà acquis.
+
+Je laisse néanmoins le bras tourner : l'ordre de carte a été tranché
+explicitement, et huit heures d'une nuit déjà productive ne valent pas que je
+renverse seul une décision humaine. La fenêtre de ~45 min pour
+`dimensionner_pi_polyglot.ps1` reste ouverte au réveil, et coûte ~9 appels
+différés, rien de perdu.
