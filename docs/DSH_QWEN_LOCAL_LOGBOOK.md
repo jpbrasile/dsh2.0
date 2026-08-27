@@ -5329,3 +5329,95 @@ valeur au garde-fou.
 **Réserve tenue depuis R28i** : `go/beer-song` échouait sur un `\n` final que
 la chaîne d'outils ne lui aurait pas appris — son énoncé ne le dit pas. Si le
 rejeu le refait échouer, ce n'est pas l'outillage qu'il faudra accuser.
+
+---
+
+### R28m — trace des conventions muettes, et le refus explicite de la réinjecter
+
+Ordre de l'opérateur : *« fait une trace des fails de ce type, on rejouera en
+donnant ce type d'info pour améliorer les perf »*, puis, une heure plus tard,
+le garde-fou qui va avec : *« non : fais simplement un fichier des best
+practices, on l'utilisera plus tard ; sinon tu casses l'instrument de mesure. »*
+
+Les deux ont été suivis, dans cet ordre : `tracer_conventions_muettes.py`
+produit la trace, `BONNES_PRATIQUES_CONVENTIONS.md` l'accumule **à côté du
+banc**, et rien ne repart vers l'agent.
+
+#### Rien à rejouer : la matière était déjà là
+
+Le correctif qui ajoute `erreurs` au journal (commit `41c9934`) est **antérieur
+au redémarrage de 12:29**. Le pilote 16168 l'a donc chargé, et **chaque FAIL du
+run porte la sortie du juge**. La trace se lit ; elle ne relance aucun
+conteneur, ne touche à aucun fichier, ne sollicite pas le CPU du run. Les
+verdicts antérieurs au correctif sont **signalés comme dépourvus du champ**
+plutôt que devinés — un seul est concerné, `cpp/parallel-letter-frequency`.
+
+#### Ce que la classification sait faire, et ce qu'elle ne sait pas
+
+Mécanique, à partir du couple obtenu/attendu extrait de la sortie du juge :
+
+| classe | test |
+|---|---|
+| `blancs` | identiques une fois **tous** les blancs retirés |
+| `casse` | identiques une fois la casse ignorée |
+| `ordre` | mêmes lignes, ordre différent |
+| `fond` | rien de tout ça — l'échec n'est pas un problème de forme |
+
+Les motifs d'extraction couvrent go (`got:`/`want:`), rust (`left:`/`right:`),
+jest (`Expected:`/`Received:`), junit (`expected: <> but was: <>`) et pytest
+(`assert X == Y`). Le **nom du motif qui a mordu** est enregistré : un échec
+classé sans qu'on sache par quelle expression ne serait pas vérifiable.
+
+Ce n'est pas `contrat_muet.py`. Celui-là demande si l'énoncé cite les
+identifiants du stub, et ne peut **par construction** rien dire de la forme de
+la valeur de retour — séparateur final, ordre, casse, arrondi. Celui-ci part de
+l'échec réel au lieu de l'énoncé : c'est le troisième biais nommé en R28i,
+enfin mesuré au lieu d'être supposé.
+
+#### Deux champs, et la séparation est délibérée
+
+- `injectable` — la **forme** de l'écart, jamais la valeur. Pour beer-song :
+  *« La valeur attendue porte, APRÈS le dernier élément, un séparateur terminal
+  que ta sortie n'a pas. »*
+- `obtenu` / `attendu` — les valeurs réelles, pour le diagnostic humain.
+
+#### Et l'injecteur n'a pas été écrit — décision, pas oubli
+
+J'avais prévu un bras « D + conventions déclarées ». L'opérateur l'a arrêté, et
+il a raison : **la variante D mesure ce qu'un agent trouve sans information
+complémentaire.** Une convention extraite de la suite cachée *est* une
+information complémentaire. La donner ne fait pas monter le score de l'agent,
+elle supprime la question à laquelle le banc répond. Le fichier de bonnes
+pratiques s'accumule, daté, hors du chemin du banc ; le jour où il servira, ce
+sera dans un bras distinct et étiqueté.
+
+#### Validation, puis deux confirmations que je n'ai pas eu à chercher
+
+Le classeur a été passé sur la sortie du juge **réellement captée** le 27/08
+pour beer-song. Verdict : `blancs`, *« l'attendu prolonge l'obtenu de 1
+caractère : "\n" »*. Le cas fondateur est retrouvé exactement.
+
+Puis le run outillé a rendu ses deux premiers verdicts go :
+
+```
+go   alphametics   PASS   155.4 s
+go   beer-song     FAIL    65.3 s
+```
+
+1. **`alphametics` passe.** Le FAIL du matin était bien un artefact du banc
+   (R28i) — confirmé non plus par un rejeu du juge que j'aurais conduit
+   moi-même, mais par un **échantillon frais et indépendant**, agent reparti du
+   stub. Au passage : 75,5 s avant, 155,4 s maintenant. L'écart est le temps
+   qu'il passe désormais à **exécuter ses tests**, ce qu'il ne pouvait pas
+   faire.
+2. **`beer-song` échoue encore**, ramassé tout seul par la trace, classé
+   `blancs`, même écart d'un `\n`. **C'est exactement la réserve posée en R28l**
+   avant de relancer : *« si le rejeu le refait échouer, ce n'est pas
+   l'outillage qu'il faudra accuser »*. Il a échoué, et ce n'est pas
+   l'outillage. Une chaîne d'outils ne fait pas deviner une convention que
+   l'énoncé ne porte pas.
+
+**Ce qui n'est pas mesuré.** Un seul cas de convention muette à ce stade, sur
+un run en cours. Les trois autres familles listées dans le fichier de bonnes
+pratiques (ordre, casse, arrondi) sont des généralisations **sans cas observé**,
+et le fichier le dit ligne à ligne.
