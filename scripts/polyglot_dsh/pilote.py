@@ -158,6 +158,31 @@ CHAINE_DE_L_AGENT = {
 }
 
 
+def charger_reformulations(chemin, degres):
+    """Rend une fonction (langue, exercice) -> liste d'ajouts, ou None.
+
+    Un degre non demande n'est jamais charge : c'est le seul garde-fou qui
+    compte ici. Sans --degres, cette fonction rend None et le pilote se
+    comporte exactement comme avant -- la variante D reste le defaut.
+    """
+    voulus = {d.strip().upper() for d in degres.split(",") if d.strip()}
+    if not chemin or not voulus:
+        return None
+    doc = json.load(io.open(chemin, encoding="utf-8"))
+    generiques = [a for a in doc.get("generiques", [])
+                  if a["degre"].upper() in voulus]
+    par_ex = collections.defaultdict(list)
+    for a in doc.get("par_exercice", []):
+        if a["degre"].upper() in voulus:
+            par_ex[a["exercice"]].append(a)
+
+    def pour(langue, exercice):
+        return generiques + par_ex.get("%s/%s" % (langue, exercice), [])
+    pour.resume = "%d generique(s), %d exercice(s) vise(s), degres %s" % (
+        len(generiques), len(par_ex), ",".join(sorted(voulus)))
+    return pour
+
+
 def _js_resolution_absente(env):
     """En javascript, la presence de `node` NE SUFFIT PAS -- mesure du 27/08.
 
@@ -919,7 +944,7 @@ def consigne_initiale(ex_hote, editables):
 def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
                 stash_ex=None, sans_tests=False, sans_corriges=False,
                 tests_maison=False, delai_tour_2=0,
-                veille_silence=0, journal_fil=None):
+                veille_silence=0, journal_fil=None, reformulations=None):
     cfg = lire_config(ex_hote)
     editables = fichiers_editables(ex_hote, cfg)
     fichiers_test = cfg.get("files", {}).get("test", [])
@@ -947,6 +972,13 @@ def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
         texte += INSTRUCTIONS_TESTS_MAISON.format(
             ou_les_tests=ou_poser_les_tests(editables), file_list=liste,
             construction=bloc)
+    # ENONCE REFORMULE. Autorise le 27/08 -- « tu as le droit d'optimiser les
+    # questions a condition de tracer la raison, puis tu rejoues le test
+    # case ». Le texte ajoute et son DEGRE sont ecrits dans le resultat, donc
+    # aucun chiffre ne peut etre lu sans savoir ce que l'agent avait recu.
+    ajouts = reformulations or []
+    if ajouts:
+        texte += "\n\n" + "\n\n".join(a["texte"] for a in ajouts) + "\n"
     masques = chemins_a_masquer(ex_hote, fichiers_test, sans_tests, sans_corriges)
 
     issues, journal = [], []
@@ -1060,6 +1092,13 @@ def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
         "sans_corriges": bool(sans_corriges),
         "tests_maison": bool(tests_maison),
         "tests_ecrits_par_l_agent": maison,
+        # ENONCE REFORMULE : identifiant, degre et texte exact de chaque ajout.
+        # Un resultat obtenu avec un enonce reformule et un resultat obtenu
+        # sans doivent etre DISCERNABLES dans les donnees, sinon la comparaison
+        # se fait a l'aveugle. Liste vide = enonce d'origine.
+        "reformulations": [{"id": a.get("id") or a.get("exercice"),
+                            "degre": a["degre"], "texte": a["texte"]}
+                           for a in ajouts],
     }
 
 
@@ -1210,6 +1249,20 @@ def main():
     # Journal de fil du proxy, seule preuve qu'un appel a eu lieu. Vide =
     # deduit du nom du run ; s'il ne bouge pas, le chien ne s'arme jamais.
     ap.add_argument("--journal-fil", default="")
+    # ENONCES REFORMULES. Autorise le 27/08 : « tu as le droit d'optimiser les
+    # questions a condition de tracer la raison, puis tu rejoues le test
+    # case ». Le fichier porte la raison de chaque reformulation et son degre ;
+    # le resultat porte ce qui a reellement ete ajoute. Sans --degres, RIEN
+    # n'est ajoute : la variante D reste le defaut, l'instrument est intact.
+    ap.add_argument("--questions", default="",
+                    help="fichier questions_reformulees.json")
+    ap.add_argument("--degres", default="",
+                    help="degres a appliquer, ex. « B » ou « A,B ». A = "
+                         "desambiguisation interne (l'enonce se contredit, "
+                         "rien n'entre) ; B = mise en garde generique (une "
+                         "classe d'ambiguite est signalee, pas son cote) ; "
+                         "C = revelation (vient de la suite cachee, "
+                         "contamination maximale). Vide = enonce d'origine.")
     args = ap.parse_args()
 
     if args.veille_silence and not args.journal_fil:
@@ -1360,6 +1413,14 @@ def main():
     dire("exercices a jouer : %d   tours : %d   delai/tour : %d s"
          % (len(liste), args.tours, args.delai_tour))
 
+    reformuler = charger_reformulations(args.questions, args.degres)
+    if reformuler:
+        dire("")
+        dire("ENONCES REFORMULES : %s" % reformuler.resume)
+        dire("  Ce run n'est PAS la variante D pure. Chaque resultat porte le")
+        dire("  texte exact ajoute et son degre, dans `reformulations`.")
+        dire("")
+
     # GARDE-FOU DE LA CHAINE D'OUTILS. Il vient AVANT le premier exercice :
     # decouvrir apres 86 exercices que l'agent n'avait pas `go` coute 86
     # exercices.
@@ -1442,6 +1503,8 @@ def main():
                               delai_tour_2=args.delai_tour_2,
                               veille_silence=args.veille_silence,
                               journal_fil=args.journal_fil,
+                              reformulations=(reformuler(lang, ex)
+                                              if reformuler else None),
                               sans_tests=args.sans_tests or args.tests_maison,
                               sans_corriges=args.sans_corriges or args.tests_maison,
                               tests_maison=args.tests_maison)

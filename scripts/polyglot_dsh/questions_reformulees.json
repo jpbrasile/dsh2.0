@@ -1,0 +1,75 @@
+{
+  "_lisez_moi": [
+    "Liste des ENONCES REFORMULES, avec la raison de chaque reformulation.",
+    "Source unique : QUESTIONS_REFORMULEES.md en est le rendu, produit par",
+    "rendre_questions.py. Ne pas editer le .md a la main.",
+    "",
+    "TROIS DEGRES, et le degre est ce qui decide si la mesure reste comparable :",
+    "  A  desambiguisation interne -- l'enonce se contredit lui-meme ; on ne",
+    "     garde que la forme qui fait foi. AUCUNE information n'entre : tout",
+    "     etait deja ecrit dans l'enonce. Comparable a la variante D.",
+    "  B  mise en garde generique -- on signale qu'une CLASSE d'ambiguite",
+    "     existe, sans dire de quel cote elle tombe. Ne cite aucun exercice,",
+    "     s'applique au corpus entier. C'est une amelioration de CONSIGNE, pas",
+    "     une reponse. Bras distinct, mais honnete.",
+    "  C  revelation -- on donne la convention attendue. Elle vient de la SUITE",
+    "     CACHEE. Contamination maximale : ne se compare ni a la variante D ni",
+    "     au banc aider, et ne sert qu'a mesurer le COUT de l'ambiguite."
+  ],
+
+  "generiques": [
+    {
+      "id": "B1-separateur-terminal",
+      "degre": "B",
+      "issu_de": "go/beer-song",
+      "constat": "classe blancs, l'attendu prolonge l'obtenu de 1 caractere : \\n",
+      "raison": "L'enonce affiche la chanson RENDUE, ou le dernier couplet n'est visiblement suivi de rien. Un separateur terminal est invisible a l'oeil dans un exemple rendu. Aucune ligne de l'enonce ne porte l'information, dans un sens ni dans l'autre.",
+      "texte": "Quand une fonction assemble plusieurs elements en une seule chaine, deux contrats existent et un exemple rendu ne les distingue pas : le separateur peut etre place ENTRE les elements, ou APRES CHACUN, dernier compris. Choisis explicitement, et ecris un test qui verifie ce qui suit le dernier element."
+    },
+    {
+      "id": "B2-tokenisation-entree",
+      "degre": "B",
+      "issu_de": "go/connect",
+      "constat": "8 cas sur 8 refuses avec le meme message issu de la validation de la solution",
+      "raison": "Le harnais officiel normalise l'entree avant de la transmettre (connect_test.go:8-16 retire tous les espaces), et son message d'erreur affiche la donnee D'ORIGINE, espacee. L'enonce montre la meme forme espacee. Rien, ni dans l'enonce ni dans l'indice fourni par l'echec, ne signale la normalisation.",
+      "texte": "Ce qu'un enonce MONTRE d'une entree est une representation lisible, pas forcement la forme qui te sera transmise : alignement, espaces et decorations peuvent avoir ete retires. Ecris un lecteur tolerant -- separateurs optionnels, indentation ignoree -- et ne rejette jamais une entree que tu n'as pas su lire."
+    },
+    {
+      "id": "B3-contraintes-du-domaine",
+      "degre": "B",
+      "issu_de": "go/kindergarten-garden",
+      "constat": "4 cas ou une erreur etait attendue et n'est pas venue",
+      "raison": "La suite officielle teste quatre validations -- format invalide, nombre impair de godets, nom en double, code inconnu -- dont l'enonce ne dit pas un mot : les mots « error », « invalid », « duplicate », « odd » n'y figurent pas.",
+      "texte": "Un enonce decrit surtout le cas nominal. Les contraintes que le DOMAINE implique -- tailles appariees, identifiants uniques, alphabet fini de codes, bornes -- sont attendues meme quand l'enonce se tait : signale-les par une erreur. Sois tolerant sur la FORME de ce qui est valide, strict sur ce que le TYPE implique."
+    },
+    {
+      "id": "B4-vocabulaire-de-sortie",
+      "degre": "B",
+      "issu_de": "go/kindergarten-garden",
+      "constat": "7 cas, repartition casse=1 lexique=6",
+      "raison": "Le meme enonce donne les quatre plantes sous TROIS formes : prose minuscule pluriel (ligne 6), tableau capitale singulier (lignes 19-22), liste a capitale initiale (ligne 58). L'agent a pris celle du tableau, la suite attend celle de la prose. Rien ne dit laquelle fait foi.",
+      "texte": "Quand un enonce donne le meme vocabulaire sous plusieurs formes -- une phrase, un tableau, une liste --, c'est la forme de la PROSE qui fait foi pour les valeurs rendues. Un tableau qui associe un code a un libelle donne le CODE d'entree, pas necessairement le libelle de sortie. Verifie casse et singulier/pluriel."
+    }
+  ],
+
+  "par_exercice": [
+    {
+      "exercice": "go/kindergarten-garden",
+      "degre": "A",
+      "raison": "Desambiguisation INTERNE : la forme correcte est deja dans l'enonce, ligne 6 (« grass, clover, radishes, and violets »). On ne fait que retirer la contradiction que le tableau des lignes 19-22 introduit. Aucune information exterieure n'entre.",
+      "texte": "Note : le tableau ci-dessus associe un CODE de diagramme a une plante ; les valeurs rendues emploient les noms tels qu'ils apparaissent dans la phrase d'introduction."
+    },
+    {
+      "exercice": "go/beer-song",
+      "degre": "C",
+      "raison": "REVELATION : le separateur terminal n'existe nulle part dans l'enonce. Ce texte vient de la suite cachee. A n'utiliser que pour chiffrer le cout de l'ambiguite.",
+      "texte": "Note : la chanson complete se termine par une ligne vide apres le dernier couplet."
+    },
+    {
+      "exercice": "go/connect",
+      "degre": "C",
+      "raison": "REVELATION : la normalisation de l'entree vient du harnais (connect_test.go:8-16), pas de l'enonce. A n'utiliser que pour chiffrer le cout de l'ambiguite.",
+      "texte": "Note : le plateau te sera transmis sans aucun espace ; les espaces des exemples ne servent qu'a la lisibilite."
+    }
+  ]
+}

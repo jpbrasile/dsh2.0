@@ -99,26 +99,83 @@ test, c'est un tirage à pile ou face à 50 %.
    sur une entrée légitime transforme un exercice réussi en 8 échecs
    identiques — et masque totalement la logique, qui était peut-être juste.
 
+### 3. `go/kindergarten-garden` — l'énoncé se contredit, et il se tait
+
+Deux échecs distincts dans le même exercice. C'est le cas le plus instructif du
+lot.
+
+**3a. Le vocabulaire : trois formes, une seule bonne.**
+
+- **Relevé** : 27/08. 7 cas classés `casse=1 lexique=6`.
+- **Écart** : `["Radish" "Clover" "Grass" "Grass"]` au lieu de
+  `["radishes" "clover" "grass" "grass"]`.
+- **Preuve, dans l'énoncé lui-même** — les mêmes quatre plantes y figurent
+  sous **trois formes différentes** :
+
+  | ligne | forme | exemple |
+  |---|---|---|
+  | 6 | prose, minuscule pluriel | « grass, clover, **radishes**, and **violets** » |
+  | 19-22 | **tableau**, capitale singulier | `Grass \| G`, `Radish \| R`, `Violet \| V` |
+  | 58 | liste, capitale initiale | « Violets, radishes, violets, radishes » |
+
+  L'agent a pris la forme du **tableau**. La suite attend celle de la **prose**.
+
+**Ce qui rend le piège vicieux** : le tableau est la présentation la plus
+*structurée*, donc la plus autoritaire à l'œil — c'est celle qu'on choisit
+quand on cherche une spécification. Elle n'est pas la bonne. Rien dans
+l'énoncé ne dit laquelle fait foi ; c'est un tirage à pile ou face.
+
+**Règle** : quand un énoncé donne le même vocabulaire sous plusieurs formes,
+c'est la **prose** qui fait foi, pas le tableau. Et un tableau qui sert à
+associer un **code** (`R` → radish) donne le code, pas forcément le libellé
+de sortie.
+
+**3b. Quatre exigences que l'énoncé ne formule jamais.**
+
+- **Relevé** : 4 cas — `wrong_diagram_format`, `odd_number_of_cups`,
+  `duplicate_name`, `invalid_cup_codes` — tous avec
+  `NewGarden expected error but got nil`.
+- **Preuve** : recherche de « error », « invalid », « duplicate », « odd » dans
+  l'énoncé → **aucune occurrence**. La suite officielle teste une validation
+  dont l'énoncé ne dit pas un mot.
+
+**Et c'est le symétrique exact de `go/connect`** :
+
+| | `go/connect` | `go/kindergarten-garden` |
+|---|---|---|
+| faute | refuse des entrées **valides** | accepte des entrées **invalides** |
+| coût | 8 échecs | 4 échecs |
+
+Les deux perdent. La règle n'est donc pas « sois tolérant », qui ferait perdre
+le second, ni « valide tout », qui ferait perdre le premier :
+
+> **Tolérant sur la _forme_ de ce qui est valide ; strict sur les contraintes
+> que le _type_ implique.**
+
+Un diagramme de jardin a un nombre pair de godets, des noms uniques, des codes
+dans un alphabet fini. Ces contraintes-là se déduisent du domaine, même quand
+l'énoncé se tait. L'espacement des godets, lui, ne se déduit de rien.
+
 ---
 
-## Les trois familles, et ce qui reste à observer
+## Les quatre familles, et ce qui reste à observer
 
-Les deux premiers cas relevés tombent dans **deux familles différentes**, et
-c'est le résultat le plus utile à ce stade : l'ambiguïté d'un énoncé ne porte
-pas que sur le résultat.
+Trois exercices, **quatre familles** déjà — et c'est le résultat le plus utile
+à ce stade : l'ambiguïté d'un énoncé ne porte pas que sur le résultat.
 
 | famille | ce qui diverge | cas observé |
 |---|---|---|
-| **sortie** | la forme de la valeur rendue | `go/beer-song` (séparateur terminal) |
+| **sortie** | la forme de la valeur rendue | `go/beer-song` (séparateur terminal), `go/kindergarten-garden` (vocabulaire) |
 | **entrée** | la forme de la donnée reçue | `go/connect` (tokenisation) |
+| **exigence** | un comportement que l'énoncé ne demande jamais | `go/kindergarten-garden` (4 validations) |
 | **contrat** | la signature publique attendue par la suite | *aucun à ce jour* |
 
-Sous-familles de **sortie**, généralisation à confirmer — trois des quatre
-n'ont **pas** de cas observé, et c'est dit ligne à ligne :
+Sous-familles de **sortie** — deux sur quatre ont maintenant un cas, et les
+deux autres sont dites sans :
 
 1. **Séparateur terminal** — *observé* (cas 1).
-2. **Ordre du résultat** — trié, ou dans l'ordre de rencontre ? *Non observé.*
-3. **Casse** — initiale majuscule, tout en bas de casse ? *Non observé.*
+2. **Vocabulaire : casse, singulier/pluriel** — *observé* (cas 3a).
+3. **Ordre du résultat** — trié, ou dans l'ordre de rencontre ? *Non observé.*
 4. **Arrondi et forme des nombres** — troncature ou arrondi, décimales,
    notation. *Non observé.*
 
@@ -128,19 +185,25 @@ déclarés par le stub ; il regarde des *noms*, jamais la *forme d'une valeur*,
 ni à l'entrée ni à la sortie. C'est le troisième biais nommé en R28i, et c'est
 ce fichier-ci qui le mesure au lieu de le supposer.
 
-## La règle qui couvre les trois familles
+## La règle qui couvre les quatre familles
 
-Une seule phrase, et elle ne coûte rien à appliquer :
-
-> **Être tolérant à l'entrée, exact à la sortie, et fidèle au stub.**
-
-- **Tolérant à l'entrée** : accepter les formes voisines plutôt que rejeter.
-  Un `return error` sur une entrée légitime détruit l'exercice entier, même
-  quand la logique est juste (`go/connect` : 8 échecs identiques).
-- **Exact à la sortie** : un caractère de séparation suffit à faire échouer
-  (`go/beer-song` : 1 caractère sur des milliers).
+- **Tolérant sur la _forme_ de l'entrée** : accepter les formes voisines
+  plutôt que rejeter. Un `return error` sur une entrée légitime détruit
+  l'exercice entier, même quand la logique est juste — `go/connect`, 8 échecs
+  identiques.
+- **Strict sur les contraintes que le _type_ implique** : un nombre pair de
+  godets, des noms uniques, un alphabet fini de codes. Ces contraintes-là se
+  déduisent du domaine même quand l'énoncé se tait — `go/kindergarten-garden`,
+  4 échecs.
+- **Exact à la sortie** : un seul caractère de séparation suffit à faire
+  échouer — `go/beer-song`, 1 caractère sur des milliers. Et le vocabulaire
+  compte autant que la ponctuation — `go/kindergarten-garden`, 6 cas.
 - **Fidèle au stub** : la suite officielle compile contre lui. Ajouter à côté,
   jamais renommer ni re-typer.
+
+Les deux premières se contredisent en apparence. Elles ne portent pas sur la
+même chose : **la forme** de l'entrée se devine mal et doit être acceptée
+largement ; **le domaine** de l'entrée se déduit et doit être vérifié.
 
 ---
 

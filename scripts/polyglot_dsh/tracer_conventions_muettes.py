@@ -73,6 +73,12 @@ MOTIFS = [
     ("go/got-want", re.compile(
         r'\bgot\s*:\s*(?P<got>"(?:[^"\\]|\\.)*")\s*\n\s*want\s*:\s*'
         r'(?P<want>"(?:[^"\\]|\\.)*")', re.M)),
+    # go, seconde idiome, tres repandu : t.Errorf("X = %v, want: %v", ...)
+    # Releve sur go/kindergarten-garden, que le premier motif ne voyait pas.
+    ("go/egal-want", re.compile(
+        r'=\s*(?P<got>\[[^\]\n]*\]|"(?:[^"\\]|\\.)*"|[^,\n]+?)\s*,\s*'
+        r'want:?\s*(?P<want>\[[^\]\n]*\]|"(?:[^"\\]|\\.)*"|[^\n]+?)'
+        r'\s*\.?\s*$', re.M)),
     # rust >= 1.73 : assertion `left == right` failed / left: X / right: Y
     ("rust/left-right-1.73", re.compile(
         r'^\s*left:\s*(?P<got>.+?)\s*\n\s*right:\s*(?P<want>.+?)\s*$', re.M)),
@@ -186,6 +192,30 @@ def deguillemete(s):
              .replace('\\"', '"').replace("\\'", "'").replace("\\\\", "\\"))
 
 
+MOTS = re.compile(r"[A-Za-z]+")
+
+
+def meme_lexique(got, want):
+    """Memes MOTS, forme differente : casse, singulier/pluriel, suffixe.
+
+    Test volontairement etroit, pour ne pas avaler des erreurs de fond : meme
+    NOMBRE de mots, meme ORDRE, et chaque paire partage un prefixe d'au moins
+    trois lettres. Releve sur go/kindergarten-garden, ou l'agent rendait
+    « Radish »/« Violet » quand la suite attendait « radishes »/« violets ».
+    """
+    a, b = MOTS.findall(got), MOTS.findall(want)
+    if not a or len(a) != len(b) or a == b:
+        return False
+    for x, y in zip(a, b):
+        x, y = x.lower(), y.lower()
+        if x == y:
+            continue
+        n = min(len(x), len(y), 3)
+        if n < 3 or x[:n] != y[:n]:
+            return False
+    return True
+
+
 def classer(got, want):
     if got == want:
         return "identiques"          # ne devrait pas arriver sur un echec
@@ -198,10 +228,24 @@ def classer(got, want):
     lb = sorted(x for x in want.splitlines() if x.strip())
     if la and la == lb:
         return "ordre"
+    if meme_lexique(got, want):
+        return "lexique"
     return "fond"
 
 
-RANG = {"blancs": 0, "casse": 1, "ordre": 2, "identiques": 3, "fond": 4}
+# EXIGENCE NON ENONCEE : la suite officielle attend une ERREUR que l'enonce ne
+# demande jamais. Releve sur go/kindergarten-garden -- quatre cas de validation
+# (format, nombre impair de godets, nom en double, code invalide) dont l'enonce
+# ne dit pas un mot. C'est le symetrique exact de go/connect, qui refusait des
+# entrees VALIDES : ici l'agent accepte des entrees INVALIDES.
+ERREUR_ATTENDUE = re.compile(
+    r"expected error but got nil|expected an error|expected error"
+    r"|did not (?:raise|throw)|should have (?:raised|thrown)"
+    r"|DID NOT RAISE|to throw", re.I)
+
+
+RANG = {"blancs": 0, "casse": 1, "lexique": 2, "ordre": 3, "identiques": 4,
+        "fond": 5}
 
 
 def difference_lisible(got, want):
@@ -241,6 +285,12 @@ def injectable(classe, got, want):
                 "espaces, indentation et sauts de ligne.")
     if classe == "casse":
         return "La casse attendue n'est pas celle que tu produis."
+    if classe == "lexique":
+        return ("Les MOTS attendus sont les tiens, sous une autre forme : "
+                "casse, singulier/pluriel. Quand l'enonce donne le meme "
+                "vocabulaire sous plusieurs formes -- une phrase, un tableau, "
+                "une liste -- c'est la forme de la PROSE qui fait foi, pas "
+                "celle du tableau.")
     if classe == "ordre":
         return ("Les memes lignes sont attendues, dans un ORDRE different de "
                 "celui que tu produis.")
@@ -260,6 +310,20 @@ LECONS = {
     "ordre": "Ordre du resultat : une collection rendue peut etre attendue "
              "triee ou dans l'ordre de rencontre. L'enonce montre un ordre "
              "sans dire s'il est signifiant.",
+    "lexique": "VOCABULAIRE du resultat : les mots sont les bons, la forme ne "
+               "l'est pas -- casse, singulier/pluriel. Piege observe : le meme "
+               "enonce donne le vocabulaire sous PLUSIEURS formes (une phrase, "
+               "un tableau, une liste a puces). Le tableau parait le plus "
+               "autoritaire parce qu'il est structure ; c'est la PROSE qui "
+               "fait foi. Quand les deux divergent, c'est un tirage a pile ou "
+               "face que rien dans l'enonce ne tranche.",
+    "exigence": "EXIGENCE NON ENONCEE : la suite officielle attend une ERREUR "
+                "sur des entrees que l'enonce ne mentionne jamais (format "
+                "invalide, doublon, taille impaire). Symetrique exact du "
+                "rejet d'entree : la, on refusait du valide ; ici, on accepte "
+                "de l'invalide. Regle : valider les contraintes que le TYPE "
+                "implique, meme quand l'enonce se tait, tout en restant "
+                "tolerant sur la FORME de ce qui est valide.",
     "entree": "Convention d'ENTREE : la solution a refuse tous les cas avec "
               "son propre message, sans rien calculer -- l'ecart est dans la "
               "LECTURE, pas dans le calcul. Deux pieges cumules : l'enonce "
@@ -325,8 +389,13 @@ def depouiller(run):
         comptes = collections.Counter(c["classe"] for c in cas)
         rupture = contrat_rompu(texte)
         rejet = rejet_uniforme(texte)
+        # Signal ADDITIF : un exercice peut cumuler un ecart de forme ET une
+        # exigence jamais enoncee. kindergarten-garden fait les deux.
+        exigences = len(ERREUR_ATTENDUE.findall(texte))
         if cas:
             verdict = min((c["classe"] for c in cas), key=lambda x: RANG[x])
+        elif exigences:
+            verdict = "exigence"
         elif rejet:
             verdict = "entree"
             rupture = ("%d cas refuses avec le MEME message, sorti de sa "
@@ -346,6 +415,7 @@ def depouiller(run):
             "verdict": verdict,
             "motif": motif_vu,
             "rupture": rupture,
+            "exigences_non_enoncees": exigences,
             "lecon": LECONS.get(verdict),
             "cas_par_classe": dict(comptes),
             "cas": cas[:6],
@@ -375,11 +445,24 @@ def main():
         print("  %-12s %d" % (v, n))
     print("")
     interessants = [e for e in ex if e["verdict"] in ("blancs", "casse",
-                                                      "ordre")]
+                                                      "lexique", "ordre")]
     print("=== echecs de CONVENTION DE FORMAT : %d ===" % len(interessants))
     for e in interessants:
-        print("  %-28s %-8s %s" % (e["exercice"], e["verdict"],
-                                   e["cas"][0]["ecart"] if e["cas"] else ""))
+        # On imprime la REPARTITION, pas seulement la classe retenue : le
+        # verdict garde la plus favorable, et sur kindergarten-garden ca
+        # cachait que la plupart des cas etaient « lexique », plus dur que
+        # « casse ». Une classe retenue sans sa repartition trompe.
+        rep = " ".join("%s=%d" % (k, v)
+                       for k, v in sorted(e["cas_par_classe"].items()))
+        print("  %-28s %-8s %s" % (e["exercice"], e["verdict"], rep))
+        if e["cas"]:
+            print("  %-28s %s" % ("", e["cas"][0]["ecart"]))
+    print("")
+    exig = [e for e in ex if e.get("exigences_non_enoncees")]
+    print("=== EXIGENCES NON ENONCEES (signal additif) : %d ===" % len(exig))
+    for e in exig:
+        print("  %-28s %d cas ou une erreur etait attendue et n'est pas venue"
+              % (e["exercice"], e["exigences_non_enoncees"]))
     print("")
     entrees = [e for e in ex if e["verdict"] == "entree"]
     print("=== echecs de CONVENTION D'ENTREE : %d ===" % len(entrees))
