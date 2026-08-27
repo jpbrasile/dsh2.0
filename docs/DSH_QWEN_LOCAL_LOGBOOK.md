@@ -3890,7 +3890,7 @@ différés, rien de perdu.
 
 ---
 
-## 27/08 05:05 — CORRECTION : le niveau absolu était bon, c'est mon a priori qui était périmé. Et la fugue chimie a un mécanisme
+## 27/08 04:45 — CORRECTION : le niveau absolu était bon, c'est mon a priori qui était périmé. Et la fugue chimie a un mécanisme
 
 Deux choses dans cette entrée : je retire une affirmation fausse que j'ai
 commitée cette nuit (`d201462`), et j'établis le mécanisme de la fugue.

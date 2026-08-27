@@ -526,7 +526,7 @@ publiée, l'arbitrage est rendu à l'opérateur. Les deux issues, chiffrées :
 
 ---
 
-# Révision du 27/08/2026, 05:05 — R15 à R18 : une affirmation retirée, et B2 remplacé
+# Révision du 27/08/2026, 04:45 — R15 à R18 : une affirmation retirée, et B2 remplacé
 
 ## R15. RETRAIT de la R13 « le niveau absolu ne se publie pas »
 
