@@ -4262,3 +4262,75 @@ Contrôle sur exercices réels :
 
 Le lanceur a fait sa remise en état : bras GPQA relancé (PID 37012), 114
 enregistrements conservés.
+
+## 27/08 06:05 — Les PASS sont audités comme les FAIL, et l'auditeur s'est trompé deux fois avant de tenir
+
+Ordre : « traite les pass mieux que tu ne le fais actuellement si possible ».
+Le reproche est juste, et l'asymétrie était nette : chaque FAIL a été ouvert et
+diagnostiqué, les deux PASS ont été **comptés sans être regardés**. C'est le
+mauvais sens. Un FAIL indûment compté coûte des points ; **un PASS indûment
+compté détruit le chiffre.**
+
+### Les cinq contrôles
+
+`auditer_pass.py`, sans conteneur et sans rien relancer :
+
+1. les **fichiers de test officiels** sont identiques à l'original, octet pour
+   octet — le juge a bien noté la vraie suite ;
+2. les **fichiers de construction** sont revenus à l'original — indispensable
+   depuis que `CMakeLists.txt` est éditable en cpp ;
+3. la **solution diffère du stub** — l'agent a écrit quelque chose ;
+4. la solution **n'est pas le corrigé `.meta` recopié** — en variante D `.meta`
+   est masqué, raison de plus pour le vérifier au lieu de le supposer ;
+5. tout **test écrit par l'agent** figure bien dans la liste qui a été sortie
+   pendant le verdict.
+
+### L'auditeur s'est trompé deux fois, et les deux méritent d'être écrites
+
+**Faute 1 — regarder le mauvais moment.** La première version signalait la simple
+*présence* d'un test maison dans le répertoire, et rendait **5 suspects sur 5**.
+Or le pilote sort ces fichiers le temps du verdict puis **les remet**
+(`finally: demasquer`). Après le run ils sont forcément là : leur présence ne
+prouve rien. Corrigé — le contrôle porte désormais sur l'appartenance à
+`tests_ecrits_par_l_agent`, qui *est* la liste masquée. Un test que cette liste
+ignore est un test que le juge a pu ramasser ; c'est ça, l'invariant.
+
+Au passage, un second faux positif du même contrôle : `test/tests-main.cpp`, le
+`main` de Catch2, appartient au corpus d'origine. L'auditeur exclut maintenant
+tout fichier déjà présent dans le corpus vierge.
+
+**Faute 2 — accuser mon propre semis.** Le contrôle 4 a tiré sur
+`gigasecond.h` : « solution = le corrigé recopié ». C'était le **semis du
+27/08**. Quand `.meta/example.h` ne contient aucun corps — le cas de gigasecond —
+l'en-tête semé est forcément identique à la référence. Ce n'est pas la solution :
+en cpp la solution est dans `example.cpp`, jamais dans le `.h`.
+
+Ce faux positif est en réalité **utile**, et il est conservé comme ligne
+d'information : il constitue une **seconde confirmation, indépendante**, que le
+semis ne porte aucun corps. La première était le contrôle « 0 corps survivant sur
+26 » du script de semis ; celle-ci vient de l'autre bout de la chaîne.
+
+### Ce que l'audit dit du tirage `pi_dimD2`
+
+    cpp         gigasecond      PASS  tient
+        (info) gigasecond.h est l'en-tete de reference SANS aucun corps :
+               c'est le semis du 27/08, pas une fuite
+    go          simple-linked-list  fail  tient
+    java        sgf-parsing         fail  note
+        ! SOLUTION INCHANGEE : le stub d'origine a ete note tel quel
+    javascript  say                 fail  tient
+    python      two-bucket      PASS  tient
+
+    5 audites, 0 suspect.
+
+**Les deux PASS tiennent sur les cinq contrôles.** Le seul signalement porte sur
+java/sgf-parsing — et il **reproduit mécaniquement** ce que la lecture à la main
+avait trouvé : l'agent n'a rien écrit dans le fichier noté. Un FAIL signalé est
+une information, pas une menace sur le taux ; seul un PASS anormal l'est, et le
+compteur de suspects ne compte que ceux-là.
+
+### Câblé pour le grand run
+
+`lancer_polyglot_complet.ps1` appelle `auditer_pass.py` **après les 225 et avant
+de rendre la carte au bras GPQA**. Le taux ne sera donc jamais publié sans que
+chacun de ses succès ait été passé aux cinq contrôles.
