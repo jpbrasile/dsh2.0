@@ -29,7 +29,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from preparer_rejeu_reformule import verdicts
+from preparer_rejeu_reformule import verdicts, classer
 # Le perimetre de visibilite de S4 vient du DETECTEUR lui-meme, jamais recopie
 # ici : deux listes finiraient par diverger, et le depouillement se ferait alors
 # sur un perimetre que la prediction n'a pas utilise.
@@ -109,18 +109,28 @@ def main():
     # la laisse ne peut que nuire, jamais aider. En ecarter 3 (zebra-puzzle,
     # crypto-square, ledger, tous coupes ET passes) retirerait des succes du
     # denominateur et gonflerait le taux d'echec des deux colonnes.
-    coupes = sorted(k for k in v if v[k]["coupe"] and not v[k]["ok"])
-    joues = sorted(k for k in v if k not in set(coupes))
+    # Meme raisonnement pour l'INFRA : quand la chaine du juge n'a pas pu
+    # construire, la solution n'a pas ete evaluee. Compter ce FAIL contre une
+    # signature serait une FAUSSE CONFIRMATION -- go/palindrome-products porte
+    # S4 et a echoue le 27/08 sur « toolchain not available », rien a voir
+    # avec une validation muette.
+    ecartes = sorted(k for k in v
+                     if not v[k]["ok"] and classer(v[k]) != "juge")
+    coupes = [k for k in ecartes if classer(v[k]) == "coupe"]
+    infra = [k for k in ecartes if classer(v[k]) == "infra"]
+    joues = sorted(k for k in v if k not in set(ecartes))
     if not joues:
         print("REFUS : tous les verdicts de %s sont des tours coupes." % run)
         return 2
     print("run depouille   : %s" % run)
     print("verdicts        : %d / %d du corpus" % (len(v),
                                                    pred["total_corpus"]))
-    if coupes:
-        print("tours coupes    : %d, ECARTES du depouillement" % len(coupes))
-        for k in coupes:
-            print("                    %-34s %7.1f s" % (k, v[k]["duree"]))
+    for titre, lot in (("tours coupes", coupes), ("pannes d'infra", infra)):
+        if lot:
+            print("%-16s: %d, ECARTES du depouillement" % (titre, len(lot)))
+            for k in lot:
+                print("                    %-34s %7.1f s" % (k, v[k]["duree"]))
+    if ecartes:
         print("depouilles      : %d" % len(joues))
     if len(joues) < pred["total_corpus"]:
         print("                  RUN PARTIEL -- les taux ci-dessous ne portent")

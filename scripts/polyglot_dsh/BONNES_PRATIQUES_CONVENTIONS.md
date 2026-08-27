@@ -242,8 +242,139 @@ pas :
 Un cas sans le point 2 n'est pas une convention muette : c'est un échec de fond
 mal classé, et l'inscrire ici fabriquerait une bonne pratique fausse.
 
-**Restes à traiter** : `cpp/parallel-letter-frequency` a échoué **avant** le
-correctif qui journalise la sortie du juge — son `.dsh.results.json` n'a pas de
-champ `erreurs`, sa cause est donc **non déterminée**. La retrouver demanderait
-un rejeu du juge dans le conteneur, que le run en cours occupe : reporté, pas
-oublié.
+**Restes à traiter — mis à jour le 27/08.** `cpp/parallel-letter-frequency`
+était noté « cause non déterminée » : elle est **déterminée**. Le champ existe,
+il est dans `turns[].erreurs` et non à la racine du fichier — je le cherchais
+au mauvais endroit. L'exercice porte `tours_coupes: 1` à 1 150 s : c'est une
+**coupure** de la laisse de silence, pas un verdict du juge. Il part au bras de
+rejeu D pur, avec `go/octal` (coupé aussi).
+
+**Trois populations, et elles ne se mélangent pas** — `classer()` de
+`preparer_rejeu_reformule.py` les sépare :
+
+| population | ce qui s'est passé | ce que son rejeu mesure |
+|---|---|---|
+| **jugé** | l'agent a rendu, le juge a dit non | le coût de l'ambiguïté (degré B) |
+| **coupé** | la laisse a arrêté l'agent avant qu'il rende | ce que la laisse coûte (D pur) |
+| **infra** | la chaîne du juge n'a pas pu construire | un défaut du **banc** (D pur) |
+
+Le cas d'infra observé : `go/palindrome-products`, 27/08. L'agent a réécrit
+`go.mod` en `go 1.24` ; le conteneur porte `go1.21.5` et n'a pas de réseau
+→ `toolchain not available`, la solution n'a **jamais** été compilée. À noter,
+parce que c'est un défaut de banc et pas un accident : `go.mod` n'est pas dans
+les éditables, et `restaurer()` ne remet à neuf que les éditables — un fichier
+d'échafaudage modifié par l'agent survit donc jusqu'au juge. Non corrigé en
+cours de route : changer ça maintenant rendrait les 176 exercices restants
+incomparables aux 49 déjà joués.
+
+---
+
+## Cas 4 — `go/pig-latin` : des exceptions énumérées, la règle jamais énoncée
+
+**Relevé** : 27/08/2026, run `pi_D_t1_dflash2`, 60,4 s, tour non coupé.
+
+**Ce que le juge a dit**, mot pour mot :
+
+```
+--- FAIL: TestPigLatin/y_is_treated_like_a_consonant_at_the_beginning_of_a_word
+    pig_latin_test.go:11: Sentence("yellow") = "yelloway", want "ellowyay"
+```
+
+**La preuve que la logique était juste.** L'énoncé donne quatre règles. La
+règle 1 (`.docs/instructions.md`, exemples) liste :
+
+```
+- "apple"  -> "appleay"   (starts with vowel)
+- "xray"   -> "xrayay"    (starts with "xr")
+- "yttria" -> "yttriaay"  (starts with "yt")
+```
+
+L'agent a codé exactement cela :
+
+```go
+if isVowel(word[0]) || strings.HasPrefix(word, "xr") || strings.HasPrefix(word, "yt") {
+    return word + "ay"
+}
+```
+
+Les cas `xray`, `yttria`, `my`, `rhythm`, `quick`, `square` **passent tous**.
+Un seul cas tombe : `yellow`.
+
+**La forme de l'écart.** L'énoncé énumère des **exceptions préfixées**
+(`xr`, `yt`) sans jamais énoncer la **règle générale dont elles dérogent** :
+il ne dit nulle part si un `y` initial est voyelle ou consonne. Le seul mot en
+`y-` qu'il montre (`yttria`) est justement celui que l'exception `yt` couvre.
+Pour `yellow`, l'énoncé est **muet**, et les deux lectures se défendent :
+
+- `y` voyelle → règle 1 → `yelloway` (ce qu'a fait l'agent) ;
+- `y` consonne → règle 2 → `ellowyay` (ce qu'attend la suite).
+
+La suite cachée tranche, et le nom de son cas le dit sans détour :
+`y_is_treated_like_a_consonant_at_the_beginning_of_a_word`. **Cette phrase
+n'est nulle part dans l'énoncé.**
+
+**La bonne pratique.** Quand un énoncé donne une liste d'exceptions par
+préfixe sans donner la classification qui les fonde, la classification est
+**muette**, pas absente : elle existe dans la suite. Traiter l'exception
+comme une *exception* (donc : le cas général est l'autre branche) est le
+pari le plus sûr — `yt` n'aurait pas eu besoin d'être mentionné si `y` était
+déjà une voyelle.
+
+**Cinquième famille, et elle manquait au tableau.** Les quatre familles
+connues — sortie, entrée, exigence, contrat — ne couvrent pas celle-ci. Elle
+s'ajoute :
+
+| famille | ce qui manque à l'énoncé |
+|---|---|
+| **règle** | l'énoncé énumère des cas particuliers sans donner la règle générale dont ils sont les exceptions |
+
+**Et c'est un raté de la prédiction du 27/08.** `go/pig-latin` n'était signalé
+par **aucune** des quatre signatures S1–S4. C'est le premier échec jugé hors
+cas fondateurs, et la prédiction ne l'avait pas vu. Le constat se publie tel
+quel : **S5 n'est pas ajoutée à la liste figée** — l'ajouter après avoir vu
+l'échec qu'elle doit attraper serait de l'ajustement après coup, exactement ce
+que le pré-enregistrement sert à empêcher. Elle est candidate pour un
+pré-enregistrement suivant, à déposer avant que d'autres langues jouent.
+
+---
+
+## Cas 5 — `go/poker` : deux caractères Unicode voisins, un seul valide
+
+**Relevé** : 27/08/2026, run `pi_D_t1_dflash2`, 280,4 s, tour non coupé.
+
+**Ce que le juge a dit** :
+
+```
+--- FAIL: TestBestHandInvalid/♥_is_an_invalid_suit
+    poker_test.go:73: BestHand([2♡ 3♡ 4♥ 5♡ 7♡]) expected error, got: [2♡ 3♡ 4♥ 5♡ 7♡]
+```
+
+**La preuve que la logique était juste.** Tous les autres cas passent : mains
+valides classées, égalités départagées. Le seul cas qui tombe est celui d'une
+main que l'agent aurait dû **rejeter**.
+
+**La forme de l'écart, et elle est double.**
+
+1. **Une validation muette de plus.** Le stub déclare
+   `func BestHand(hands []string) ([]string, error)`. L'énoncé fait
+   **quatre lignes** et n'emploie aucun mot du champ de l'erreur — ni
+   « error », ni « invalid », ni « must ». Le contrat d'erreur n'existe que
+   dans la signature.
+2. **Deux caractères que l'œil ne sépare pas.** `♡` (U+2661, cœur *blanc*) est
+   la couleur valide ; `♥` (U+2665, cœur *noir*) doit être rejeté. Dans la
+   sortie du juge, `[2♡ 3♡ 4♥ 5♡ 7♡]` — la carte fautive est la troisième, et
+   rien ne la distingue à la lecture.
+
+**La bonne pratique.** Quand l'entrée est faite de symboles Unicode, l'ensemble
+valide se lit **au point de code**, jamais à l'œil. Et une signature qui rend
+une erreur sur un énoncé qui n'en parle pas veut dire qu'un **jeu de valeurs
+valides** existe quelque part : le construire en liste blanche explicite, et
+rejeter tout ce qui n'y est pas — plutôt que d'accepter ce qui *ressemble* à
+du valide.
+
+**Pour la prédiction du 27/08 : c'est une confirmation hors échantillon.**
+`go/poker` était signalé **S4**, et il échoue par le mécanisme même de S4 —
+stub qui déclare une erreur, énoncé qui n'en dit rien. Premier cas où la
+prédiction voit juste sur un exercice qui n'a pas servi à l'écrire. Un cas ne
+conclut rien : à 49 verdicts, S4 hors cas fondateurs donne 1/5 contre 1/13,
+soit +12,3 points, **p = 0,490**.

@@ -5816,3 +5816,102 @@ deux tableaux, marque le premier « à ne pas publier seul », et refuse de
 conclure sur le second tant qu'il ne contient aucun échec.
 
 État : **41 PASS sur 44 jugés** (cpp + go partiel), plus 2 coupures à rejouer.
+
+---
+
+### R28s — la prédiction prend ses deux premiers coups, un raté et une confirmation
+
+Quatre échecs jugés sont arrivés pendant que j'écrivais le dépouilleur. Ils
+sont le premier hors-échantillon de la prédiction déposée en R28r, et ils la
+traitent durement — ce qui est exactement ce qu'on lui demande.
+
+#### `go/pig-latin` — un RATÉ, non signalé
+
+```
+--- FAIL: TestPigLatin/y_is_treated_like_a_consonant_at_the_beginning_of_a_word
+    pig_latin_test.go:11: Sentence("yellow") = "yelloway", want "ellowyay"
+```
+
+L'énoncé donne quatre règles et, en règle 1, trois exemples :
+`apple` (voyelle), `xray` (préfixe `xr`), `yttria` (préfixe `yt`). L'agent a
+codé cela au mot près :
+
+```go
+if isVowel(word[0]) || strings.HasPrefix(word, "xr") || strings.HasPrefix(word, "yt") {
+```
+
+`xray`, `yttria`, `my`, `rhythm`, `quick`, `square` passent. Seul `yellow`
+tombe. **L'énoncé ne dit jamais si un `y` initial est voyelle ou consonne** ;
+il ne donne que l'exception `yt`, et le seul mot en `y-` qu'il montre est
+précisément celui que l'exception couvre.
+
+C'est une **cinquième famille** : *l'énoncé énumère des exceptions préfixées
+sans énoncer la règle générale dont elles dérogent*. Aucune de mes quatre
+signatures ne la voit. **S5 n'est pas ajoutée à la liste figée** — l'ajouter
+après avoir vu l'échec qu'elle doit attraper serait de l'ajustement après
+coup, exactement ce que le pré-enregistrement sert à empêcher.
+
+#### `go/poker` — une CONFIRMATION, signalée S4
+
+```
+--- FAIL: TestBestHandInvalid/♥_is_an_invalid_suit
+    BestHand([2♡ 3♡ 4♥ 5♡ 7♡]) expected error, got: [2♡ 3♡ 4♥ 5♡ 7♡]
+```
+
+Le stub déclare `func BestHand(hands []string) ([]string, error)`. L'énoncé
+fait **quatre lignes** et n'emploie ni « error », ni « invalid », ni « must ».
+C'est le mécanisme de S4, littéralement. Et un second piège par-dessus : `♡`
+(U+2661, cœur *blanc*) est valide, `♥` (U+2665, cœur *noir*) doit être rejeté —
+deux points de code que l'œil ne sépare pas.
+
+#### `go/palindrome-products` — ni l'un ni l'autre : une panne de banc
+
+```
+go: downloading go1.24 (linux/amd64)
+go: download go1.24 for linux/amd64: toolchain not available
+```
+
+L'agent a réécrit `go.mod` en `go 1.24` ; le conteneur porte `go1.21.5` et n'a
+pas de réseau. **La solution n'a jamais été compilée.** Cet exercice portait S4 :
+le compter comme confirmation aurait été une **fausse confirmation**.
+
+Le défaut est structurel, pas accidentel : `go.mod` n'est pas dans les
+éditables, et `restaurer()` ne remet à neuf **que** les éditables. Un fichier
+d'échafaudage modifié par l'agent survit donc jusqu'au juge. **Non corrigé en
+cours de route** — changer ça maintenant rendrait les 176 exercices restants
+incomparables aux 49 déjà joués.
+
+#### Trois populations, et `classer()` les sépare
+
+| population | ce qui s'est passé | rejeu | ce qu'il mesure |
+|---|---|---|---|
+| **jugé** | l'agent a rendu, le juge a dit non | degré **B** | le coût de l'ambiguïté |
+| **coupé** | la laisse a arrêté l'agent | **D pur** | ce que la laisse coûte |
+| **infra** | la chaîne du juge n'a pas construit | **D pur** | un défaut du banc |
+
+Une erreur corrigée au passage, et elle allait dans le mauvais sens : j'écartais
+**toutes** les coupures. Or 3 des 5 avaient **passé** (`cpp/zebra-puzzle`,
+`go/crypto-square`, `go/ledger`) — l'agent avait fini, la coupure l'a pris en
+vérification. Une coupure qui passe reste un PASS ; la laisse ne peut que nuire.
+Les écarter retirait trois succès du dénominateur et gonflait le taux d'échec
+des **deux** colonnes.
+
+#### Où en est la prédiction, hors cas fondateurs
+
+```
+=== HORS cas fondateurs -- c'est CE tableau qui teste la prediction ===
+  sig   perimetre        signales           non signales        ecart      Fisher
+  S1    43 joues          0/1   =   0.0 %     2/42  =   4.8 %     -4.8 pt   p = 1.000
+  S2    43 joues          0/9   =   0.0 %     2/34  =   5.9 %     -5.9 pt   p = 1.000
+  S3    43 joues          0/2   =   0.0 %     2/41  =   4.9 %     -4.9 pt   p = 1.000
+  S4    18 joues          1/5   =  20.0 %     1/13  =   7.7 %    +12.3 pt   p = 0.490
+```
+
+**Une confirmation, un raté, rien de conclu.** S4 est la seule signature qui
+sépare dans le bon sens, et p = 0,490 ne conclut rien. S1, S2 et S3 n'ont
+encore aucun échec signalé hors cas fondateurs. Le tableau « tout compris »
+donne S4 à p = 0,047 — il est **circulaire** et le script le marque « à ne pas
+publier seul ».
+
+État : 49 verdicts, 46 dépouillés (2 coupures + 1 infra écartées), 5 échecs
+jugés.

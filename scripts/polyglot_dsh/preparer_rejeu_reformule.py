@@ -26,6 +26,7 @@ import glob
 import io
 import json
 import os
+import re
 import sys
 
 BENCH = os.path.join(os.environ["USERPROFILE"], "tools", "aider-bench",
@@ -53,8 +54,40 @@ def verdicts(run):
                     # doit l'ecarter -- le rejeu, lui, le rejoue comme les
                     # autres, c'est justement une chance de le finir.
                     "coupe": bool(d.get("tours_coupes")),
+                    # La sortie du juge du DERNIER tour. Elle vit dans
+                    # turns[].erreurs, pas a la racine du fichier.
+                    "erreurs": ((d.get("turns") or [{}])[-1].get("erreurs")
+                                or ""),
                     "reformulations": d.get("reformulations", [])}
     return out
+
+
+# Un echec d'INFRASTRUCTURE n'est pas un echec de solution : la chaine du juge
+# n'a pas pu construire. Motifs OBSERVES, jamais devines -- chacun a ete lu
+# dans un .dsh.results.json de ce run.
+#   go/palindrome-products 27/08 : l'agent a reecrit go.mod en « go 1.24 », le
+#   conteneur porte go1.21.5 et n'a pas de reseau. Le juge n'a jamais compile
+#   la solution. Compter ce FAIL contre le modele attribue au modele une
+#   panne de banc.
+INFRA = re.compile(
+    r"toolchain not available"
+    r"|go: download go[\d.]+ .*not available"
+    r"|could not resolve dependencies"
+    r"|Could not (?:download|resolve)"
+    r"|network is unreachable", re.I)
+
+
+def classer(d):
+    """coupe | infra | juge -- dans cet ordre, et l'ordre compte.
+
+    Une coupure d'abord : l'agent n'avait pas rendu, ce qui suit ne le juge
+    pas. Puis l'infra. Ce qui reste est un vrai verdict sur la solution.
+    """
+    if d["coupe"]:
+        return "coupe"
+    if INFRA.search(d["erreurs"]):
+        return "infra"
+    return "juge"
 
 
 def main():
@@ -91,17 +124,22 @@ def main():
     #           reformulation » ferait passer des timeouts pour du cout
     #           d'ambiguite : une coupure qui passe au rejeu passe parce
     #           qu'elle a eu le temps, pas parce que l'enonce etait plus clair.
-    echecs = sorted(k for k, d in v.items() if not d["ok"] and not d["coupe"])
-    coupes = sorted(k for k, d in v.items() if not d["ok"] and d["coupe"])
+    par = {"juge": [], "coupe": [], "infra": []}
+    for k in sorted(v):
+        if not v[k]["ok"]:
+            par[classer(v[k])].append(k)
+    echecs, coupes, infra = par["juge"], par["coupe"], par["infra"]
     print("run de reference : %s" % run)
     print("  verdicts   : %d / %d%s" % (len(v), total,
                                         "" if fini else "  -- NON TERMINE"))
-    print("  echecs juges : %d" % len(echecs))
-    for k in echecs:
-        print("      %-34s %7.1f s" % (k, v[k]["duree"]))
-    print("  tours coupes : %d  (bras SEPARE, sans reformulation)" % len(coupes))
-    for k in coupes:
-        print("      %-34s %7.1f s" % (k, v[k]["duree"]))
+    for titre, lot, note in (
+            ("echecs juges", echecs, "degre B"),
+            ("tours coupes", coupes, "bras SEPARE, D pur"),
+            ("pannes d'infra", infra, "bras SEPARE, D pur -- pas un echec "
+                                      "de solution")):
+        print("  %-14s : %d  (%s)" % (titre, len(lot), note))
+        for k in lot:
+            print("      %-34s %7.1f s" % (k, v[k]["duree"]))
     print("")
 
     if not fini and not partiel:
@@ -110,7 +148,7 @@ def main():
               "colonne partielle. Attendre, ou assumer avec --partiel."
               % (len(v), total))
         return 1
-    if not echecs and not coupes:
+    if not echecs and not coupes and not infra:
         print("Rien a rejouer : aucun echec.")
         return 0
 
@@ -124,6 +162,8 @@ def main():
         "exercices": ",".join(echecs),
         "coupes": coupes,
         "exercices_coupes": ",".join(coupes),
+        "infra": infra,
+        "exercices_infra": ",".join(infra),
     }
     chemin = os.path.join(ICI, "rejeu_%s.json" % run)
     io.open(chemin, "w", encoding="utf-8", newline="\n").write(
@@ -151,6 +191,19 @@ def main():
         print("  Ce bras-la ne mesure PAS l'ambiguite : il mesure ce que la")
         print("  laisse de silence a coute. Son resultat s'ajoute au taux D,")
         print("  il n'entre jamais dans la colonne « avec reformulation ».")
+        print("")
+    if infra:
+        print("  BRAS 3 -- les %d pannes d'INFRA, D PUR, SANS -Degres :" % len(infra))
+        print("")
+        print("  .\\lancer_polyglot_complet.ps1 -Nom %s_infra `" % run)
+        print("      -Modele specdec-q38-dflash2 -Tours 1 `")
+        print("      -Exercices (Get-Content rejeu_%s.json |" % run)
+        print("          ConvertFrom-Json).exercices_infra")
+        print("")
+        print("  La chaine du juge n'a pas pu construire ; la solution n'a")
+        print("  jamais ete evaluee. Le rejeu part d'un repertoire neuf, donc")
+        print("  d'un echafaudage vierge. Si l'agent le casse a nouveau, c'est")
+        print("  reproductible et ca devient un defaut du BANC, pas du modele.")
         print("")
     print("Puis comparer avec comparer_reformulation.py -- qui ne doit voir")
     print("que le BRAS 1.")
