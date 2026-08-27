@@ -6795,3 +6795,404 @@ aveugle** : respecter le seul contrat visible garantit l'echec de compilation.
 Confondu structurel, a declarer comme tel — au meme titre que
 `javascript/resistor-color-trio`, dont le stub declare `label()` methode quand
 la suite lit `.label` propriete.
+
+---
+
+## R31 — 27/08 au soir : le serveur meurt en cours de run, et ce que la mesure devient
+
+### 1. La panne, et pourquoi son ampleur est contre-intuitive
+
+Le `llama-server` du port 8005 est mort a **20 h 12 min 33 s**, en plein run
+`pi_D_t1_dflash2`. Le pilote, lui, a continue : `pi` ouvre une connexion neuve
+a chaque exercice, echoue en `ECONNREFUSED 127.0.0.1:8005`, et rend un FAIL.
+
+**71 exercices ont ete brules ainsi**, jusqu'a 20 h 36 min 53 s.
+
+Le chiffre parait impossible et c'est le point interessant : l'intuition est
+calibree sur la duree d'un exercice qui travaille — **mediane 137,6 s** — et 71
+exercices auraient donc demande 2 h 43. Mais un refus de connexion ne coute
+rien : **mediane 20,6 s**. La panne brule **7 fois plus vite que le travail**.
+24 minutes ont suffi.
+
+Recoupement, trois signaux independants, tous concordants :
+
+| signal | les 71 | les 153 sains |
+|---|---|---|
+| duree mediane | **20,6 s** | 137,6 s |
+| duree maximale | 62,8 s | 1 150 s |
+| PASS | **0** | 78 |
+| rang chronologique | 153 → 224, **ininterrompu** | 1 → 152 |
+
+Aucun exercice sain n'est intercale parmi les 71. La coupure est nette.
+
+Manifeste ecrit sur disque :
+`scripts/polyglot_dsh/a_rejouer_panne_serveur_2708.json`.
+**Regle : a rejouer, jamais a classer.** Ces verdicts ne mesurent rien.
+
+Repartition : javascript 7, **python 34, rust 30**. Les deux dernieres pistes
+sont **entierement perdues** — zero exercice sain sur 64.
+
+### 2. Deux erreurs de comptage a moi, corrigees ici
+
+- **« 7 exercices perdus »** annonce a l'operateur pendant la panne. C'etait la
+  mesure a l'instant t ; le run a continue pendant l'echange. Le chiffre reel
+  est **71**. L'operateur a doute du chiffre, et le doute etait fonde au sens
+  ou il demandait un recoupement — c'est ce recoupement, section 1, qui
+  l'etablit.
+- **« 0 coupure parmi les sains »**. Faux : je lisais un champ `coupe` a la
+  racine, qui n'existe pas. La coupure est portee par `tours_coupes` (racine)
+  et `turns[-1].coupe`. Il y en a **8** :
+
+| exercice | verdict | duree |
+|---|---|---|
+| cpp/parallel-letter-frequency | FAIL | 1 150,0 s |
+| cpp/zebra-puzzle | **PASS** | 843,5 s |
+| go/crypto-square | **PASS** | 710,6 s |
+| go/ledger | **PASS** | 855,7 s |
+| go/octal | FAIL | 635,6 s |
+| java/connect | FAIL | 838,2 s |
+| java/tree-building | FAIL | 699,0 s |
+| javascript/connect | FAIL | 766,6 s |
+
+La liste de 5 donnee en R30 section 7 n'etait pas fausse, elle etait partielle :
+elle ne retenait que les coupures **qui echouent**. Trois coupures ont passe
+quand meme.
+
+### 3. Le trou de masquage F1 est chiffre, et il coute 31 points sur go
+
+`pilote.py` masque les fichiers listes sous `files.test` de `.meta/config.json`.
+Mesure sur les six pistes : **go est la seule touchee**, et l'ampleur exacte est
+**18 exercices sur 39** (et non 19) qui declarent `cases_test.go` ailleurs que
+sous `files.test` — l'agent voyait donc la suite officielle.
+
+| sous-ensemble go | PASS | taux |
+|---|---|---|
+| suite officielle **visible** (trou F1) | 15/18 | **83,3 %** |
+| correctement masques | 11/21 | **52,4 %** |
+| ecart | | **+31,0 points** |
+
+cpp, java, javascript, python et rust : **0 exercice** concerne. Le trou est
+propre a go.
+
+### 4. L'etat de la mesure, sans extrapolation
+
+| piste | sains | PASS | taux | board apparie |
+|---|---|---|---|---|
+| cpp | 26 | 25 | **96,2 %** | 53,8 % |
+| go | 39 | 26 | 66,7 % | 43,6 % |
+| java | 46 | 15 | 32,6 % | 50,0 % |
+| javascript | 42 | 12 | 28,6 % | 63,4 % |
+| python | **0** | — | — | 52,9 % |
+| rust | **0** | — | — | 46,7 % |
+| **total** | **153** | **78** | **51,0 %** | 52,6 % |
+
+Hors les 8 coupures : **75/145 = 51,7 %**, et **cpp passe a 24/24 = 100 %**.
+
+Plancher si rien n'est rejoue : **78/224 = 34,8 %**.
+
+### 5. L'estimation demandee, et pourquoi sa bande est large
+
+python et rust n'ayant **aucune** mesure, le seul ancrage est le taux du board
+sur les memes exercices. L'ecart pi−board, une fois F1 retire de go, vaut
+**cpp +42,4 · go +8,8 · java −17,4 · javascript −34,8** : moyenne **−0,2**,
+**ecart-type 29,1 points**. C'est cette dispersion qui fixe la bande, et elle
+est enorme.
+
+| | python | rust | global brut | **F1 corrige** |
+|---|---|---|---|---|
+| central | 17,9/34 | 13,9/30 | 49,9 % | **47,4 %** |
+| bas (−1σ) | 8,0 | 5,2 | 41,6 % | 39,1 % |
+| haut (+1σ) | 27,8 | 22,7 | 58,2 % | 55,8 % |
+
+**≈ 47 %, bande 39–56 %.** C'est une extrapolation, pas une mesure, et elle ne
+vaut que jusqu'au rejeu.
+
+**Une hypothese testee et refutee.** J'attendais que l'ecart suive la presence
+de la chaine d'outils cote agent, puisque la variante D lui demande d'executer
+ses propres tests. Verification du PATH de l'hote : `python`, `node`, `cargo`
+et `rustc` **presents** ; `go`, `java`, `javac`, `g++`, `gcc` **absents**. Or
+javascript a `node` et **perd 34,8 points**, tandis que cpp n'a **aucun
+compilateur** et **gagne 42,4 points**. La correlation est inverse de celle
+attendue. Aucun facteur mesure ne predit l'ecart par piste — donc rien
+n'autorise a resserrer la bande.
+
+### 6. Ce qui reste ouvert, et qui pese plus que le chiffre
+
+**cpp a 96,2 % — 100 % hors coupures — sans compilateur, contre 53,8 % pour le
+banc aider sur les memes 26 exercices.** Un ecart de +42 points en faveur d'un
+agent qui ne peut pas compiler demande une explication, et trois hypotheses
+restent a departager sur pieces : memorisation (les exercices Exercism sont
+publics), fuite de masquage d'une autre forme que F1, ou exercices simplement
+plus faciles. Tant que ce n'est pas tranche, le +42 de cpp porte toute
+l'estimation vers le haut sans justification etablie.
+
+### 7. Etat du serveur
+
+Relance detache le 27/08 au soir sous **autorisation humaine explicite**, avec
+le regime **reproduit a l'identique** de celui du run, pour que le rejeu des 71
+mesure la meme chose que les 153 sains : binaire `build-faq`, `-Config
+q38-dflash2`, `-CtxSize 163840`, `-Ctk q8_0 -Ctv q4_0`, `-SpecDraftNMax 7`,
+`--parallel 1`. Verifie : `/health` → `ok`, alias `specdec-q38-dflash2`,
+`n_ctx` 163840, 27 320 697 856 parametres, 23 778 MiB de VRAM.
+
+Le lanceur exige `-Config` : un premier essai sans ce parametre a echoue
+proprement (`MissingMandatoryParameter`), ce qui est le bon comportement — il
+n'y a pas de repli silencieux vers une autre configuration.
+
+**A faire** : rejouer les 71 (~2 h de carte) plus les 3 jamais juges
+(2 cpp, 1 java). Le rejeu remplace la ligne « central » de la section 5 par une
+mesure.
+
+### 8. Correction des sections 4 et 5 : je comparais au mauvais board
+
+**L'erreur.** Les colonnes « board apparie » des sections 4 et 5 lisent
+`tests_outcomes[-1]`, c'est-a-dire le board **apres 2 tentatives**. Or D tourne
+a `--tours 1`. Le comparateur juste est `tests_outcomes[0]`, la **premiere
+tentative**. `comparer_protocoles.py` porte d'ailleurs les deux
+(`verdict_aider_1` et `verdict_aider_2`) ; j'ai pris le mauvais. RT#4 utilisait
+le bon champ.
+
+Consequence : j'ai a la fois **sous-estime l'avantage de D** et **surestime le
+niveau absolu** de python et rust, qui sert d'ancrage a l'estimation.
+
+| piste | D (sains, hors fuites go) | board a1 | board a2 | delta vs **a1** |
+|---|---|---|---|---|
+| cpp | 25/26 = 96,2 % | 11,5 % | 53,8 % | **+84,6** |
+| go | 10/20 = 50,0 % | 10,0 % | 45,0 % | **+40,0** |
+| java | 15/46 = 32,6 % | 10,9 % | 50,0 % | **+21,7** |
+| javascript | 12/42 = 28,6 % | 24,5 % | 63,3 % | **+2,4** |
+| python | — perdu — | 11,8 % | 52,9 % | — |
+| rust | — perdu — | 20,0 % | 46,7 % | — |
+
+Moyenne des ecarts **+37,2**, ecart-type **30,4**.
+
+**Estimation refaite** (ancrage board a1 + cet ecart) :
+
+| | python | rust | global /224 |
+|---|---|---|---|
+| bas (−1σ) | 18,5 % | 26,7 % | 42,1 % |
+| **central** | **48,9 %** | **57,2 %** | **50,8 %** |
+| haut (+1σ) | 79,4 % | 87,6 % | 59,5 % |
+
+**≈ 51 %**, bande 42–59 %, au lieu des 47 % de la section 5. Les deux erreurs
+se compensent en partie : ancrer sur a1 abaisse le niveau de depart et releve
+l'ecart.
+
+### 9. RT#4 « la significativite est morte en vol » — refute dans son mecanisme
+
+RT#4 (`harness/redteam/reponse-les-pass-sont-ils-reels-27-08.md`) pose en HIGH
+que la cellule publiable est passee de **+16,2 (p = 0,011, n = 99)** a
+**+3,4 (p = 0,4709, n = 175)**, et en donne la cause : « l'ordre de jugement —
+go/java (D-favorables) complets tot, python/rust (D-negatifs) tard », donc un
+biais d'arret optionnel.
+
+**La cause est ailleurs.** RT#4 a lu le run a **20:36:33**. Le serveur etait
+mort depuis **20:12:33**. Sa cellule contient les cadavres.
+
+| cellule facon V4 | n | D | board a1 | ecart | b/c | p exact |
+|---|---|---|---|---|---|---|
+| telle que RT#4 l'a lue | 179 | 20,7 % | 16,2 % | +4,5 | 29/21 | 0,3222 |
+| **apres retrait des morts** | **108** | **34,3 %** | 16,7 % | **+17,6** | **29/10** | **0,0034** |
+
+**71 des 179 exercices de sa cellule — 40 % — sont des `ECONNREFUSED`, avec
+D-PASS = 0 et board-PASS = 11.** Le rapport ecrit lui-meme « python −11,8
+(n=34), rust −20,7 (n=29) », soit **0/63 cumules** : ce n'est pas une faiblesse
+du modele sur ces deux langages, c'est la signature de la panne. Un taux de
+reussite exactement nul sur 63 exercices aurait du alerter.
+
+Par piste, avant et apres retrait :
+
+| piste | morts inclus (lecture RT#4) | morts retires |
+|---|---|---|
+| go | n=20, +40,0 | n=20, +40,0 |
+| java | n=46, +21,7 | n=46, +21,7 |
+| javascript | n=49, +0,0 | n=42, +2,4 |
+| python | n=34, D **0,0 %**, board 11,8 %, −11,8 | aucun survivant |
+| rust | n=30, D **0,0 %**, board 20,0 %, −20,0 | aucun survivant |
+
+**Le chiffre publie n'est donc pas mort : il est reproduit et renforce.**
++16,2 / p = 0,011 a n=99 devient **+17,6 / p = 0,0034 a n=108**. La trajectoire
+decroissante que RT#4 decrit (+16,5 → +16,2 → +8,1 → +5,7 → +3,4) est
+exactement la dilution progressive par les 71 morts, dans l'ordre ou ils
+tombaient.
+
+**Ce qui tient dans RT#4, et qu'il faut garder** : aucun faux PASS demontre sur
+les quatre chemins testes (§1) ; l'equite du board etablie (corpus gele, 0
+coupe cotee en echec cote board, `@Disabled` symetrique) ; le detecteur F1
+incomplet de 2 (`go/dnd-character`, `go/wordy`, tables `var tests =
+[]<Type>Test` que `FLAIRS_TEST` ne voit pas) — effet delta nul, paires
+concordantes ; `auditer_pass.py:166` fragile sur `tests_outcomes` vide. Sa
+reserve M4 (≈ 14 echecs board a marqueurs infra) reste ouverte et va, elle,
+contre D.
+
+**Et sa limite propre etait declaree** : « Run en vol : tous les chiffres sont
+horodates 2026-08-27 20:36:33. Remesure obligatoire a completion. » La remesure
+etait bien obligatoire ; ce que le rapport n'a pas vu, c'est que le run
+n'avancait plus depuis 24 minutes — il brulait.
+
+### 10. Rejeu lance
+
+Autorisation humaine obtenue. Les 71 `.dsh.results.json` faux ont ete
+**deplaces** (jamais supprimes) vers
+`tmp.benchmarks/_panne_2708/pi_D_t1_dflash2/`, arborescence conservee, retour
+arriere par deplacement inverse. `pilote.py:1044` saute un exercice dont le
+resultat existe : c'est pourquoi le retrait est necessaire.
+
+Commande, protocole identique a l'origine (`--tests-maison` implique
+`sans_tests` et `sans_corriges`, `pilote.py:1625-1627`) :
+
+```
+python pilote.py pi_D_t1_dflash2 --agent pi --accueil-pi %USERPROFILE%\.pi-bench-polyglot
+  --dotenv <racine>\.env --tests-maison --conteneur pi-polyglot-tests
+  --exercices <les 71, gelees dans _exercices_rejeu_2708.txt>
+  --tours 1 --delai-tour 1800 --veille-silence 600 --effort medium
+  --fournisseur local-mesure --modele specdec-q38-dflash2
+```
+
+Le lanceur porte desormais une garde qui **refuse de partir si `/health` ne
+repond pas** sur 8005 — celle qui manquait a 20 h 12 et dont l'absence a coute
+71 exercices.
+
+**Le pilote a emis le garde-fou de chaine d'outils** reclame par le plan :
+
+> `CHAINE D'OUTILS ABSENTE COTE AGENT : javascript — NODE_PATH ne resout pas
+> @exercism/babel-preset-javascript (jest global sans node_modules local
+> execute 0 test) -> 7 exercices sur 71.`
+
+Ces 7 javascript rejouent donc sans pouvoir executer leurs propres tests, ce
+qui est un protocole degrade au regard de la variante D. **A declarer au
+depouillement**, pas a decouvrir apres.
+
+---
+
+## R32 — 27/08, audit des 75 echecs sains : le taux n'est pas sous-estime, il est SUR-estime
+
+Audit demande sur l'hypothese de l'operateur (« les scores devraient etre
+meilleurs »). Il la refute, et il refute au passage une affirmation que j'avais
+faite le meme soir.
+
+### 1. Zero bascule
+
+**Aucun des 75 echecs sains ne bascule en PASS.** Les artefacts de banc
+existent, mais aucun ne cache un code correct :
+
+| exercice | artefact reel du banc | pourquoi il ne bascule pas |
+|---|---|---|
+| `javascript/food-chain` | le pilote a **plante avant le jugement** sur un fichier nomme `nul` (nom reserve Windows) cree pendant le tour ; `tests_outcomes: []` donc FAIL par defaut, alors que l'agent avait livre | rejuge en copie isolee : **10/10 tombent** (un `\n` final manquant) |
+| `go/palindrome-products` | l'agent a reecrit `go.mod` (`go 1.24`, module renomme) et le banc **ne restaure pas `go.mod`** — il ne remet que `CMakeLists.txt` et `Cargo.toml` (`pilote.py:256`). Le juge est mort sur `toolchain not available` | `go.mod` vierge remis : **2 tests officiels tombent encore** |
+| `cpp/parallel-letter-frequency` | sortie de juge **vide** aux deux tours (`erreurs: ""`) : le verdict ne portait aucune explication | rejuge : `12 | 6 passed | 6 failed` — vrai echec de fond |
+
+Le seul gain defendable est le retrait de deux exercices **structurellement
+impassables en aveugle** : `go/octal` (deja connu) et **`go/trinary`, nouveau**
+— stub `ParseTrinary(arg string, want int64, ok bool)`, c'est-a-dire les champs
+de la table de cas, quand la suite exige un retour `error`. Retires du
+denominateur : go 26/37 = 70,3 %, global **78/151 = 51,7 %**, soit **+0,7 pt**.
+
+Origine des 75 : **68 viennent d'une suite qui a reellement tourne**
+(assertions), 4 d'echecs de compilation go, 1 d'environnement, 2 de sortie
+vide. **Zero OOM, zero `exit 137`** — les quatre « 137 » reperes etaient des
+numeros de ligne `spec.js:137`.
+
+### 2. L'effet inverse, et il est plus grand : le run melange deux protocoles
+
+Mesure faite independamment de l'audit, sur `tours_max` et la longueur de
+`tests_outcomes` :
+
+| piste | `tours_max` | exercices |
+|---|---|---|
+| **cpp** | **2** | 26 sur 26 |
+| go | 1 | 39 |
+| java | 1 | 46 |
+| javascript | 1 | 42 |
+
+Un run nomme `t1` porte donc un bloc cpp joue a **deux tours**, le second
+nourri par la sortie d'erreur de la suite officielle. **Quatre PASS cpp
+n'existent qu'au tour 2** : `all-your-base`, `bank-account`, `phone-number`,
+`zebra-puzzle` (`tests_outcomes = [false, true]`).
+
+| | tel que mesure | **t1 homogene** |
+|---|---|---|
+| cpp | 25/26 = 96,2 % | **21/26 = 80,8 %** |
+| global sain | 78/153 = 51,0 % | **74/153 = 48,4 %** |
+
+### 3. Correction : mon affirmation sur la chaine d'outils etait fausse
+
+J'ai ecrit en R31 section 5 que l'hypothese « chaine d'outils » etait refutee,
+au motif que cpp n'a « ni `g++` ni `gcc` » et gagne malgre tout. **J'avais
+interroge MON PATH, pas celui que le lanceur donne a l'agent.**
+
+Les pieces disent le contraire :
+
+- cmake + MSVC presents pendant le bloc cpp (transcript `zebra-puzzle` :
+  « MSVC/VS 2022 via CMake ») ;
+- le lanceur a **ajoute `go\bin` et `jdk21\bin` au PATH de l'agent** avant les
+  segments t1 (lignes « chaine ajoutee au PATH », journaux 12:29 et 14:52) ;
+- **31/39** files go, **27/46** java, **23/42** javascript disent avoir execute
+  leurs tests.
+
+La conclusion de R28k (« 86 exercices mesures hors variante D faute de chaine »)
+vaut donc pour les segments ANTERIEURS a ces ajouts, pas pour tout le run. A
+reprendre : la ligne exacte de partage.
+
+### 4. L'ecart cpp est explique, sans invoquer la memorisation
+
+Trois avantages de protocole cumules, tous documentes :
+
+1. **Le semis.** Les 26 stubs cpp servis pendant le run etaient les
+   **declarations d'API completes** tirees de `.meta/example.h`, corps retires
+   (`semer_signatures.py` ; `binary_search_tree.h` fait 105 lignes d'API contre
+   5 a l'origine). C'est une fuite partielle du contrat, deliberee et declaree,
+   mais derivee du corrige.
+2. **Deux tours au lieu d'un** (section 2).
+3. **Une chaine operante** (section 3).
+
+Une fuite de la **suite** est en revanche exclue au niveau des fichiers : zero
+test officiel hors `files.test` sur cpp, contre 18 `cases_test.go` sur go.
+La memorisation n'est pas exclue, mais elle n'est **pas necessaire** pour
+expliquer l'ecart.
+
+**Le bras temoin n'existe pas.** Le commit `cd4f461` pose
+`mesurer_valeur_du_semis.ps1` et le run `pi_cpp_sans_semis` comme la
+justification en attente ; ce run **est absent de `tmp.benchmarks`**. Tant
+qu'il n'est pas joue, la valeur du semis reste non mesuree.
+
+### 5. Correction a `classification_echecs.json`
+
+La preuve de `go/robot-simulator` attribue a l'agent des signatures qui sont en
+fait celles du **stub vierge**, octet pour octet. A reecrire : c'est une
+livraison incomplete, pas une signature choisie par l'agent.
+
+### 6. Ce que l'audit n'a pas pu verifier, nomme
+
+- Les transcripts complets : `wire_pi_D_t1_dflash2.jsonl` ne porte que des
+  metadonnees (comptes de caracteres, empreintes) et `sortie_queue` se limite
+  aux 600 derniers caracteres. Les exercices coupes n'ont aucun transcript.
+- Quatre exercices restent **indetermines faute de piece**, et ils ne
+  basculent pas pour autant : `java/connect` et `javascript/connect` (coupes
+  par la veille-silence a 835 s et 765 s, solution = stub intact — le FAIL
+  mesure la laisse, pas le code) ; `java/sgf-parsing` et `go/robot-simulator`
+  (tour complet, tests maison ecrits, solution = stub intact — livraison
+  incomplete de l'agent, sans transcript pour l'affirmer).
+- `auditer_pass.py:166` leve un `IndexError` sur `tests_outcomes` vide — meme
+  defaut que celui signale par RT#4.
+
+### 7. Rejeu : la panne avait DEUX maillons, pas un
+
+Le premier lancement du rejeu a echoue alors que `/health` sur 8005 rendait
+`ok`. Cause : le fournisseur `local-mesure` de pi ne pointe **pas** sur 8005
+mais sur **l'enregistreur 8013**
+(`~/.pi-bench-polyglot/models.json`), qui relaie vers 8005 et ecrit le fil.
+Cet enregistreur etait mort lui aussi. Remonte par `proxy.mjs`
+(`UP_PORT=8005`, `PROXY_PORT=8013`, meme fil que le run), le pre-vol est passe
+**OK en 2,2 s**.
+
+**Deux gardes ont mordu avant que quoi que ce soit ne parte a vide**, et les
+deux sont des acquis :
+
+1. `pilote.py:1552` — refus quand une chaine d'outils manque cote agent
+   (« le taux melangerait deux protocoles dans une meme colonne »). Il a fallu
+   `--sans-chaine-outils` pour assumer l'ecart des 7 javascript, ecart declare
+   ici.
+2. Le **pre-vol** « l'agent repond-il ? » — « le banc ne part pas : un agent
+   muet rendrait 225 FAIL indiscernables d'un mauvais modele ». C'est
+   exactement le garde-fou dont l'absence a coute 71 exercices a 20 h 12.

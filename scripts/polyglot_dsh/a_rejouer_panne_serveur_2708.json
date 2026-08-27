@@ -1,0 +1,439 @@
+{
+  "run": "pi_D_t1_dflash2",
+  "cause": "llama-server sur 8005 mort le 27/08 a 20 h 12 ; le pilote a continue et a brule les exercices restants a ~20,5 s piece, chacun sur un refus de connexion. Aucun appel modele n'a eu lieu. Ces verdicts ne mesurent rien.",
+  "signature": "ECONNREFUSED 127.0.0.1:8005 dans sortie_queue",
+  "recoupement": "les 71 sont exactement les 71 derniers dans l'ordre chronologique, sans un seul exercice sain intercale ; duree mediane 20,6 s contre 137,6 s pour les sains ; zero PASS parmi eux",
+  "regle": "A REJOUER. Jamais a classer, jamais compte comme echec de contenu.",
+  "n_a_rejouer": 71,
+  "n_sains": 153,
+  "premier": "2026-08-27 20:12:33",
+  "dernier": "2026-08-27 20:36:53",
+  "a_rejouer": [
+    {
+      "cas": "javascript/twelve-days",
+      "duree": 62.8,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:12:33"
+    },
+    {
+      "cas": "javascript/two-bucket",
+      "duree": 21.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:12:54"
+    },
+    {
+      "cas": "javascript/variable-length-quantity",
+      "duree": 21.3,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:13:16"
+    },
+    {
+      "cas": "javascript/word-search",
+      "duree": 21.3,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:13:37"
+    },
+    {
+      "cas": "javascript/wordy",
+      "duree": 21.2,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:13:58"
+    },
+    {
+      "cas": "javascript/zebra-puzzle",
+      "duree": 21.1,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:14:19"
+    },
+    {
+      "cas": "javascript/zipper",
+      "duree": 21.1,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:14:41"
+    },
+    {
+      "cas": "python/affine-cipher",
+      "duree": 20.8,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:15:01"
+    },
+    {
+      "cas": "python/beer-song",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:15:22"
+    },
+    {
+      "cas": "python/book-store",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:15:42"
+    },
+    {
+      "cas": "python/bottle-song",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:16:03"
+    },
+    {
+      "cas": "python/bowling",
+      "duree": 20.7,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:16:24"
+    },
+    {
+      "cas": "python/connect",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:16:44"
+    },
+    {
+      "cas": "python/dominoes",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:17:04"
+    },
+    {
+      "cas": "python/dot-dsl",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:17:25"
+    },
+    {
+      "cas": "python/food-chain",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:17:45"
+    },
+    {
+      "cas": "python/forth",
+      "duree": 20.8,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:18:06"
+    },
+    {
+      "cas": "python/go-counting",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:18:27"
+    },
+    {
+      "cas": "python/grade-school",
+      "duree": 20.6,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:18:47"
+    },
+    {
+      "cas": "python/grep",
+      "duree": 20.6,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:19:08"
+    },
+    {
+      "cas": "python/hangman",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:19:28"
+    },
+    {
+      "cas": "python/list-ops",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:19:49"
+    },
+    {
+      "cas": "python/paasio",
+      "duree": 20.7,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:20:09"
+    },
+    {
+      "cas": "python/phone-number",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:20:30"
+    },
+    {
+      "cas": "python/pig-latin",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:20:50"
+    },
+    {
+      "cas": "python/poker",
+      "duree": 20.6,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:21:11"
+    },
+    {
+      "cas": "python/pov",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:21:32"
+    },
+    {
+      "cas": "python/proverb",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:21:52"
+    },
+    {
+      "cas": "python/react",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:22:13"
+    },
+    {
+      "cas": "python/rest-api",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:22:33"
+    },
+    {
+      "cas": "python/robot-name",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:22:53"
+    },
+    {
+      "cas": "python/scale-generator",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:23:14"
+    },
+    {
+      "cas": "python/sgf-parsing",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:23:34"
+    },
+    {
+      "cas": "python/simple-linked-list",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:23:55"
+    },
+    {
+      "cas": "python/transpose",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:24:15"
+    },
+    {
+      "cas": "python/tree-building",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:24:36"
+    },
+    {
+      "cas": "python/two-bucket",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:24:56"
+    },
+    {
+      "cas": "python/variable-length-quantity",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:25:17"
+    },
+    {
+      "cas": "python/wordy",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:25:37"
+    },
+    {
+      "cas": "python/zebra-puzzle",
+      "duree": 20.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:25:58"
+    },
+    {
+      "cas": "python/zipper",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:26:18"
+    },
+    {
+      "cas": "rust/accumulate",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:26:39"
+    },
+    {
+      "cas": "rust/acronym",
+      "duree": 20.9,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:27:00"
+    },
+    {
+      "cas": "rust/alphametics",
+      "duree": 21.3,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:27:21"
+    },
+    {
+      "cas": "rust/book-store",
+      "duree": 20.9,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:27:42"
+    },
+    {
+      "cas": "rust/bowling",
+      "duree": 21.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:28:03"
+    },
+    {
+      "cas": "rust/decimal",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:28:24"
+    },
+    {
+      "cas": "rust/dot-dsl",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:28:44"
+    },
+    {
+      "cas": "rust/doubly-linked-list",
+      "duree": 21.1,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:29:05"
+    },
+    {
+      "cas": "rust/fizzy",
+      "duree": 21.1,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:29:27"
+    },
+    {
+      "cas": "rust/forth",
+      "duree": 21.2,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:29:48"
+    },
+    {
+      "cas": "rust/gigasecond",
+      "duree": 22.3,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:30:10"
+    },
+    {
+      "cas": "rust/grade-school",
+      "duree": 21.0,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:30:31"
+    },
+    {
+      "cas": "rust/grep",
+      "duree": 21.8,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:30:53"
+    },
+    {
+      "cas": "rust/luhn-from",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:31:13"
+    },
+    {
+      "cas": "rust/macros",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:31:34"
+    },
+    {
+      "cas": "rust/nucleotide-codons",
+      "duree": 21.1,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:31:55"
+    },
+    {
+      "cas": "rust/ocr-numbers",
+      "duree": 21.0,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:32:16"
+    },
+    {
+      "cas": "rust/parallel-letter-frequency",
+      "duree": 21.4,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:32:37"
+    },
+    {
+      "cas": "rust/pig-latin",
+      "duree": 20.9,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:32:58"
+    },
+    {
+      "cas": "rust/poker",
+      "duree": 21.3,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:33:20"
+    },
+    {
+      "cas": "rust/react",
+      "duree": 21.0,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:33:41"
+    },
+    {
+      "cas": "rust/robot-name",
+      "duree": 21.3,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:34:02"
+    },
+    {
+      "cas": "rust/say",
+      "duree": 20.9,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:34:23"
+    },
+    {
+      "cas": "rust/scale-generator",
+      "duree": 21.0,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:34:44"
+    },
+    {
+      "cas": "rust/simple-cipher",
+      "duree": 24.1,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:35:08"
+    },
+    {
+      "cas": "rust/two-bucket",
+      "duree": 20.9,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:35:29"
+    },
+    {
+      "cas": "rust/variable-length-quantity",
+      "duree": 20.9,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:35:50"
+    },
+    {
+      "cas": "rust/word-count",
+      "duree": 21.2,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:36:11"
+    },
+    {
+      "cas": "rust/wordy",
+      "duree": 20.9,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:36:32"
+    },
+    {
+      "cas": "rust/xorcism",
+      "duree": 20.5,
+      "verdict_faux": "FAIL",
+      "juge_a": "2026-08-27 20:36:53"
+    }
+  ]
+}
