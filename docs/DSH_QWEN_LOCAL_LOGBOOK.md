@@ -5421,3 +5421,22 @@ go   beer-song     FAIL    65.3 s
 un run en cours. Les trois autres familles listées dans le fichier de bonnes
 pratiques (ordre, casse, arrondi) sont des généralisations **sans cas observé**,
 et le fichier le dit ligne à ligne.
+
+**Addendum, 5 verdicts go plus tard — la relance se paie déjà.**
+
+```
+go   alphametics   PASS   155.4 s
+go   beer-song     FAIL    65.3 s
+go   book-store    PASS   320.3 s
+go   bottle-song   PASS    65.4 s
+go   bowling       PASS   200.4 s
+```
+
+`bottle-song` est le cas qui a tout déclenché : **coupé à 640,1 s sur veille de
+silence** sous le régime sans chaîne (R28j), l'agent parti chasser `gofmt` avec
+un `find /`. Avec `go` sur son PATH, il **passe en 65,4 s** — presque dix fois
+moins que la seule coupure. Ce n'est pas un gain de qualité du modèle : c'est
+le coût, enfin retiré, d'une chaîne d'outils absente.
+
+4 PASS sur 5 à ce stade, contre 5 sur 8 sous le régime précédent. Trop peu pour
+un taux ; assez pour dire que les deux régimes ne mesuraient pas la même chose.
