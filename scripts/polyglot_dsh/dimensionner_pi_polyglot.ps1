@@ -45,6 +45,22 @@
 # Ce script met quand meme le bras en pause s'il en trouve un, et le relance a
 # la fin : il doit rester rejouable seul.
 
+# 27/08 05:20 -- LE CONTRAT D'API EST DESORMAIS SEME DANS LES STUBS cpp.
+# Le premier tirage (pi_dimD) a montre que cpp/gigasecond echouait pour une
+# raison qui n'est pas la programmation : le test officiel appelle
+# `gigasecond::advance`, le stub livrait un namespace VIDE, et TASK.md ne nomme
+# aucune fonction. En variante D le test est masque : le nom n'etait ecrit
+# NULLE PART que l'agent puisse lire. Il a ecrit `anniversary` -- le seul mot de
+# l'enonce -- avec une logique par ailleurs juste.
+#   Mesure : 26 exercices sur 225 (12 %) etaient dans ce cas, TOUS en cpp.
+#   go, java, javascript, python et rust livrent deja leurs signatures.
+#   Correction : semer_signatures.py ecrit dans chaque stub cpp les
+#   DECLARATIONS de .meta/example.h, corps de fonction retires (controle : 0
+#   corps survivant sur les 26), sauvegarde en <ex>.h.stub-origine.
+# Passer -Nom pour ne pas melanger deux protocoles dans un meme repertoire.
+
+param([string]$Nom = 'pi_dimD')
+
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
@@ -73,16 +89,16 @@ if ($g) {
 
 Arreter-Proxy8013
 $env:UP_TLS = '0'; $env:UP_HOST = '127.0.0.1'; $env:UP_PORT = '8005'
-$env:PROXY_PORT = '8013'; $env:PROXY_LOG = (Join-Path $banc 'wire_pi_dimD.jsonl')
+$env:PROXY_PORT = '8013'; $env:PROXY_LOG = (Join-Path $banc "wire_$Nom.jsonl")
 Remove-Item Env:\PROXY_INJECT -ErrorAction SilentlyContinue
 Start-Process -FilePath 'node' -ArgumentList 'proxy.mjs' `
     -WorkingDirectory $banc -WindowStyle Hidden `
-    -RedirectStandardError (Join-Path $banc 'proxy_pi_dimD.err') | Out-Null
+    -RedirectStandardError (Join-Path $banc "proxy_$Nom.err") | Out-Null
 Start-Sleep -Seconds 3
 
 Write-Output ''
 Write-Output '=== pi local, VARIANTE D, 1 tour, laisse 1800 s ==='
-python pilote.py pi_dimD --agent pi --accueil-pi $accueilPi --dotenv $dotenv `
+python pilote.py $Nom --agent pi --accueil-pi $accueilPi --dotenv $dotenv `
     --tests-maison --conteneur pi-polyglot-tests `
     --pas 45 --decalage 10 --tours 1 --delai-tour 1800 --effort medium `
     --fournisseur local-mesure --modele specdec-q38-plain

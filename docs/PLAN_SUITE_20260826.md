@@ -667,3 +667,73 @@ banc est un problème de dsh, et dsh est sorti du livrable 1 (R9).
 **L'instrument du polyglot reste donc celui déjà en place** : le plafond de
 sortie par appel (16 384) et la laisse de tour (`--delai-tour 1800`). Ce sont
 eux qui bornent, et ils bornent les deux canaux.
+
+---
+
+# Révision du 27/08/2026, 05:25 — R20 : le contrat d'API est semé dans les stubs cpp ; B6 en dépendait
+
+## R20a. Le défaut, mesuré sur le premier FAIL du dimensionnement
+
+`cpp/gigasecond` a échoué en 1 508 s avec des tests maison qui passaient. Cause :
+le test officiel appelle `gigasecond::advance`, le stub livrait un **namespace
+vide**, `TASK.md` ne nomme aucune fonction, et la variante D masque le test. Le
+nom attendu n'était lisible nulle part. L'agent a écrit `anniversary` — le seul
+mot de l'énoncé — avec une logique par ailleurs juste.
+
+Ampleur re-mesurée sur les stubs d'origine sauvegardés :
+
+| langue | stubs sans aucune déclaration | total |
+|---|---|---|
+| **cpp** | **26** | **26** — soit **100 % du cpp** |
+| go / java / javascript / python / rust | **0** | 199 |
+| TOTAL | 26 | 225 (**11,6 %**) |
+
+Un premier comptage annonçait 26/47 java muets : artefact de motif (les stubs
+java d'Exercism déclarent sans modificateur d'accès). Java est à **0/47**.
+
+## R20b. Correction appliquée, et sa borne
+
+`semer_signatures.py --appliquer` écrit dans les 26 stubs cpp les
+**déclarations** de `.meta/example.h`, corps retirés ; sauvegarde
+`<ex>.h.stub-origine`. Contrôle : **0 corps survivant sur 26** (6 des 26
+en-têtes en contenaient — ils auraient été la solution).
+
+Ce qui est semé est le **contrat**, pas la solution : nom, types, structure.
+C'est exactement ce que go, java, javascript, python et rust livrent déjà. Le
+semis **aligne le cpp sur les cinq autres**, il ne l'avantage pas.
+
+**Écart à déclarer dans toute publication du livrable 1** : les stubs cpp du
+corpus ont été modifiés par rapport à l'amont Exercism. Deux lignes suffisent —
+le motif, et le fait que les 199 autres exercices sont intouchés.
+
+## R20c. Conséquence sur B6 et sur le dimensionnement
+
+Le tirage `pi_dimD` (4 FAIL, dont le FAIL cpp ci-dessus) est **arrêté, non
+concaténé**. Relance sous `pi_dimD2`, répertoire et protocole neufs ; le lanceur
+prend désormais `-Nom` pour interdire le mélange.
+
+**B6 ne pouvait pas partir avant ce correctif** : 26 exercices sur 225 auraient
+compté un échec de divination comme un échec de programmation, soit jusqu'à
+11,6 points de `pass_rate` perdus pour une raison qui n'est pas le modèle.
+
+## R20d. dflash2 reste hors de tous les chiffres, polyglot compris
+
+Question posée : le brouillon dflash2 est-il utilisable pour le banc aider ?
+**Non, et pour la raison déjà mesurée en B1** — pas une nouvelle.
+
+En glouton, graine fixe, même binaire des deux côtés : `plain` contre `dflash2`
+= **12/12 sorties divergentes**, premier octet différent entre 58 et 1113. Les
+deux témoins (deux processus plain ; deux passes dflash2 même processus) sont à
+12/12 identiques : l'accusation porte bien sur le spéculateur.
+
+Le polyglot rend un **score**, exactement comme GPQA. Un score ne se mesure pas
+avec un décodeur dont on vient de montrer qu'il change la suite de jetons là où
+elle est décidable. Prix payé, le même qu'en GPQA : **46,9 t/s au lieu de
+103,6** (2,2×).
+
+**Caveat à porter sur le chiffre déjà publié** : le `pass_rate_2 = 52,0 %` de la
+fenêtre 7quater a été mesuré **avec** dflash2 n7. Il reste valide comme mesure de
+la *configuration publiée*, mais il n'est pas comparable jeton à jeton avec un
+bras sans spéculation. Le dimensionnement en cours et B6 tournent sur
+`specdec-q38-plain` — vérifié sur la ligne de commande du serveur vivant : aucun
+`--model-draft`, aucun `--spec-*`.

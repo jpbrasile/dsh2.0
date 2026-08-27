@@ -3994,3 +3994,101 @@ produit pour ne demander que la conclusion coûterait 10 min au lieu de 6 h — 
 le journal ne conserve que 40 000 des 101 344 caractères produits. L'idée
 redevient bonne si l'on relève d'abord la queue de journalisation ; en l'état
 elle travaillerait sur un raisonnement amputé des deux tiers.
+
+## 27/08 05:25 — Le premier FAIL du polyglot n'était pas de la programmation : les 26 stubs cpp cachaient le contrat d'API
+
+Ordre : « lis le premier fail pour voir si ce n'est pas une question de setting ».
+C'en était une, et elle touche **tout le cpp**.
+
+### Ce que dit l'artefact
+
+`pi_dimD/cpp/exercises/practice/gigasecond/.dsh.results.json` :
+
+| champ | valeur |
+|---|---|
+| `tests_outcomes` | `[False]` |
+| `duration` | **1 508,2 s** (laisse 1 800 s — 16 % de marge) |
+| `num_turns` | 1, `coupe: false` |
+| queue de sortie de l'agent | « all 5 tests pass » |
+| `tests_ecrits_par_l_agent` | `gigasecond_test.cpp`, `maison_test.cpp` |
+
+L'agent a écrit `gigasecond::anniversary(...)`, avec une logique juste, et ses
+propres tests passaient. Le test officiel appelle `gigasecond::advance(...)`.
+Le stub livré était un **namespace vide**, et `TASK.md` ne nomme aucune fonction.
+
+En variante D la suite officielle est masquée — **donc le nom attendu n'était
+écrit nulle part que l'agent puisse lire.** Ce FAIL mesure de la divination, pas
+de la programmation.
+
+### L'ampleur, re-mesurée sur les sauvegardes
+
+Sur les 225 exercices, combien de stubs éditables ne déclarent **rien** ?
+
+| langue | stubs muets | total |
+|---|---|---|
+| **cpp** | **26** | **26** |
+| go, java, javascript, python, rust | 0 | 199 |
+| **TOTAL** | **26** | **225** (11,6 %) |
+
+Ce n'est pas « 26 exercices cpp sur 26 » par hasard : **c'est 100 % du cpp**.
+Les cinq autres langages livrent leur signature dans le stub (`pub fn after(...)
+-> ... { todo!() }` en rust, `void open() throws ... { }` en java). Le cpp
+d'Exercism, lui, livre `namespace X {}`.
+
+**Fausse mesure corrigée au passage** : un premier comptage annonçait 26/47 java
+muets (55 %). Artefact de motif — les stubs java d'Exercism déclarent leurs
+méthodes **sans modificateur d'accès**, et un motif exigeant `public|private|
+static` les rate toutes. Java est à **0/47**. Le chiffre publié ci-dessus est
+celui d'après correction.
+
+### La correction : semer la SIGNATURE, jamais le CORPS
+
+`semer_signatures.py` écrit dans chaque stub cpp les **déclarations** de
+`.meta/example.h`, corps de fonction retirés. Sauvegarde en
+`<ex>.h.stub-origine` avant écriture (26 créées, aucune écrasée).
+
+```cpp
+// gigasecond.h, après
+namespace gigasecond {
+boost::posix_time::ptime advance(const boost::posix_time::ptime& start);
+}
+```
+
+Ce qui est semé : le nom, les types, la structure (namespace/class/enum).
+Ce qui ne l'est pas : aucun corps — 6 des 26 en-têtes en contiennent (inline),
+ils **seraient** la solution.
+
+**L'extracteur s'est trompé trois fois, dont deux en silence.** Consigné parce
+qu'un extracteur qui produit du C++ *plausible* est plus dangereux qu'un qui
+plante :
+
+1. la liste d'initialisation de constructeur restait accrochée → C++ invalide
+   **et** fuite de `_data(std::forward<TParam>(data))` ;
+2. le balayage arrière des parenthèses s'arrêtait à la première `(`, prenant
+   `_right(` pour la liste de paramètres ;
+3. un `break` sur profondeur négative faisait renoncer le balayage : plus rien
+   n'était retiré, `{return _data;}` survivait — **et l'essai à blanc disait OK**.
+
+Règle finale, une seule, ancrée sur la fin de la signature :
+
+```python
+mm = re.search(r"\)[\s\w]*(?::[^;{}]*)?\s*$", avant)
+```
+
+Contrôle : **0 corps survivant sur les 26**. Le seul `{` restant repéré au grep
+était un faux positif — `enum class Plants : char { grass = 'G', … }`, une
+déclaration de type qui doit rester.
+
+### Ce que ça change, et ce que ça ne change pas
+
+Ça ne « répare » pas un score : le tirage `pi_dimD` (4 FAIL : cpp/gigasecond
+1 508 s, go/simple-linked-list 83 s, java/sgf-parsing 528 s, javascript/say
+172 s) a été **arrêté et relancé** sous `pi_dimD2`, protocole neuf, répertoire
+neuf (`-Nom` ajouté au lanceur pour ne pas mélanger deux protocoles). Les deux
+tirages ne se concaténeront pas.
+
+Ça change la **portée déclarée de la variante D** : sans ce semis, elle est
+injouable en cpp par construction. La limite déjà écrite au lanceur (« en cpp et
+java, câbler un test maison demande de toucher CMakeLists.txt / Gradle, qui sont
+interdits — D y est structurellement plus dur, 73 exercices sur 225 ») en reçoit
+une seconde, indépendante, et désormais corrigée.
