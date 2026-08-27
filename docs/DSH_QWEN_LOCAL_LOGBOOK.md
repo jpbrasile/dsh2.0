@@ -6195,3 +6195,91 @@ run terminé.
 **Reste à faire :** `java/circular-buffer` (échec arrivé pendant la réparation)
 n'est pas encore rejugé — le conteneur sert le pilote en vol, et deux gradle
 concurrents dans un même conteneur peuvent se marcher dessus.
+
+---
+
+## R28w — 27/08 : l'appariement etait asymetrique. A information egale, l'ecart est de +30,5 points
+
+**Ce qui etait faux.** `comparer_protocoles.py` comparait la variante D a
+`pass_rate_2` du board, soit 52,0 %. C'est le taux du DEUXIEME essai : le modele
+a d'abord vu le fichier de test officiel tomber, a recu **la sortie d'echec**,
+puis a recommence. La variante D joue un tour et ne recoit aucun retour. On
+mettait un bras sans retour face a un bras avec retour, et on publiait
+« parite ». Defaut trouve par l'audit Fable du 27/08, verifie a la main.
+
+**Le board publie les deux** (`reports/specdec_20260825_ctxsweep_dflash2/
+aider_polyglot_stats.yml`) : `pass_rate_1 = 16,9 %`, `pass_rate_2 = 52,0 %`. Le
+retour du juge vaut donc **+35,1 points pour ce modele meme**.
+
+**L'essai 1 du board est-il aveugle ?** OUI, verifie deux fois.
+ * Code : `benchmark/benchmark.py:744` `ignore_files.update(test_files)` puis
+   `:747` `solution_files.difference_update(ignore_files)` -- seuls les stubs
+   entrent dans `fnames`.
+ * Empirique, et c'est la preuve qui compte : `verse`, `verses`, `sing`,
+   `fromPov`, `isSubset` apparaissent **0 fois** dans les enonces et le modele
+   les a emises avec leur signature exacte. Il avait le stub, pas le test.
+
+### Le chiffre, appariement honnete (les deux bras aveugles)
+
+| jeu | n | D 1 tour | board `pass_rate_1` | ecart | gagne/perd | p exact |
+|---|---|---|---|---|---|---|
+| tous les aveugles | 105 | 58,1 % | 15,2 % | +42,9 | 49 / 4 | 7,1e-11 |
+| sans cpp (semis) | 84 | 47,6 % | 15,5 % | +32,1 | 31 / 4 | 3,5e-06 |
+| **sans cpp ni ledger** | **82** | **46,3 %** | **15,9 %** | **+30,5** | **29 / 4** | **1,1e-05** |
+
+Pour memoire, l'ancien appariement (D 1 tour contre `pass_rate_2`) : +7,6 sur
+105, **0,0 sur 84**, -2,4 sur 82. C'etait la « parite » -- obtenue une main
+attachee.
+
+### Deux contaminations mesurees le meme jour
+
+**1. cpp : le semis n'est pas un supplement, c'est la difference entre rien et
+tout.** Le stub d'origine cpp est un NAMESPACE VIDE de 8 lignes (conserve en
+`*.stub-origine`, 26 fichiers) ; le semis du 27/08 y a mis la declaration de
+classe complete, DANS LE CORPUS VIERGE que le pilote lit en direct. Le run aider
+date du **25/08** : il est anterieur. Sur cpp les deux bras n'ont donc pas recu
+le meme stub. Le 100 % cpp est INUTILISABLE et n'entre dans aucun chiffre
+publie.
+
+**2. 5 exercices cpp ont joue DEUX tours -- ils ne sont pas aveugles.**
+`pilote.py:1071` reinjecte `erreurs`, qui sort de `lancer_tests()` sur les
+fichiers de test OFFICIELS. Sequelle de l'etape « complement » de
+`mesurer_valeur_du_semis.ps1:136-141`, qui rejoue en `--tours 2`.
+    cpp/all-your-base   PASS au tour 2       cpp/phone-number   PASS au tour 2
+    cpp/bank-account    PASS au tour 2       cpp/zebra-puzzle   PASS au tour 2
+    cpp/parallel-letter-frequency  FAIL
+**4 PASS sur 25 en cpp ont ete obtenus avec la sortie d'echec officielle en
+main** : c'est le protocole du board, pas la variante D. Isoles par le script.
+
+### Ce que le chiffre autorise, et ce qu'il n'autorise pas
+
+ * **Autorise** : a information egale, l'agent local est tres au-dessus du
+   modele seul. +30,5 points, 29 gains contre 4 pertes, p ~ 1e-5.
+ * **NON autorise** : « a capacite egale ». L'asymetrie restante est le
+   protocole agentique lui-meme -- l'agent compile, execute, itere ; le modele
+   du board ne peut rien executer. C'est le SUJET de la mesure, pas un biais,
+   mais ca s'ecrit.
+ * Handicap reel en face : l'agent ecrit ses propres tests et ne voit jamais la
+   suite officielle.
+ * **Dette non deduite** : le modele local tourne sous un fork portant
+   « Revert draft sampling in rejection sampling », echantillonne a t=1,0. La
+   losslessness du specdec n'est PAS mesuree (`SPECDEC_4090_BENCH.md:588`).
+ * **Le bras symetrique de `pass_rate_2` (D a 2 tours) n'existe pas.**
+
+### Classification
+
+`java/pov` RECLASSE `ambiguite/libelle_seul` -> `fond/mapping_condition_message`.
+Ma classification etait fausse sur pieces : `.docs/instructions.append.md:57-64`
+publie les DEUX chaines exactes AVEC leur condition, dans un bloc java commente,
+et l'agent les avait recopiees toutes les deux (`Tree.java:50` et `:71`). Il a
+laisse celle de `fromPov` se propager a travers `pathTo` au lieu de la
+convertir. La famille `libelle_seul` compte donc **9**, pas 10.
+
+Ajoutes : `java/twelve-days` (separateur terminal -- 15 tests officiels sur 15
+tombent, 7 tests maison sur 7 passent, cause unique un `\n` final ; l'enonce
+publie les paroles COMPLETES et dit « should _exactly_ match », mais un bloc
+markdown ne peut pas montrer une terminaison) et `java/state-of-tic-tac-toe`.
+**38 echecs juges, 38 classes.**
+
+**Etat du run a cette lecture : 110 verdicts. Lecture d'etape. La regle d'arret
+tient -- le depouillement fait foi une seule fois, sur les 225.**

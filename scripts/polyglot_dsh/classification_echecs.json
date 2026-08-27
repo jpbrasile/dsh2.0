@@ -1,256 +1,275 @@
 {
-  "_lisez_moi": {
-    "a_quoi_ca_sert": "Le taux d'echec brut melange DEUX populations qui ne disent pas la meme chose : un echec d'AMBIGUITE (l'enonce ne dit pas ce que la suite exige) et un echec de FOND (l'agent a ecrit un bug). Aucune signature d'enonce ne peut attraper un echec de fond. Les laisser dans la colonne « non signales » dilue mecaniquement tout ecart mesure.",
-    "critere": "Il n'est PAS invente pour l'occasion : c'est la barre deja ecrite dans BONNES_PRATIQUES_CONVENTIONS.md le 27/08, avant ces echecs. Un echec est classe AMBIGUITE si et seulement si les DEUX conditions tiennent : (1) la logique passe les cas voisins -- on peut nommer quels cas passent ; (2) l'element divergent est ABSENT de l'enonce ET du stub, c'est-a-dire de tout ce que l'agent peut voir. Sinon : FOND.",
-    "regle_d_usage": "Le classement se fait en lisant la sortie du juge et l'enonce, JAMAIS en regardant si l'exercice etait signale par une signature. Le critere est symetrique : un exercice signale qui echoue sur un bug est classe FOND comme les autres, et sort du depouillement lui aussi. C'est ce qui empeche le classement de fabriquer l'ecart qu'il est cense mesurer.",
-    "chaque_entree_porte_sa_preuve": "Le champ `preuve` doit citer la piece : ligne de l'enonce, ligne du stub, ou cas voisins qui passent. Une entree sans preuve verifiable est a retirer, pas a garder par confort.",
-    "mecanisme_signature": "Champ SEPARE, et il ne change AUCUN calcul. La prediction du 27/08 annonce que les exercices signales ECHOUENT PLUS -- elle n'annonce pas par quel mecanisme. Exiger apres coup que le mecanisme corresponde reviendrait a resserrer le critere une fois les resultats connus. Le champ enregistre donc si le mecanisme de la signature est bien celui qui a fait echouer l'exercice, pour que la publication puisse le dire, sans jamais retirer ni ajouter un cas au decompte."
+ "_lisez_moi": {
+  "a_quoi_ca_sert": "Le taux d'echec brut melange DEUX populations qui ne disent pas la meme chose : un echec d'AMBIGUITE (l'enonce ne dit pas ce que la suite exige) et un echec de FOND (l'agent a ecrit un bug). Aucune signature d'enonce ne peut attraper un echec de fond. Les laisser dans la colonne « non signales » dilue mecaniquement tout ecart mesure.",
+  "critere": "Il n'est PAS invente pour l'occasion : c'est la barre deja ecrite dans BONNES_PRATIQUES_CONVENTIONS.md le 27/08, avant ces echecs. Un echec est classe AMBIGUITE si et seulement si les DEUX conditions tiennent : (1) la logique passe les cas voisins -- on peut nommer quels cas passent ; (2) l'element divergent est ABSENT de l'enonce ET du stub, c'est-a-dire de tout ce que l'agent peut voir. Sinon : FOND.",
+  "regle_d_usage": "Le classement se fait en lisant la sortie du juge et l'enonce, JAMAIS en regardant si l'exercice etait signale par une signature. Le critere est symetrique : un exercice signale qui echoue sur un bug est classe FOND comme les autres, et sort du depouillement lui aussi. C'est ce qui empeche le classement de fabriquer l'ecart qu'il est cense mesurer.",
+  "chaque_entree_porte_sa_preuve": "Le champ `preuve` doit citer la piece : ligne de l'enonce, ligne du stub, ou cas voisins qui passent. Une entree sans preuve verifiable est a retirer, pas a garder par confort.",
+  "mecanisme_signature": "Champ SEPARE, et il ne change AUCUN calcul. La prediction du 27/08 annonce que les exercices signales ECHOUENT PLUS -- elle n'annonce pas par quel mecanisme. Exiger apres coup que le mecanisme corresponde reviendrait a resserrer le critere une fois les resultats connus. Le champ enregistre donc si le mecanisme de la signature est bien celui qui a fait echouer l'exercice, pour que la publication puisse le dire, sans jamais retirer ni ajouter un cas au decompte."
+ },
+ "echecs": {
+  "java/affine-cipher": {
+   "classe": "ambiguite",
+   "signature": "aucune",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "S4 n'a PAS tire, et c'etait correct : elle exige que l'enonce soit muet sur l'erreur, or la ligne 27 dit « your program should indicate that this is an error ». L'enonce n'est pas muet sur l'erreur, il est muet sur son TEXTE. Autre famille -- voir PREDICTION_LIBELLES_ERREUR.md.",
+   "preuve": "Les 14 autres tests passent. Les 2 qui tombent sont testEncodeThrowsMeaningfulException et testDecodeThrowsMeaningfulException, tous deux sur le TEXTE : attendu « Error: keyA and alphabet size must be coprime. », obtenu « a and m must be coprime. » -- redige avec le vocabulaire de l'enonce (a, m, lignes 26-27). La chaine attendue est ABSENTE de .docs/, verifie par grep le 27/08. Sortie complete relue par rejuger.py, la queue de 3 000 car. du pilote ne portait que la pile gradle."
   },
-  "echecs": {
-    "java/affine-cipher": {
-      "classe": "ambiguite",
-      "signature": "aucune",
-      "divergence": "libelle_seul",
-      "mecanisme_signature": "S4 n'a PAS tire, et c'etait correct : elle exige que l'enonce soit muet sur l'erreur, or la ligne 27 dit « your program should indicate that this is an error ». L'enonce n'est pas muet sur l'erreur, il est muet sur son TEXTE. Autre famille -- voir PREDICTION_LIBELLES_ERREUR.md.",
-      "preuve": "Les 14 autres tests passent. Les 2 qui tombent sont testEncodeThrowsMeaningfulException et testDecodeThrowsMeaningfulException, tous deux sur le TEXTE : attendu « Error: keyA and alphabet size must be coprime. », obtenu « a and m must be coprime. » -- redige avec le vocabulaire de l'enonce (a, m, lignes 26-27). La chaine attendue est ABSENTE de .docs/, verifie par grep le 27/08. Sortie complete relue par rejuger.py, la queue de 3 000 car. du pilote ne portait que la pile gradle."
-    },
-    "java/all-your-base": {
-      "classe": "ambiguite",
-      "signature": "aucune",
-      "divergence": "libelle_seul",
-      "mecanisme_signature": "aucune signature ne pouvait tirer : l'enonce fait 1 362 caracteres et ne contient AUCUN mot du champ de l'erreur, et le stub ne porte que le remplisseur UnsupportedOperationException commun a 46 stubs java sur 47. Rien de visible n'annonce l'exception.",
-      "preuve": "Les cas de conversion passent. Ceux qui tombent (testFirstBaseIsOne, testFirstBaseIsZero, testSecondBaseIsZero...) le font tous sur le TEXTE : attendu « Bases must be at least 2. », obtenu « base must be >= 2 ». Meme sens, autre redaction."
-    },
-    "java/alphametics": {
-      "classe": "ambiguite",
-      "signature": "S2+S3+S4",
-      "divergence": "separateur_d_entree",
-      "mecanisme_signature": "OUI, et c'est S3 -- « entree presentee alignee/espacee pour l'oeil : sa tokenisation n'est pas dite ». L'enonce ne donne JAMAIS le puzzle comme une chaine de code : il le donne comme un bloc rendu en colonnes (`  S E N D` / `  M O R E +` / `-----------` / `M O N E Y`) et, en prose, comme « SEND + MORE = MONEY » avec UN SEUL `=`. La suite, elle, passe « I + BB == ILL » avec `==`. Le separateur reel n'est ecrit nulle part.",
-      "preuve": "Analyseur de l'agent, Alphametics.java:15 : `userInput.split(\"=\")`. Ses propres tests emploient « A + B = C », « AS + A = MOM », « ABC + DEF = GHIJ » -- un seul `=`, repris de l'enonce -- et les 4 passent (MaisonTest 4/4), donc le solveur fonctionne, portage des retenues compris. Sur « I + BB == ILL », split(\"=\") rend [\"I + BB \", \"\", \" ILL\"] : le membre droit est vide, l'equation devient insoluble, et l'agent leve UnsolvablePuzzleException a Alphametics.java:95 sur les 9 cas non triviaux. testLeadingZero PASSE parce qu'il ATTEND une exception -- il passe pour la mauvaise raison. Verifie sur la suite vierge AlphameticsTest.java:12 et sur .docs/instructions.md lignes 7-13 le 27/08."
-    },
-    "java/bank-account": {
-      "classe": "ambiguite",
-      "signature": "aucune",
-      "divergence": "exigence_et_libelle",
-      "mecanisme_signature": "S4 a RENONCE, et c'etait correct : elle exige les DEUX conditions, or si le stub declare bien `throws BankAccountActionInvalidException` sur les cinq methodes, l'enonce n'est pas muet sur l'erreur -- ligne 8 : « operations against a closed account must fail ». La signature n'est pas en defaut ; l'enonce annonce UNE erreur et en exige QUATRE.",
-      "preuve": "Les cas de fond passent, y compris le plus dur : multipleDeposits, withdrawTwice, singleDeposit, reopenedAccountDoesNotRetainBalance et canHandleConcurrentTransactions (l'acces concurrent, seul sujet reellement traite par l'enonce). Ce qui tombe n'est jamais dans l'enonce de 749 caracteres : cannotDepositNegativeAmount et cannotWithdrawNegativeAmount (« Expecting code to raise a throwable » -- les montants negatifs n'y sont pas mentionnes), cannotWithdrawMoreThanWasDeposited (pas davantage), et cannotDepositIntoUnopenedAccount sur le TEXTE : attendu « Account closed », obtenu « Account is closed ». NON compte pour P1 : la divergence n'est pas SEULEMENT un libelle."
-    },
-    "java/circular-buffer": {
-      "classe": "ambiguite",
-      "signature": "aucune",
-      "divergence": "libelle_seul",
-      "mecanisme_signature": "S4 a RENONCE, correctement : le stub declare bien `T read() throws BufferIOException` et `void write(T) throws BufferIOException`, mais l'enonce n'est pas muet sur l'erreur -- ligne 37 : « When the buffer is full an error will be raised ». Comme pour affine-cipher, l'enonce annonce l'erreur et tait son TEXTE. C'est la famille de PREDICTION_LIBELLES_ERREUR.md, pas celle de S4.",
-      "preuve": "9 des 14 tests passent -- lecture, ecriture, ecrasement force, enroulement, effacement. Les 5 qui tombent portent TOUS la meme forme, « Expecting message to be », et rien d'autre : attendu « Tried to read from empty buffer », obtenu « Read from empty buffer » ; attendu « Tried to write to full buffer », obtenu « Write to full buffer ». La bonne exception, au bon moment, avec un message de meme sens -- seule la redaction differe, et c'est le mot « Tried to ». La chaine « Tried to » est ABSENTE de .docs/ ET du stub, verifie par grep recursif le 27/08. Sortie complete obtenue par rejuger.py : la queue de 3 000 caracteres du pilote ne portait que « 14 tests completed, 5 failed »."
-    },
-    "java/dominoes": {
-      "classe": "ambiguite",
-      "signature": "aucune",
-      "divergence": "libelle_seul",
-      "mecanisme_signature": "Non signale, et c'est coherent : PREDICTION_LIBELLES_ERREUR.md soutient qu'aucun detecteur par exercice n'est possible pour cette famille. Rien dans l'enonce ni dans le stub ne distingue « une erreur » de « une erreur dont le texte sera compare au caractere pres ».",
-      "preuve": "7 tests passent, et ce sont TOUS les cas de chainage positif : nineElements, separateLoops, needBacktrack, canReverseDominoes, threeElements, singleton, empty. L'algorithme marche. Les 6 qui tombent sont les cas de REJET, et ils portent tous la meme forme -- 6 occurrences de « Expecting message to be » et ZERO comparaison de valeur dans la sortie entiere (compte le 27/08) : attendu « No domino chain found. », obtenu « not all vertices have even degree ». L'agent detecte donc correctement l'impossibilite -- son propre test MaisonTest > oddDegreeFails PASSE -- et se trompe uniquement de redaction. La chaine « No domino chain » est ABSENTE de .docs/ et du stub, verifie par grep recursif."
-    },
-    "java/poker": {
-      "classe": "fond",
-      "signature": "non signale",
-      "divergence": "classement_de_mains_incomplet",
-      "attention_ce_classement_arrange_la_prediction": "java/poker n'etait PAS signale (seul go/poker l'etait, et par S4, pour un mecanisme sans rapport : retour d'erreur declare). Le classer `fond` le retire donc de la colonne des echecs NON signales, ce qui RENFORCE la pre-inscription. Le critere lui est applique strictement et la preuve ne porte pas sur un compte d'echecs. Test de severite applique : si java/poker AVAIT ete signale, le classement serait le meme -- le raisonnement (specification publique et universelle, echelle detenue a 25/28, aucune convention propre au corpus) ne depend pas du signalement.",
-      "preuve": "3 echecs sur 28 tests, et LES TROIS ATTENDUS SONT DU POKER STANDARD, verifie un a un. (1) threeVsStraight : la suite attend la quinte 3S 4D 2S 6D 5C, l'agent rend le brelan 4S 5H 4C 8D 4H. (2) acesCanStartAStraight : la suite attend la quinte basse 4D AH 3S 2D 5C, l'agent rend LE MEME brelan -- ces deux echecs sont donc UN SEUL bug : le brelan classe au-dessus de la quinte. (3) twoDoublePairs : deux doubles paires, la suite attend 2S 8H 2D 8D 3H (paires de 8 et 2) contre 4S 5H 4C 8S 5D (paires de 5 et 4) ; la plus haute paire departage, 8 > 5, standard. Bug distinct du precedent. L'agent DETIENT l'echelle : 25 des 28 tests passent, dont flushBeatsStraight, fourOfKindBeatsFullHouse, doublePairVsThree et acesCanEndAStraight. Il ne s'agit donc pas d'une convention retenue par le corpus -- contrairement a java/custom-set ou le corpus INVERSE le sens usuel de isSubset -- mais d'un trou dans une specification publique, identique dans tous les casinos du monde.",
-      "observation_supplementaire": "FAMILLE CANDIDATE, enregistree comme candidate et NON comme signature -- aucune signature n'est ajoutee apres avoir vu l'echec qu'elle attraperait : `specification_deleguee`. L'enonce fait 194 caracteres en tout et ne contient AUCUNE specification : « Pick the best hand(s) from a list of poker hands. See [Wikipedia] for an overview of poker hands. » L'echelle des mains, qui EST le sujet de l'exercice, est renvoyee a une URL externe que l'agent ne peut pas atteindre (pi n'a ni web_search ni web_fetch, verifie le 27/08 : README.md:587 liste read, bash, powershell, edit, write, grep, find, ls). L'exercice cesse d'etre un test de lecture pour devenir un test de MEMOIRE PARAMETRIQUE. Ce mecanisme est different des cinq familles connues et n'est pas couvert par S1-S4 ; a instruire sur les langages restants avant toute conclusion.",
-      "lecon_variante_D": "LE CAS LE PLUS NET DU RUN sur ce point, plus net que java/forth. L'agent a ecrit 29 tests maison ; LES 29 PASSENT. Sa suite couvre explicitement l'echelle rung par rung -- straightFlushBeatsFourOfKind, fourOfKindBeatsFullHouse, fullHouseBeatsTwoPair, flushBeatsStraight, twoPairBeatsOnePair, onePairBeatsHighCard, highCardDoesNotBeatStraight -- et couvre meme les as en detail : aceIsLowInStraight, aceWithTwoIsNotAStraight, aceHighStraightBeatsBroadway, aceDoesNotPlayBetween10AndKing, aceLowStraightFlushBeatsHighStraightFlushOfLowerRank. Il manque EXACTEMENT UN barreau : quinte contre brelan. Celui ou il a tort. Ce n'est pas une coincidence -- on ne peut tester que les barreaux auxquels on croit. Un agent qui ecrit ses propres tests ne peut pas, par construction, tester le trou de sa propre connaissance."
-    },
-    "java/satellite": {
-      "classe": "ambiguite",
-      "signature": "S2+S3",
-      "divergence": "premisse_transformee_en_obligation",
-      "mecanisme_signature": "NON. S2 et S3 designent le bloc de traversees rendu et sa tokenisation ; or la reconstruction d'arbre MARCHE. Les 3 echecs portent tous sur le REJET d'entrees invalides. Signature juste, mecanisme faux -- 4e cas apres go-counting, ocr-numbers et pov. Garde dans le decompte. S4 ne pouvait pas tirer : le stub `public Tree treeFromTraversals(List<Character>, List<Character>)` ne declare AUCUN throws.",
-      "preuve": "17 tests, 3 tombent (2 ignores) : rejectTraversalsOfDifferentLengths -- « Expecting code to raise a throwable », aucune exception ; rejectInconsistentTraversalsOfSameLength -- attendu IllegalArgumentException, obtenu ArrayIndexOutOfBoundsException: Index 3 out of bounds for length 3, l'agent PLANTE au lieu de VALIDER ; rejectTraversalsWithRepeatedItems -- « Expecting code to raise a throwable ».",
-      "observation_supplementaire": "SOUS-MECANISME NOUVEAU, et net : L'ENONCE POSE LA PROPRIETE COMME UNE GARANTIE, LA SUITE EXIGE QU'ON LA VERIFIE. Texte exact, ligne 4 : « Since the tree has NO REPEATING ITEMS it can be uniquely represented by its pre-order and in-order traversals ». Tout developpeur lit la : « vous pouvez supposer qu'il n'y a pas de doublons ». La suite, elle, teste qu'on les DETECTE. Sur 941 caracteres, c'est l'UNIQUE occurrence de tout le vocabulaire invalid/error/exception/throw/reject/must/cannot/duplicate/repeat -- et elle est une premisse, pas une exigence. Enregistre comme sous-mecanisme observe de la famille exigence, PAS comme signature. Note : l'enonce renvoie aussi a un lien externe [wiki], 3e delegation apres poker et resistor-color-trio."
-    },
-    "java/series": {
-      "classe": "ambiguite",
-      "signature": "non signale",
-      "divergence": "libelle_seul",
-      "mecanisme_signature": "Non signale, coherent avec PREDICTION_LIBELLES_ERREUR.md.",
-      "preuve": "23 tests, 2 tombent, tous deux « Expecting message to be », zero comparaison de valeur : attendu « slice length cannot be negative or zero », obtenu « slice length cannot be zero ». Meme sens -- une longueur de tranche negative et une nulle sont refusees dans les deux cas -- autre redaction. Le mot « negative » est ABSENT de l'enonce (512 caracteres) ET du stub : grep recursif le 27/08, 0 occurrence des deux cotes."
-    },
-    "java/sgf-parsing": {
-      "classe": "livraison_incomplete",
-      "signature": "S4",
-      "divergence": "methode_centrale_jamais_implementee",
-      "mecanisme_signature": "SANS OBJET. S4 avait signale cet exercice (le stub declare SgfParsingException et l'enonce n'emploie aucun mot du champ de l'erreur), mais la question ne se pose pas : l'agent n'a jamais ecrit le code dont la signature aurait juge la lecture. A EXCLURE du score des signatures au depouillement, comme les coupes -- une signature ne peut pas etre creditee ni penalisee sur un exercice non livre.",
-      "preuve": "13 tests sur 13 tombent, TOUS sur `java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.` a SgfParsing.java:3 -- c'est-a-dire LE CORPS DU STUB VIERGE, intact. L'agent a pourtant travaille : il a ecrit SgfNode.java (1 469 car., proprietes et enfants, constructeurs, equals) et SgfParsingException.java (136 car.). Il a construit les classes de soutien et n'a JAMAIS implemente la methode centrale. Aucun test maison non plus -- aucun MaisonTest dans src/test, alors que le pilote les preserve (verifie sur java/poker, 29 MaisonTest intacts apres rejeu).",
-      "observation_supplementaire": "CE N'EST NI UNE AMBIGUITE NI UNE ERREUR DE FOND : l'agent n'a pas mal lu, il n'a pas fini. Et il n'a PAS ete coupe -- tours_coupes = 0, exception = None, duree 203,4 s, tres en deca de la laisse de silence (600 s) et de celle du tour (1 800 s). IL S'EST ARRETE EN CROYANT AVOIR FINI. C'est le mode d'echec propre a la variante D et le protocole du board ne peut PAS l'avoir : la-bas le harnais execute toujours la suite, donc une non-implementation est impossible a confondre avec une reussite. Ici l'agent n'a ecrit aucun test, donc rien ne l'a contredit. A rapprocher de la lecon de java/poker et java/forth : des tests ecrits par l'agent confortent sa lecture ; ici l'absence de tests supprime meme ce garde-fou-la.",
-      "consequence_de_comptage": "NE PAS MODIFIER etat_run.py EN COURS DE RUN. Les populations (pass/juge/coupe/infra/plantage) ont ete gelees avant que java soit joue ; deplacer cet exercice hors de `juge` maintenant changerait la definition de la mesure apres avoir vu la donnee. Il reste donc compte en `juge`, et LA REGLE EST POSEE ICI, D'AVANCE, pour le depouillement final : un exercice dont le stub central est intact et qui n'a produit aucun test maison releve de la livraison incomplete, a rapporter separement des echecs juges. A rechercher systematiquement sur les 225 par grep de `UnsupportedOperationException` dans src/main."
-    },
-    "java/rest-api": {
-      "classe": "ambiguite",
-      "signature": "non signale",
-      "divergence": "contrat_publie_faux",
-      "mecanisme_signature": "Non signale, et AUCUNE des quatre signatures ne pouvait le voir : elles cherchent toutes une INFORMATION MANQUANTE (separateur tu, tokenisation non dite, retour d'erreur declare sans vocabulaire d'erreur). Ici l'information n'est pas manquante, elle est PRESENTE ET FAUSSE. Le detecteur qu'il faudrait comparerait l'enonce a la suite cachee -- il ne peut donc pas exister du cote de l'agent.",
-      "preuve": "9 tests, 8 tombent, sur UNE SEULE divergence : la suite attend la cle JSON `owedBy`, l'agent emet `owed_by`. Tout le reste est exact, balances comprises -- attendu {\"owes\":{\"Bob\":1},\"balance\":-1,\"name\":\"Adam\",\"owedBy\":{}}, obtenu le meme objet au caractere pres avec `owed_by`. Seul noUsers() passe, parce qu'il ne serialise aucun utilisateur donc aucune cle.",
-      "observation_supplementaire": "LE CAS LE PLUS FORT DU RUN, et il RENVERSE le sens habituel de la famille. L'ENONCE ECRIT `owed_by`, textuellement, dans son bloc JSON canonique (.docs/instructions.md ligne 21, au milieu de \"name\", \"owes\", \"balance\"). Il n'y a ni instructions.append.md, ni note de convention : grep de camel/snake/naming/convention sur tout .docs/ -> ZERO. L'agent a donc fait EXACTEMENT ce que l'enonce publie -- et mieux que ca : son propre code java emploie `owedBy` en interne (plus de 20 occurrences dans User.java et RestApi.java) et ne bascule en `owed_by` QU'AU POINT DE SERIALISATION, RestApi.java:158. Il connaissait donc la convention java et l'a DELIBEREMENT surchargee pour respecter le contrat publie. Mieux lire l'enonce l'aurait rendu PLUS faux. C'est la forme extreme du mecanisme de java/house : l'enonce ne se tait pas et ne montre pas seulement le contraire -- il PUBLIE le contrat exact, et la suite en exige un autre."
-    },
-    "java/resistor-color-trio": {
-      "classe": "ambiguite",
-      "signature": "non signale",
-      "divergence": "unite_non_normalisee",
-      "mecanisme_signature": "Non signale. S2 vise les blocs de sortie rendus sur plusieurs lignes ; ici la sortie tient en trois mots.",
-      "preuve": "testBlueAndVioletAndBlue : attendu « 67 megaohms », obtenu « 67000 kiloohms ». LES DEUX VALEURS SONT LA MEME RESISTANCE -- 67 000 kiloohms = 67 megaohms. L'agent ne normalise pas vers le plus grand prefixe ; il s'arrete a celui que l'enonce lui a montre.",
-      "observation_supplementaire": "DEUXIEME CAS DE LA FAMILLE CANDIDATE `specification_deleguee`, apres java/poker, et le mecanisme est identique. L'enonce (2 241 caracteres) ne nomme QUE deux unites : « 33 ohms » et « 33 kiloohms ». Le mot « megaohm » n'y figure PAS -- verifie par grep. La regle generale de normalisation est renvoyee a un lien externe, [metric-prefix]: https://en.wikipedia.org/wiki/Metric_prefix, que l'agent ne peut pas suivre (pi n'a ni web_search ni web_fetch). L'agent a produit une reponse NUMERIQUEMENT JUSTE, dans la plus grande unite que l'enonce nomme. Deux cas sur deux, la specification deleguee se delegue a Wikipedia : a instruire sur javascript, python et rust avant toute conclusion."
-    },
-    "java/pov": {
-      "classe": "ambiguite",
-      "signature": "S2+S3",
-      "divergence": "libelle_seul",
-      "mecanisme_signature": "NON. S2 et S3 designent le bloc de sortie rendu et sa tokenisation ; or 28 des 29 tests passent, toute la reorientation d'arbre comprise. Signature juste, mecanisme faux -- 3e cas apres java/go-counting et java/ocr-numbers. GARDE dans le decompte : la pre-inscription annonce que les signales echouent plus, pas par quel mecanisme.",
-      "preuve": "29 tests, UN SEUL tombe : testPathWhenSourceDoesNotExist, sur « Expecting message to be \"No path found\" » quand l'agent leve « Tree could not be reoriented » (Tree.java:50, remonte par pathTo:68). Zero comparaison de valeur. L'agent leve donc la bonne exception au bon moment et ne diverge que sur la redaction."
-    },
-    "java/protein-translation": {
-      "classe": "ambiguite",
-      "signature": "non signale",
-      "divergence": "exigence_de_rejet",
-      "mecanisme_signature": "Non signale. S4 ne pouvait pas tirer : elle exige un retour d'erreur DECLARE, et le stub n'en declare aucun. Meme angle mort nomme que go/trinary, go/octal, java/go-counting et java/phone-number.",
-      "preuve": "51 tests, 2 tombent, ET LES DEUX VIENNENT DE LA MEME SILENCE, en sens OPPOSES : (1) testNonExistingCodonCantTranslate -- « Expecting code to raise a throwable », l'agent ne rejette PAS un codon inconnu ; (2) testIncompleteRnaSequenceCanTranslateIfValidUntilAStopCodon -- l'agent leve « IllegalArgumentException: Invalid codon » la ou la suite attend une traduction reussie jusqu'au codon STOP. Trop laxiste d'un cote, trop strict de l'autre. L'enonce fait 1 753 caracteres et ne contient AUCUNE occurrence de invalid, error, exception, throw ni incomplete -- verifie par grep le 27/08. Il decrit les codons STOP et la fin de traduction, jamais le sort d'un codon inconnu ni celui d'un fragment incomplet.",
-      "observation_supplementaire": "COMPARAISON INTER-LANGUES, la premiere du corpus sur un meme exercice. go/protein-translation echoue sur le meme exercice mais par un AUTRE mecanisme : la suite go exige ErrStop et ErrInvalidBase par leur NOM exact, absents de .docs/ et du stub. Le meme enonce ambigu produit donc une divergence de contrat en go et une divergence d'exigence en java. La famille se conserve, le mecanisme non."
-    },
-    "java/queen-attack": {
-      "classe": "ambiguite",
-      "signature": "non signale",
-      "divergence": "libelle_seul",
-      "mecanisme_signature": "Non signale, coherent avec PREDICTION_LIBELLES_ERREUR.md : pas de detecteur par exercice possible pour cette famille.",
-      "preuve": "15 tests, 6 tombent ; 5 « Expecting message to be » et ZERO comparaison de valeur. LA SUITE EXIGE CINQ MESSAGES GRANULAIRES : « Queen position must have positive row. », « Queen position must have row <= 7. », « Queen position must have positive column. », « Queen position must have column <= 7. », « Queens cannot occupy the same position. » L'agent leve la bonne exception a chacune des bonnes conditions, mais avec UN SEUL message generique : « Queen position must be on the board ».",
-      "observation_supplementaire": "SOUS-MOTIF RECURRENT DANS LA FAMILLE LIBELLE, 2e occurrence apres java/phone-number : LA SUITE DECOUPE LA OU L'AGENT REGROUPE. Sur phone-number la suite voulait « area code cannot start with zero » et « ... with one » distincts la ou l'agent ecrivait « Area code cannot start with 0 or 1 » ; ici elle veut quatre bornes distinctes la ou l'agent ecrit « must be on the board ». Rien dans l'enonce ni le stub ne dit a quelle GRANULARITE les messages sont attendus. Enregistre comme sous-motif observe, PAS comme signature."
-    },
-    "java/rational-numbers": {
-      "classe": "ambiguite",
-      "signature": "non signale",
-      "divergence": "orientation_de_la_relation",
-      "mecanisme_signature": "Non signale. Aucune des quatre signatures ne porte sur l'orientation d'une operation binaire ; c'est deja le constat de java/custom-set et go/simple-linked-list.",
-      "preuve": "2 echecs sur N, tous deux en comparaison de valeur, et LE CALCUL EST INVERSE : (1) attendu 9.988721231519586, l'agent rend 16.0 -- or (4/3)^8 = 9.98872123... et 8^(4/3) = 16 ; (2) attendu -0.001953125, l'agent rend 0.3333333333333333 -- or (-1/2)^9 = -1/512 = -0.001953125 et 9^(-1/2) = 1/3. La suite calcule donc r^x (le rationnel eleve au reel), l'agent x^r (le reel eleve au rationnel). L'ENONCE DEMANDE LES DEUX OPERATIONS, textuellement : « Exponentiation of a rational number r = a/b to a real (floating-point) number x is the quotient (a^x)/(b^x) » ET « Exponentiation of a real number x to a rational number r = a/b is x^(a/b) ». Le stub, lui, n'offre QU'UNE methode pour les deux : `double exp(double exponent)`. L'agent devait deviner laquelle des deux operations cette methode unique porte.",
-      "argument_contre_ce_classement": "A CHARGE, et je l'ecris parce qu'il est reel : le parametre du stub s'appelle `exponent`. Ce nom designe le double comme l'exposant, donc `this` comme la base, donc r^x -- la bonne reponse. L'information n'etait donc pas absente, elle tenait dans UN NOM DE PARAMETRE. Ce qui fait pencher vers l'ambiguite malgre cela : l'enonce enumere DEUX operations a implementer et le stub n'expose qu'une methode pour les deux, si bien que l'agent affronte un choix 1 parmi 2 reel ; et le nom des tests officiels le renforce dans l'erreur -- ils s'appellent testRaiseARealNumberToAPositiveRationalNumber, c'est-a-dire x^r, alors qu'ils ASSERTENT r^x. Le nom du test contredit son propre calcul. Classement conserve en ambiguite pour cette raison ; si le depouillement final devait trancher autrement, ce paragraphe est la piece a relire."
-    },
-    "java/phone-number": {
-      "classe": "ambiguite",
-      "signature": "non signale",
-      "divergence": "libelle_seul",
-      "mecanisme_signature": "Non signale, et c'est coherent : PREDICTION_LIBELLES_ERREUR.md soutient qu'aucun detecteur par exercice n'est possible pour cette famille. S4 ne pouvait pas tirer non plus -- elle exige un retour d'erreur DECLARE, or le stub vierge est nu : `PhoneNumber(String numberString)` et `String getNumber()`, aucun `throws`. Meme angle mort que go/trinary, go/octal et java/go-counting : nomme, pas comble apres coup.",
-      "preuve": "13 tests sur 18 tombent et LES 12 NOMMES SONT TOUS des `invalid*` : les 5 qui passent sont exactement les cas de nettoyage d'un numero valide. Zero comparaison de valeur ; les 12 assertions sont des `Expecting message to be`. L'agent leve donc la bonne exception, a la bonne condition, au bon endroit (PhoneNumber.java:16, :19, :22) et ne diverge QUE sur la redaction : attendu « area code cannot start with zero » et « area code cannot start with one » -- DEUX messages distincts, minuscules, chiffres en toutes lettres -- obtenu un seul « Area code cannot start with 0 or 1 » ; idem exchange code ; attendu « must not be fewer than 10 digits » / « must not be greater than 11 digits », obtenu « Incorrect number of digits » pour les deux. Aucune des chaines attendues n'existe cote agent : grep recursif sur .docs/ et src/main/ le 27/08, 0 fichier pour « cannot start with zero », « cannot start with one », « must not be fewer than », « must not be greater than », « not permitted ».",
-      "observation_supplementaire": "L'enonce fait 1 253 caracteres, dit « Your task is to clean up differently formatted telephone numbers » et ne contient AUCUNE occurrence de error, invalid, must, cannot, exception, throw ni reject -- une seule de punctuation. Il ne demande donc jamais de REJETER quoi que ce soit, alors que 12 des 18 tests l'exigent. L'agent a pourtant infere l'exigence entiere et correctement (les regles de validite, « N is any digit from 2 through 9 », sont, elles, ecrites). C'est ce qui distingue ce cas de java/bank-account : ici l'exigence tacite a ete SATISFAITE, et il ne reste que le libelle. Le cas renforce donc la famille au lieu de la diluer."
-    },
-    "java/ocr-numbers": {
-      "classe": "ambiguite",
-      "signature": "S2+S3",
-      "divergence": "libelle_seul",
-      "mecanisme_signature": "NON. S2 et S3 designent le bloc de grille rendu et sa tokenisation ; or la LECTURE OCR MARCHE -- 15 tests sur 17 passent, y compris les grilles multi-lignes. L'echec porte sur le texte de deux messages d'erreur. Signature juste, mecanisme faux, garde dans le decompte comme go-counting.",
-      "preuve": "15 des 17 tests passent. Les 2 qui tombent portent 2 « Expecting message to be » et ZERO comparaison de valeur dans la sortie entiere : attendu « Number of input columns must be a positive multiple of 3 », obtenu « input must have a number of columns that is a multiple of 3 » -- meme sens, autre redaction. La chaine « positive multiple » est ABSENTE de .docs/ et du stub, verifie par grep recursif le 27/08. L'enonce dit bien la contrainte (« four rows high and three columns wide ») mais jamais le texte du message."
-    },
-    "java/mazy-mice": {
-      "classe": "fond",
-      "signature": "aucune",
-      "divergence": "borne_haute_omise",
-      "attention_ce_classement_arrange_la_prediction": "mazy-mice n'etait PAS signale. Le classer `fond` le retire de la colonne des echecs non signales, donc cela sert la prediction. Le critere lui est applique strictement -- et ici il n'y a pas de marge : l'enonce donne la borne noir sur blanc.",
-      "preuve": "11 tests sur 13 passent, y compris les DEUX bornes BASSES -- shouldThrowExceptionWhenColumnsIsLessThanFive et shouldThrowExceptionWhenRowsIsLessThanFive. Les 2 qui tombent sont les deux bornes HAUTES, shouldThrowExceptionWhenRowsIsMoreThenHundred et shouldThrowExceptionWhenColumnsIsMoreThenHundred, avec « Expecting code to raise a throwable ». Or l'enonce, ligne 8, ecrit : « The program should accept two parameters: rows and columns. The maze should be between 5 and 100 cells in size. » La borne haute est donc ECRITE, dans la meme phrase que la borne basse que l'agent a bien implementee. Condition (2) du critere non remplie : l'element divergent n'est pas absent de l'enonce. Omission, pas convention cachee.",
-      "reserve_examinee": "« between 5 and 100 cells in size » pourrait se lire comme une aire totale plutot que par dimension. Cette lecture ne sauve pas le cas : l'agent lui-meme a implemente la borne BASSE par dimension, donc il avait retenu la lecture par dimension -- celle de la suite. Il n'a pas mal lu la phrase, il n'en a applique que la moitie."
-    },
-    "java/house": {
-      "classe": "ambiguite",
-      "signature": "S2",
-      "divergence": "separateur_interne",
-      "mecanisme_signature": "FAMILLE oui, POSITION non, et la nuance vaut d'etre gardee. S2 dit « un separateur TERMINAL y est invisible » ; ici les separateurs sont INTERNES, et ils ne sont pas invisibles -- ils sont VISIBLES et l'agent les a copies. La claim profonde de S2 tient pourtant entierement : un bloc de sortie rendue ne specifie pas la vraie structure de la chaine. Elle la contredit meme. Enregistre tel quel, et GARDE dans le decompte : la pre-inscription annonce que les signales echouent plus, pas par quel mecanisme.",
-      "preuve": "Le contenu est identique CARACTERE POUR CARACTERE : joindre la sortie de l'agent par une espace au lieu d'un saut de ligne donne exactement l'attendu. Juge sur verseSix -- attendu « This is the cow with the crumpled horn that tossed the dog that worried the cat that killed the rat that ate the malt that lay in the house that Jack built. » sur UNE ligne ; obtenu les memes mots, meme ordre, meme ponctuation, repartis sur six lignes. Tout l'enchassement cumulatif, qui est le sujet de l'exercice, est donc juste. Et l'element divergent n'est pas seulement absent de l'enonce : L'ENONCE MONTRE LE CONTRAIRE. Son bloc ```text affiche « This is the rat / that ate the malt / that lay in the house that Jack built. » avec exactement les sauts de ligne que l'agent a produits. L'agent a reproduit fidelement le seul exemple qu'il pouvait voir. 13 des 14 tests tombent, tous sur ce seul point."
-    },
-    "java/go-counting": {
-      "classe": "ambiguite",
-      "signature": "S2",
-      "divergence": "exigence_de_rejet",
-      "mecanisme_signature": "NON. S2 signale un bloc de sortie rendue sur 6 lignes et son separateur terminal ; l'echec porte sur le REJET de coordonnees hors plateau. La signature a designe le bon exercice pour la mauvaise raison, et le decompte le garde tel quel -- la pre-inscription annonce que les exercices signales ECHOUENT PLUS, pas par quel mecanisme. S4, elle, ne pouvait pas tirer : elle exige un retour d'erreur DECLARE, or le stub ne porte aucun `throws` (`Set<Point> getTerritory(int x, int y)`). Meme angle mort que go/trinary et go/octal, nomme et non comble apres coup.",
-      "preuve": "Toute la logique de comptage passe : whiteCenter5x5BoardTest, blackCorner5x5BoardTest, stoneNotTerritory5x5Board, twoRegionRectangularBoardTest. Les 4 qui tombent sont exactement les 4 cas de coordonnee hors plateau -- invalidXTooHigh, invalidXTooLow, invalidYTooHigh, invalidYTooLow -- et tous avec le meme message, « Expecting code to raise a throwable ». L'enonce fait 1 207 caracteres et ne contient AUCUNE occurrence de « error », « invalid », « must », « cannot », « exception », « throw », « outside » ni « range » -- verifie par grep le 27/08. Le stub ne declare pas d'erreur. Rien de visible n'annonce ce rejet. Meme phenomene que go/tree-building."
-    },
-    "java/forth": {
-      "classe": "fond",
-      "signature": "aucune",
-      "divergence": "contrat_d_entree_mal_lu",
-      "attention_ce_classement_arrange_la_prediction": "forth n'etait PAS signale. Le classer `fond` le RETIRE de la colonne des echecs non signales, donc cela sert la prediction. C'est pourquoi le critere lui est applique strictement et la preuve porte sur ce que l'agent POUVAIT LIRE, pas sur le compte d'echecs.",
-      "preuve": "Cause unique, ForthEvaluator.java:26 : `for (String token : input)`. `input` est un List<String> de LIGNES -- la suite passe Collections.singletonList(\"1 dup\") -- et l'agent traite la ligne entiere comme UN SEUL jeton. Il ne decoupe jamais sur les espaces. D'ou 46 « IllegalArgumentException: Unknown command » sur 54 echecs, et 54 tests sur 55 qui tombent. La condition (1) du critere -- la logique passe les cas voisins -- n'est donc pas remplie, et on ne peut nommer aucun cas officiel qui passe. Surtout, l'element divergent N'ETAIT PAS cache : l'enonce donne les regles de lexing (« a number is a sequence of one or more (ASCII) digits, a word is a sequence of one or more letters, digits, symbols or punctuation that is not a number ») et la syntaxe « : word-name definition ; ». Ces regles n'ont de sens que si l'agent decoupe lui-meme. Le reste de son code est complet et correct d'aspect -- pile, mots, definitions, garde de recursion.",
-      "lecon_variante_D": "L'agent a ecrit 35 tests maison, et LES 35 PASSENT, pendant que 54 des 55 tests officiels tombent. Des tests ecrits par l'agent confirment sa lecture du contrat au lieu de l'eprouver. C'est le risque propre de la variante D, et il ne se voit que parce que le juge est independant."
-    },
-    "java/food-chain": {
-      "classe": "ambiguite",
-      "signature": "S2",
-      "divergence": "separateur_terminal",
-      "mecanisme_signature": "OUI, au libelle pres, et c'est la DEUXIEME touche S2 exacte en java apres bottle-song. La pre-inscription annonce pour cet exercice : « bloc de sortie rendue sur 43 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible ». L'echec porte sur exactement un separateur terminal. Signale avant que java commence, et ce n'est pas un cas fondateur.",
-      "preuve": "10 tests sur 10 tombent, y compris le plus simple, fly(). Le juge sur fly() : attendu « ...I don't know why she swallowed the fly. Perhaps she'll die.\" » -- la chaine se ferme immediatement apres le point ; obtenu la meme chose SUIVIE D'UN SAUT DE LIGNE avant la fermeture. Verifie octet a octet (cat -A) sur juge_java_food-chain.txt le 27/08. Meme mecanisme que java/bottle-song et que go/beer-song : un separateur terminal est invisible dans un exemple rendu."
-    },
-    "java/custom-set": {
-      "classe": "ambiguite",
-      "signature": "aucune",
-      "divergence": "orientation_de_la_relation",
-      "mecanisme_signature": "AUCUNE signature ne pouvait tirer, et l'angle mort se nomme : S4 exige un retour d'erreur declare (il n'y en a pas), S2 et S3 exigent un bloc rendu (l'enonce fait 269 caracteres et ne contient aucun bloc). Le defaut porte sur le SENS d'une relation binaire dans une signature nue -- meme phenomene que go/simple-linked-list, ou le stub nomme Push et Pop sans dire sur quel bout ils agissent. Famille CANDIDATE, PAS une signature ajoutee apres coup : l'ajouter maintenant reviendrait a inscrire une regle apres avoir vu l'echec qu'elle attraperait.",
-      "preuve": "21 tests passent -- union, intersection, difference, egalite, disjonction, doublons. Les 2 qui tombent sont les seuls a porter sur le sens de isSubset. La suite vierge, CustomSetTest.java:55-59 : customSet = {1}, secondCustomSet = {} et `customSet.isSubset(secondCustomSet)` doit rendre TRUE ; lignes 63-67, customSet = {} et secondCustomSet = {'1'} doit rendre FALSE. Donc `a.isSubset(b)` veut dire « b est un sous-ensemble de a » : l'ARGUMENT est le sous-ensemble. L'agent a ecrit l'inverse (CustomSet.java:83-90, `for (T e : elements) if (!other.contains(e)) return false`), c'est-a-dire this ⊆ other -- la convention de set.issubset() en Python et de Set#subset? en Ruby. Le corpus inverse le sens usuel. L'enonce entier fait 269 caracteres et ne contient NI « subset », NI « empty », NI « contain » (grep le 27/08) ; le stub ne porte que `boolean isSubset(CustomSet<T> other)`, signature nue. Rien de visible ne donne le sens."
-    },
-    "java/bottle-song": {
-      "classe": "ambiguite",
-      "signature": "S2",
-      "divergence": "separateur_terminal",
-      "mecanisme_signature": "OUI, au libelle pres. La pre-inscription du 27/08 annonce pour cet exercice : « bloc de sortie rendue sur 40 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible ». L'echec porte sur exactement un separateur terminal. Exercice signale AVANT que java commence, et ce n'est PAS un cas fondateur.",
-      "preuve": "Meme mecanisme que go/beer-song, reproduit dans une autre langue et sur un autre exercice. Le juge sur lastGenericVerse : attendu et obtenu sont identiques caractere pour caractere jusqu'a « There'll be two green bottles hanging on the wall. » ; l'agent ajoute UNE LIGNE VIDE de plus avant la fermeture de la chaine. Verifie octet a octet (cat -A) sur juge_java_bottle-song.txt le 27/08. 7 des 13 tests tombent, tous sur l'assemblage des couplets."
-    },
-    "go/beer-song": {
-      "classe": "ambiguite",
-      "fondateur": true,
-      "preuve": "Les 5 cas de Verse et les 2 cas d'erreur passent ; seul l'assemblage echoue, et d'UN caractere. Un separateur terminal est invisible dans un exemple rendu."
-    },
-    "go/connect": {
-      "classe": "ambiguite",
-      "fondateur": true,
-      "preuve": "connect_test.go:8-16 retire tous les espaces avant l'appel mais AFFICHE le plateau espace dans son message d'erreur. La forme passee n'est ni dans l'enonce ni dans le stub."
-    },
-    "go/kindergarten-garden": {
-      "classe": "ambiguite",
-      "fondateur": true,
-      "preuve": "Le meme vocabulaire figure sous trois formes dans l'enonce (prose ligne 6, tableau lignes 19-22, liste ligne 58) ; rien ne dit laquelle fait foi. Et « error », « invalid », « duplicate », « odd » n'y figurent pas du tout."
-    },
-    "go/poker": {
-      "classe": "ambiguite",
-      "signature": "S4",
-      "mecanisme_signature": "oui -- l'echec EST le rejet manquant d'une entree invalide, ce que S4 annonce",
-      "preuve": "Tous les cas de classement et de departage passent ; seul le rejet d'une main invalide tombe. Le stub declare ([]string, error) ; l'enonce fait 4 lignes et n'emploie ni « error », ni « invalid », ni « must »."
-    },
-    "go/protein-translation": {
-      "classe": "ambiguite",
-      "signature": "S4",
-      "mecanisme_signature": "oui -- l'echec porte sur les sentinelles d'erreur elles-memes",
-      "preuve": "ErrStop et ErrInvalidBase n'apparaissent NI dans .docs/, NI dans le stub -- verifie par grep le 27/08. La suite les exige par leur nom exact et verifie qu'ils ne sont pas nil."
-    },
-    "go/simple-linked-list": {
-      "classe": "ambiguite",
-      "signature": "S4",
-      "mecanisme_signature": "NON -- S4 signale le contrat d'erreur de Pop() (int, error) ; l'echec porte sur le BOUT sur lequel Push et Pop agissent. La signature a designe le bon exercice pour la mauvaise raison, et le decompte le garde tel quel.",
-      "preuve": "L'enonce parle d'un lecteur de musique, demande « create a singly linked list » et « reverse the list », et ne nomme JAMAIS Push, Pop, Size ni Array -- verifie sur .docs/instructions.md entier. Ces quatre-la n'existent que comme signatures nues dans le stub, sans un mot de semantique : ni le bout sur lequel Push/Pop agissent, ni l'ordre que rend Array. Le juge : « Push to non empty list: [4 1 2 3], want [1 2 3 4] » et « Pop from non empty list: 1, want 3 »."
-    },
-    "go/tree-building": {
-      "classe": "ambiguite",
-      "signature": "S4",
-      "mecanisme_signature": "oui -- les trois cas qui tombent sont TROIS validations que l'enonce ne demande jamais",
-      "preuve": "L'enonce fait 24 lignes et ne contient AUCUNE occurrence de « error », « invalid », « cycle », « continuous », « must » ni « fail » -- verifie par grep le 27/08. Le stub declare Build(records []Record) (*Node, error). Le juge : « non-continuous », « cycle indirectly » et « higher id parent of lower id » « returned ... but was expected to fail ». Meme phenomene que go/kindergarten-garden 3b."
-    },
-    "go/pig-latin": {
-      "classe": "ambiguite",
-      "preuve": "xray, yttria, my, rhythm, quick, square passent tous ; seul yellow tombe. L'enonce ne dit nulle part si un « y » initial est voyelle ou consonne : il ne donne que l'exception de prefixe « yt »."
-    },
-    "go/trinary": {
-      "classe": "ambiguite",
-      "signature": "aucune",
-      "mecanisme_signature": "raté du detecteur -- S4 exige que le stub DECLARE un retour d'erreur ; ici le stub n'a pas de retour du tout, sa signature est cassee. Angle mort nomme, pas comble apres coup.",
-      "preuve": "LE STUB VIERGE EST FAUX : `func ParseTrinary(arg string, want int64, ok bool)`. Ce ne sont pas des parametres, ce sont les CHAMPS DE LA TABLE DE CAS DE TEST. L'agent doit donc inventer la signature. Tout ce qu'il voit pointe au mauvais endroit : le stub suggere un `ok bool`, et l'enonce (lignes 6-7) dit « strings specifying an invalid trinary as the value 0 », donc PAS d'erreur. La suite, elle, exige un `error` : « cannot use err (variable of type bool) as error value ». Deux exercices du corpus entier portent ce defaut -- octal et trinary, verifie par balayage des 225 le 27/08 -- et LES DEUX ont echoue."
-    },
-    "go/react": {
-      "classe": "fond",
-      "preuve": "react.go:119-122 : suppression par echange qui corrige l'index de l'entree RETIREE (e := cbs[c.idx]) au lieu de celle qui a BOUGE (cbs[last]). Le rescape garde un index perime -> index out of range [3] with length 2. Rien a voir avec l'enonce."
-    },
-    "go/robot-simulator": {
-      "classe": "fond",
-      "preuve": "Le stub NOMME ce qu'il faut definir (« Define N, E, S, W here. », « Define Action type here. ») et instructions.append.md:22 le redit. L'agent a utilise Action et Action3 dans ses signatures sans jamais declarer les types : build failed. Rien n'etait cache."
-    }
+  "java/all-your-base": {
+   "classe": "ambiguite",
+   "signature": "aucune",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "aucune signature ne pouvait tirer : l'enonce fait 1 362 caracteres et ne contient AUCUN mot du champ de l'erreur, et le stub ne porte que le remplisseur UnsupportedOperationException commun a 46 stubs java sur 47. Rien de visible n'annonce l'exception.",
+   "preuve": "Les cas de conversion passent. Ceux qui tombent (testFirstBaseIsOne, testFirstBaseIsZero, testSecondBaseIsZero...) le font tous sur le TEXTE : attendu « Bases must be at least 2. », obtenu « base must be >= 2 ». Meme sens, autre redaction."
+  },
+  "java/alphametics": {
+   "classe": "ambiguite",
+   "signature": "S2+S3+S4",
+   "divergence": "separateur_d_entree",
+   "mecanisme_signature": "OUI, et c'est S3 -- « entree presentee alignee/espacee pour l'oeil : sa tokenisation n'est pas dite ». L'enonce ne donne JAMAIS le puzzle comme une chaine de code : il le donne comme un bloc rendu en colonnes (`  S E N D` / `  M O R E +` / `-----------` / `M O N E Y`) et, en prose, comme « SEND + MORE = MONEY » avec UN SEUL `=`. La suite, elle, passe « I + BB == ILL » avec `==`. Le separateur reel n'est ecrit nulle part.",
+   "preuve": "Analyseur de l'agent, Alphametics.java:15 : `userInput.split(\"=\")`. Ses propres tests emploient « A + B = C », « AS + A = MOM », « ABC + DEF = GHIJ » -- un seul `=`, repris de l'enonce -- et les 4 passent (MaisonTest 4/4), donc le solveur fonctionne, portage des retenues compris. Sur « I + BB == ILL », split(\"=\") rend [\"I + BB \", \"\", \" ILL\"] : le membre droit est vide, l'equation devient insoluble, et l'agent leve UnsolvablePuzzleException a Alphametics.java:95 sur les 9 cas non triviaux. testLeadingZero PASSE parce qu'il ATTEND une exception -- il passe pour la mauvaise raison. Verifie sur la suite vierge AlphameticsTest.java:12 et sur .docs/instructions.md lignes 7-13 le 27/08."
+  },
+  "java/bank-account": {
+   "classe": "ambiguite",
+   "signature": "aucune",
+   "divergence": "exigence_et_libelle",
+   "mecanisme_signature": "S4 a RENONCE, et c'etait correct : elle exige les DEUX conditions, or si le stub declare bien `throws BankAccountActionInvalidException` sur les cinq methodes, l'enonce n'est pas muet sur l'erreur -- ligne 8 : « operations against a closed account must fail ». La signature n'est pas en defaut ; l'enonce annonce UNE erreur et en exige QUATRE.",
+   "preuve": "Les cas de fond passent, y compris le plus dur : multipleDeposits, withdrawTwice, singleDeposit, reopenedAccountDoesNotRetainBalance et canHandleConcurrentTransactions (l'acces concurrent, seul sujet reellement traite par l'enonce). Ce qui tombe n'est jamais dans l'enonce de 749 caracteres : cannotDepositNegativeAmount et cannotWithdrawNegativeAmount (« Expecting code to raise a throwable » -- les montants negatifs n'y sont pas mentionnes), cannotWithdrawMoreThanWasDeposited (pas davantage), et cannotDepositIntoUnopenedAccount sur le TEXTE : attendu « Account closed », obtenu « Account is closed ». NON compte pour P1 : la divergence n'est pas SEULEMENT un libelle."
+  },
+  "java/circular-buffer": {
+   "classe": "ambiguite",
+   "signature": "aucune",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "S4 a RENONCE, correctement : le stub declare bien `T read() throws BufferIOException` et `void write(T) throws BufferIOException`, mais l'enonce n'est pas muet sur l'erreur -- ligne 37 : « When the buffer is full an error will be raised ». Comme pour affine-cipher, l'enonce annonce l'erreur et tait son TEXTE. C'est la famille de PREDICTION_LIBELLES_ERREUR.md, pas celle de S4.",
+   "preuve": "9 des 14 tests passent -- lecture, ecriture, ecrasement force, enroulement, effacement. Les 5 qui tombent portent TOUS la meme forme, « Expecting message to be », et rien d'autre : attendu « Tried to read from empty buffer », obtenu « Read from empty buffer » ; attendu « Tried to write to full buffer », obtenu « Write to full buffer ». La bonne exception, au bon moment, avec un message de meme sens -- seule la redaction differe, et c'est le mot « Tried to ». La chaine « Tried to » est ABSENTE de .docs/ ET du stub, verifie par grep recursif le 27/08. Sortie complete obtenue par rejuger.py : la queue de 3 000 caracteres du pilote ne portait que « 14 tests completed, 5 failed »."
+  },
+  "java/dominoes": {
+   "classe": "ambiguite",
+   "signature": "aucune",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "Non signale, et c'est coherent : PREDICTION_LIBELLES_ERREUR.md soutient qu'aucun detecteur par exercice n'est possible pour cette famille. Rien dans l'enonce ni dans le stub ne distingue « une erreur » de « une erreur dont le texte sera compare au caractere pres ».",
+   "preuve": "7 tests passent, et ce sont TOUS les cas de chainage positif : nineElements, separateLoops, needBacktrack, canReverseDominoes, threeElements, singleton, empty. L'algorithme marche. Les 6 qui tombent sont les cas de REJET, et ils portent tous la meme forme -- 6 occurrences de « Expecting message to be » et ZERO comparaison de valeur dans la sortie entiere (compte le 27/08) : attendu « No domino chain found. », obtenu « not all vertices have even degree ». L'agent detecte donc correctement l'impossibilite -- son propre test MaisonTest > oddDegreeFails PASSE -- et se trompe uniquement de redaction. La chaine « No domino chain » est ABSENTE de .docs/ et du stub, verifie par grep recursif."
+  },
+  "java/poker": {
+   "classe": "fond",
+   "signature": "non signale",
+   "divergence": "classement_de_mains_incomplet",
+   "attention_ce_classement_arrange_la_prediction": "java/poker n'etait PAS signale (seul go/poker l'etait, et par S4, pour un mecanisme sans rapport : retour d'erreur declare). Le classer `fond` le retire donc de la colonne des echecs NON signales, ce qui RENFORCE la pre-inscription. Le critere lui est applique strictement et la preuve ne porte pas sur un compte d'echecs. Test de severite applique : si java/poker AVAIT ete signale, le classement serait le meme -- le raisonnement (specification publique et universelle, echelle detenue a 25/28, aucune convention propre au corpus) ne depend pas du signalement.",
+   "preuve": "3 echecs sur 28 tests, et LES TROIS ATTENDUS SONT DU POKER STANDARD, verifie un a un. (1) threeVsStraight : la suite attend la quinte 3S 4D 2S 6D 5C, l'agent rend le brelan 4S 5H 4C 8D 4H. (2) acesCanStartAStraight : la suite attend la quinte basse 4D AH 3S 2D 5C, l'agent rend LE MEME brelan -- ces deux echecs sont donc UN SEUL bug : le brelan classe au-dessus de la quinte. (3) twoDoublePairs : deux doubles paires, la suite attend 2S 8H 2D 8D 3H (paires de 8 et 2) contre 4S 5H 4C 8S 5D (paires de 5 et 4) ; la plus haute paire departage, 8 > 5, standard. Bug distinct du precedent. L'agent DETIENT l'echelle : 25 des 28 tests passent, dont flushBeatsStraight, fourOfKindBeatsFullHouse, doublePairVsThree et acesCanEndAStraight. Il ne s'agit donc pas d'une convention retenue par le corpus -- contrairement a java/custom-set ou le corpus INVERSE le sens usuel de isSubset -- mais d'un trou dans une specification publique, identique dans tous les casinos du monde.",
+   "observation_supplementaire": "FAMILLE CANDIDATE, enregistree comme candidate et NON comme signature -- aucune signature n'est ajoutee apres avoir vu l'echec qu'elle attraperait : `specification_deleguee`. L'enonce fait 194 caracteres en tout et ne contient AUCUNE specification : « Pick the best hand(s) from a list of poker hands. See [Wikipedia] for an overview of poker hands. » L'echelle des mains, qui EST le sujet de l'exercice, est renvoyee a une URL externe que l'agent ne peut pas atteindre (pi n'a ni web_search ni web_fetch, verifie le 27/08 : README.md:587 liste read, bash, powershell, edit, write, grep, find, ls). L'exercice cesse d'etre un test de lecture pour devenir un test de MEMOIRE PARAMETRIQUE. Ce mecanisme est different des cinq familles connues et n'est pas couvert par S1-S4 ; a instruire sur les langages restants avant toute conclusion.",
+   "lecon_variante_D": "LE CAS LE PLUS NET DU RUN sur ce point, plus net que java/forth. L'agent a ecrit 29 tests maison ; LES 29 PASSENT. Sa suite couvre explicitement l'echelle rung par rung -- straightFlushBeatsFourOfKind, fourOfKindBeatsFullHouse, fullHouseBeatsTwoPair, flushBeatsStraight, twoPairBeatsOnePair, onePairBeatsHighCard, highCardDoesNotBeatStraight -- et couvre meme les as en detail : aceIsLowInStraight, aceWithTwoIsNotAStraight, aceHighStraightBeatsBroadway, aceDoesNotPlayBetween10AndKing, aceLowStraightFlushBeatsHighStraightFlushOfLowerRank. Il manque EXACTEMENT UN barreau : quinte contre brelan. Celui ou il a tort. Ce n'est pas une coincidence -- on ne peut tester que les barreaux auxquels on croit. Un agent qui ecrit ses propres tests ne peut pas, par construction, tester le trou de sa propre connaissance."
+  },
+  "java/satellite": {
+   "classe": "ambiguite",
+   "signature": "S2+S3",
+   "divergence": "premisse_transformee_en_obligation",
+   "mecanisme_signature": "NON. S2 et S3 designent le bloc de traversees rendu et sa tokenisation ; or la reconstruction d'arbre MARCHE. Les 3 echecs portent tous sur le REJET d'entrees invalides. Signature juste, mecanisme faux -- 4e cas apres go-counting, ocr-numbers et pov. Garde dans le decompte. S4 ne pouvait pas tirer : le stub `public Tree treeFromTraversals(List<Character>, List<Character>)` ne declare AUCUN throws.",
+   "preuve": "17 tests, 3 tombent (2 ignores) : rejectTraversalsOfDifferentLengths -- « Expecting code to raise a throwable », aucune exception ; rejectInconsistentTraversalsOfSameLength -- attendu IllegalArgumentException, obtenu ArrayIndexOutOfBoundsException: Index 3 out of bounds for length 3, l'agent PLANTE au lieu de VALIDER ; rejectTraversalsWithRepeatedItems -- « Expecting code to raise a throwable ».",
+   "observation_supplementaire": "SOUS-MECANISME NOUVEAU, et net : L'ENONCE POSE LA PROPRIETE COMME UNE GARANTIE, LA SUITE EXIGE QU'ON LA VERIFIE. Texte exact, ligne 4 : « Since the tree has NO REPEATING ITEMS it can be uniquely represented by its pre-order and in-order traversals ». Tout developpeur lit la : « vous pouvez supposer qu'il n'y a pas de doublons ». La suite, elle, teste qu'on les DETECTE. Sur 941 caracteres, c'est l'UNIQUE occurrence de tout le vocabulaire invalid/error/exception/throw/reject/must/cannot/duplicate/repeat -- et elle est une premisse, pas une exigence. Enregistre comme sous-mecanisme observe de la famille exigence, PAS comme signature. Note : l'enonce renvoie aussi a un lien externe [wiki], 3e delegation apres poker et resistor-color-trio."
+  },
+  "java/series": {
+   "classe": "ambiguite",
+   "signature": "non signale",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "Non signale, coherent avec PREDICTION_LIBELLES_ERREUR.md.",
+   "preuve": "23 tests, 2 tombent, tous deux « Expecting message to be », zero comparaison de valeur : attendu « slice length cannot be negative or zero », obtenu « slice length cannot be zero ». Meme sens -- une longueur de tranche negative et une nulle sont refusees dans les deux cas -- autre redaction. Le mot « negative » est ABSENT de l'enonce (512 caracteres) ET du stub : grep recursif le 27/08, 0 occurrence des deux cotes."
+  },
+  "java/sgf-parsing": {
+   "classe": "livraison_incomplete",
+   "signature": "S4",
+   "divergence": "methode_centrale_jamais_implementee",
+   "mecanisme_signature": "SANS OBJET. S4 avait signale cet exercice (le stub declare SgfParsingException et l'enonce n'emploie aucun mot du champ de l'erreur), mais la question ne se pose pas : l'agent n'a jamais ecrit le code dont la signature aurait juge la lecture. A EXCLURE du score des signatures au depouillement, comme les coupes -- une signature ne peut pas etre creditee ni penalisee sur un exercice non livre.",
+   "preuve": "13 tests sur 13 tombent, TOUS sur `java.lang.UnsupportedOperationException: Please implement the SgfParsing.parse method.` a SgfParsing.java:3 -- c'est-a-dire LE CORPS DU STUB VIERGE, intact. L'agent a pourtant travaille : il a ecrit SgfNode.java (1 469 car., proprietes et enfants, constructeurs, equals) et SgfParsingException.java (136 car.). Il a construit les classes de soutien et n'a JAMAIS implemente la methode centrale. Aucun test maison non plus -- aucun MaisonTest dans src/test, alors que le pilote les preserve (verifie sur java/poker, 29 MaisonTest intacts apres rejeu).",
+   "observation_supplementaire": "CE N'EST NI UNE AMBIGUITE NI UNE ERREUR DE FOND : l'agent n'a pas mal lu, il n'a pas fini. Et il n'a PAS ete coupe -- tours_coupes = 0, exception = None, duree 203,4 s, tres en deca de la laisse de silence (600 s) et de celle du tour (1 800 s). IL S'EST ARRETE EN CROYANT AVOIR FINI. C'est le mode d'echec propre a la variante D et le protocole du board ne peut PAS l'avoir : la-bas le harnais execute toujours la suite, donc une non-implementation est impossible a confondre avec une reussite. Ici l'agent n'a ecrit aucun test, donc rien ne l'a contredit. A rapprocher de la lecon de java/poker et java/forth : des tests ecrits par l'agent confortent sa lecture ; ici l'absence de tests supprime meme ce garde-fou-la.",
+   "consequence_de_comptage": "NE PAS MODIFIER etat_run.py EN COURS DE RUN. Les populations (pass/juge/coupe/infra/plantage) ont ete gelees avant que java soit joue ; deplacer cet exercice hors de `juge` maintenant changerait la definition de la mesure apres avoir vu la donnee. Il reste donc compte en `juge`, et LA REGLE EST POSEE ICI, D'AVANCE, pour le depouillement final : un exercice dont le stub central est intact et qui n'a produit aucun test maison releve de la livraison incomplete, a rapporter separement des echecs juges. A rechercher systematiquement sur les 225 par grep de `UnsupportedOperationException` dans src/main."
+  },
+  "java/rest-api": {
+   "classe": "ambiguite",
+   "signature": "non signale",
+   "divergence": "contrat_publie_faux",
+   "mecanisme_signature": "Non signale, et AUCUNE des quatre signatures ne pouvait le voir : elles cherchent toutes une INFORMATION MANQUANTE (separateur tu, tokenisation non dite, retour d'erreur declare sans vocabulaire d'erreur). Ici l'information n'est pas manquante, elle est PRESENTE ET FAUSSE. Le detecteur qu'il faudrait comparerait l'enonce a la suite cachee -- il ne peut donc pas exister du cote de l'agent.",
+   "preuve": "9 tests, 8 tombent, sur UNE SEULE divergence : la suite attend la cle JSON `owedBy`, l'agent emet `owed_by`. Tout le reste est exact, balances comprises -- attendu {\"owes\":{\"Bob\":1},\"balance\":-1,\"name\":\"Adam\",\"owedBy\":{}}, obtenu le meme objet au caractere pres avec `owed_by`. Seul noUsers() passe, parce qu'il ne serialise aucun utilisateur donc aucune cle.",
+   "observation_supplementaire": "LE CAS LE PLUS FORT DU RUN, et il RENVERSE le sens habituel de la famille. L'ENONCE ECRIT `owed_by`, textuellement, dans son bloc JSON canonique (.docs/instructions.md ligne 21, au milieu de \"name\", \"owes\", \"balance\"). Il n'y a ni instructions.append.md, ni note de convention : grep de camel/snake/naming/convention sur tout .docs/ -> ZERO. L'agent a donc fait EXACTEMENT ce que l'enonce publie -- et mieux que ca : son propre code java emploie `owedBy` en interne (plus de 20 occurrences dans User.java et RestApi.java) et ne bascule en `owed_by` QU'AU POINT DE SERIALISATION, RestApi.java:158. Il connaissait donc la convention java et l'a DELIBEREMENT surchargee pour respecter le contrat publie. Mieux lire l'enonce l'aurait rendu PLUS faux. C'est la forme extreme du mecanisme de java/house : l'enonce ne se tait pas et ne montre pas seulement le contraire -- il PUBLIE le contrat exact, et la suite en exige un autre."
+  },
+  "java/resistor-color-trio": {
+   "classe": "ambiguite",
+   "signature": "non signale",
+   "divergence": "unite_non_normalisee",
+   "mecanisme_signature": "Non signale. S2 vise les blocs de sortie rendus sur plusieurs lignes ; ici la sortie tient en trois mots.",
+   "preuve": "testBlueAndVioletAndBlue : attendu « 67 megaohms », obtenu « 67000 kiloohms ». LES DEUX VALEURS SONT LA MEME RESISTANCE -- 67 000 kiloohms = 67 megaohms. L'agent ne normalise pas vers le plus grand prefixe ; il s'arrete a celui que l'enonce lui a montre.",
+   "observation_supplementaire": "DEUXIEME CAS DE LA FAMILLE CANDIDATE `specification_deleguee`, apres java/poker, et le mecanisme est identique. L'enonce (2 241 caracteres) ne nomme QUE deux unites : « 33 ohms » et « 33 kiloohms ». Le mot « megaohm » n'y figure PAS -- verifie par grep. La regle generale de normalisation est renvoyee a un lien externe, [metric-prefix]: https://en.wikipedia.org/wiki/Metric_prefix, que l'agent ne peut pas suivre (pi n'a ni web_search ni web_fetch). L'agent a produit une reponse NUMERIQUEMENT JUSTE, dans la plus grande unite que l'enonce nomme. Deux cas sur deux, la specification deleguee se delegue a Wikipedia : a instruire sur javascript, python et rust avant toute conclusion."
+  },
+  "java/pov": {
+   "classe": "fond",
+   "signature": "S2+S3",
+   "divergence": "mapping_condition_message",
+   "mecanisme_signature": "NON, et le classement CHANGE : pov quitte `ambiguite` pour `fond`. S2/S3 designaient le bloc de sortie rendu ; 28 des 29 tests passent. Signature juste, mecanisme faux. GARDE dans le decompte des signatures -- la pre-inscription annonce que les signales echouent plus, pas par quel mecanisme -- mais RETIRE du decompte des ambiguites.",
+   "preuve": "29 tests, UN SEUL tombe : testPathWhenSourceDoesNotExist, sur « Expecting message to be \"No path found\" » quand l'agent leve « Tree could not be reoriented » (Tree.java:50, remontee par pathTo:68). L'agent leve la bonne exception au bon moment et se trompe de message.",
+   "correction_20260827": "CLASSE A TORT `ambiguite/libelle_seul` jusqu'au 27/08. Le critere exige que la chaine soit absente du visible ; elle ne l'est pas. .docs/instructions.append.md:57-64 publie un bloc java qui donne les DEUX chaines AVEC leur condition en commentaire : « // when a tree cannot be oriented to a new node POV » -> \"Tree could not be reoriented\" ; « // when a path cannot be found between a start and end node on the tree. » -> \"No path found\". L'agent a recopie les deux au caractere pres (Tree.java:50 et :71) : il avait toute l'information et a mal cable la condition au message. CONSEQUENCE DE COMPTAGE : la famille `libelle_seul` passe de 9 a 8 cas ; l'exercice sort des ambiguites et entre au fond. Defaut trouve par l'audit Fable du 27/08, verifie a la main sur les deux pieces avant reecriture."
+  },
+  "java/protein-translation": {
+   "classe": "ambiguite",
+   "signature": "non signale",
+   "divergence": "exigence_de_rejet",
+   "mecanisme_signature": "Non signale. S4 ne pouvait pas tirer : elle exige un retour d'erreur DECLARE, et le stub n'en declare aucun. Meme angle mort nomme que go/trinary, go/octal, java/go-counting et java/phone-number.",
+   "preuve": "51 tests, 2 tombent, ET LES DEUX VIENNENT DE LA MEME SILENCE, en sens OPPOSES : (1) testNonExistingCodonCantTranslate -- « Expecting code to raise a throwable », l'agent ne rejette PAS un codon inconnu ; (2) testIncompleteRnaSequenceCanTranslateIfValidUntilAStopCodon -- l'agent leve « IllegalArgumentException: Invalid codon » la ou la suite attend une traduction reussie jusqu'au codon STOP. Trop laxiste d'un cote, trop strict de l'autre. L'enonce fait 1 753 caracteres et ne contient AUCUNE occurrence de invalid, error, exception, throw ni incomplete -- verifie par grep le 27/08. Il decrit les codons STOP et la fin de traduction, jamais le sort d'un codon inconnu ni celui d'un fragment incomplet.",
+   "observation_supplementaire": "COMPARAISON INTER-LANGUES, la premiere du corpus sur un meme exercice. go/protein-translation echoue sur le meme exercice mais par un AUTRE mecanisme : la suite go exige ErrStop et ErrInvalidBase par leur NOM exact, absents de .docs/ et du stub. Le meme enonce ambigu produit donc une divergence de contrat en go et une divergence d'exigence en java. La famille se conserve, le mecanisme non."
+  },
+  "java/queen-attack": {
+   "classe": "ambiguite",
+   "signature": "non signale",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "Non signale, coherent avec PREDICTION_LIBELLES_ERREUR.md : pas de detecteur par exercice possible pour cette famille.",
+   "preuve": "15 tests, 6 tombent ; 5 « Expecting message to be » et ZERO comparaison de valeur. LA SUITE EXIGE CINQ MESSAGES GRANULAIRES : « Queen position must have positive row. », « Queen position must have row <= 7. », « Queen position must have positive column. », « Queen position must have column <= 7. », « Queens cannot occupy the same position. » L'agent leve la bonne exception a chacune des bonnes conditions, mais avec UN SEUL message generique : « Queen position must be on the board ».",
+   "observation_supplementaire": "SOUS-MOTIF RECURRENT DANS LA FAMILLE LIBELLE, 2e occurrence apres java/phone-number : LA SUITE DECOUPE LA OU L'AGENT REGROUPE. Sur phone-number la suite voulait « area code cannot start with zero » et « ... with one » distincts la ou l'agent ecrivait « Area code cannot start with 0 or 1 » ; ici elle veut quatre bornes distinctes la ou l'agent ecrit « must be on the board ». Rien dans l'enonce ni le stub ne dit a quelle GRANULARITE les messages sont attendus. Enregistre comme sous-motif observe, PAS comme signature."
+  },
+  "java/rational-numbers": {
+   "classe": "ambiguite",
+   "signature": "non signale",
+   "divergence": "orientation_de_la_relation",
+   "mecanisme_signature": "Non signale. Aucune des quatre signatures ne porte sur l'orientation d'une operation binaire ; c'est deja le constat de java/custom-set et go/simple-linked-list.",
+   "preuve": "2 echecs sur N, tous deux en comparaison de valeur, et LE CALCUL EST INVERSE : (1) attendu 9.988721231519586, l'agent rend 16.0 -- or (4/3)^8 = 9.98872123... et 8^(4/3) = 16 ; (2) attendu -0.001953125, l'agent rend 0.3333333333333333 -- or (-1/2)^9 = -1/512 = -0.001953125 et 9^(-1/2) = 1/3. La suite calcule donc r^x (le rationnel eleve au reel), l'agent x^r (le reel eleve au rationnel). L'ENONCE DEMANDE LES DEUX OPERATIONS, textuellement : « Exponentiation of a rational number r = a/b to a real (floating-point) number x is the quotient (a^x)/(b^x) » ET « Exponentiation of a real number x to a rational number r = a/b is x^(a/b) ». Le stub, lui, n'offre QU'UNE methode pour les deux : `double exp(double exponent)`. L'agent devait deviner laquelle des deux operations cette methode unique porte.",
+   "argument_contre_ce_classement": "A CHARGE, et je l'ecris parce qu'il est reel : le parametre du stub s'appelle `exponent`. Ce nom designe le double comme l'exposant, donc `this` comme la base, donc r^x -- la bonne reponse. L'information n'etait donc pas absente, elle tenait dans UN NOM DE PARAMETRE. Ce qui fait pencher vers l'ambiguite malgre cela : l'enonce enumere DEUX operations a implementer et le stub n'expose qu'une methode pour les deux, si bien que l'agent affronte un choix 1 parmi 2 reel ; et le nom des tests officiels le renforce dans l'erreur -- ils s'appellent testRaiseARealNumberToAPositiveRationalNumber, c'est-a-dire x^r, alors qu'ils ASSERTENT r^x. Le nom du test contredit son propre calcul. Classement conserve en ambiguite pour cette raison ; si le depouillement final devait trancher autrement, ce paragraphe est la piece a relire."
+  },
+  "java/phone-number": {
+   "classe": "ambiguite",
+   "signature": "non signale",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "Non signale, et c'est coherent : PREDICTION_LIBELLES_ERREUR.md soutient qu'aucun detecteur par exercice n'est possible pour cette famille. S4 ne pouvait pas tirer non plus -- elle exige un retour d'erreur DECLARE, or le stub vierge est nu : `PhoneNumber(String numberString)` et `String getNumber()`, aucun `throws`. Meme angle mort que go/trinary, go/octal et java/go-counting : nomme, pas comble apres coup.",
+   "preuve": "13 tests sur 18 tombent et LES 12 NOMMES SONT TOUS des `invalid*` : les 5 qui passent sont exactement les cas de nettoyage d'un numero valide. Zero comparaison de valeur ; les 12 assertions sont des `Expecting message to be`. L'agent leve donc la bonne exception, a la bonne condition, au bon endroit (PhoneNumber.java:16, :19, :22) et ne diverge QUE sur la redaction : attendu « area code cannot start with zero » et « area code cannot start with one » -- DEUX messages distincts, minuscules, chiffres en toutes lettres -- obtenu un seul « Area code cannot start with 0 or 1 » ; idem exchange code ; attendu « must not be fewer than 10 digits » / « must not be greater than 11 digits », obtenu « Incorrect number of digits » pour les deux. Aucune des chaines attendues n'existe cote agent : grep recursif sur .docs/ et src/main/ le 27/08, 0 fichier pour « cannot start with zero », « cannot start with one », « must not be fewer than », « must not be greater than », « not permitted ».",
+   "observation_supplementaire": "L'enonce fait 1 253 caracteres, dit « Your task is to clean up differently formatted telephone numbers » et ne contient AUCUNE occurrence de error, invalid, must, cannot, exception, throw ni reject -- une seule de punctuation. Il ne demande donc jamais de REJETER quoi que ce soit, alors que 12 des 18 tests l'exigent. L'agent a pourtant infere l'exigence entiere et correctement (les regles de validite, « N is any digit from 2 through 9 », sont, elles, ecrites). C'est ce qui distingue ce cas de java/bank-account : ici l'exigence tacite a ete SATISFAITE, et il ne reste que le libelle. Le cas renforce donc la famille au lieu de la diluer."
+  },
+  "java/ocr-numbers": {
+   "classe": "ambiguite",
+   "signature": "S2+S3",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "NON. S2 et S3 designent le bloc de grille rendu et sa tokenisation ; or la LECTURE OCR MARCHE -- 15 tests sur 17 passent, y compris les grilles multi-lignes. L'echec porte sur le texte de deux messages d'erreur. Signature juste, mecanisme faux, garde dans le decompte comme go-counting.",
+   "preuve": "15 des 17 tests passent. Les 2 qui tombent portent 2 « Expecting message to be » et ZERO comparaison de valeur dans la sortie entiere : attendu « Number of input columns must be a positive multiple of 3 », obtenu « input must have a number of columns that is a multiple of 3 » -- meme sens, autre redaction. La chaine « positive multiple » est ABSENTE de .docs/ et du stub, verifie par grep recursif le 27/08. L'enonce dit bien la contrainte (« four rows high and three columns wide ») mais jamais le texte du message."
+  },
+  "java/mazy-mice": {
+   "classe": "fond",
+   "signature": "aucune",
+   "divergence": "borne_haute_omise",
+   "attention_ce_classement_arrange_la_prediction": "mazy-mice n'etait PAS signale. Le classer `fond` le retire de la colonne des echecs non signales, donc cela sert la prediction. Le critere lui est applique strictement -- et ici il n'y a pas de marge : l'enonce donne la borne noir sur blanc.",
+   "preuve": "11 tests sur 13 passent, y compris les DEUX bornes BASSES -- shouldThrowExceptionWhenColumnsIsLessThanFive et shouldThrowExceptionWhenRowsIsLessThanFive. Les 2 qui tombent sont les deux bornes HAUTES, shouldThrowExceptionWhenRowsIsMoreThenHundred et shouldThrowExceptionWhenColumnsIsMoreThenHundred, avec « Expecting code to raise a throwable ». Or l'enonce, ligne 8, ecrit : « The program should accept two parameters: rows and columns. The maze should be between 5 and 100 cells in size. » La borne haute est donc ECRITE, dans la meme phrase que la borne basse que l'agent a bien implementee. Condition (2) du critere non remplie : l'element divergent n'est pas absent de l'enonce. Omission, pas convention cachee.",
+   "reserve_examinee": "« between 5 and 100 cells in size » pourrait se lire comme une aire totale plutot que par dimension. Cette lecture ne sauve pas le cas : l'agent lui-meme a implemente la borne BASSE par dimension, donc il avait retenu la lecture par dimension -- celle de la suite. Il n'a pas mal lu la phrase, il n'en a applique que la moitie."
+  },
+  "java/house": {
+   "classe": "ambiguite",
+   "signature": "S2",
+   "divergence": "separateur_interne",
+   "mecanisme_signature": "FAMILLE oui, POSITION non, et la nuance vaut d'etre gardee. S2 dit « un separateur TERMINAL y est invisible » ; ici les separateurs sont INTERNES, et ils ne sont pas invisibles -- ils sont VISIBLES et l'agent les a copies. La claim profonde de S2 tient pourtant entierement : un bloc de sortie rendue ne specifie pas la vraie structure de la chaine. Elle la contredit meme. Enregistre tel quel, et GARDE dans le decompte : la pre-inscription annonce que les signales echouent plus, pas par quel mecanisme.",
+   "preuve": "Le contenu est identique CARACTERE POUR CARACTERE : joindre la sortie de l'agent par une espace au lieu d'un saut de ligne donne exactement l'attendu. Juge sur verseSix -- attendu « This is the cow with the crumpled horn that tossed the dog that worried the cat that killed the rat that ate the malt that lay in the house that Jack built. » sur UNE ligne ; obtenu les memes mots, meme ordre, meme ponctuation, repartis sur six lignes. Tout l'enchassement cumulatif, qui est le sujet de l'exercice, est donc juste. Et l'element divergent n'est pas seulement absent de l'enonce : L'ENONCE MONTRE LE CONTRAIRE. Son bloc ```text affiche « This is the rat / that ate the malt / that lay in the house that Jack built. » avec exactement les sauts de ligne que l'agent a produits. L'agent a reproduit fidelement le seul exemple qu'il pouvait voir. 13 des 14 tests tombent, tous sur ce seul point."
+  },
+  "java/go-counting": {
+   "classe": "ambiguite",
+   "signature": "S2",
+   "divergence": "exigence_de_rejet",
+   "mecanisme_signature": "NON. S2 signale un bloc de sortie rendue sur 6 lignes et son separateur terminal ; l'echec porte sur le REJET de coordonnees hors plateau. La signature a designe le bon exercice pour la mauvaise raison, et le decompte le garde tel quel -- la pre-inscription annonce que les exercices signales ECHOUENT PLUS, pas par quel mecanisme. S4, elle, ne pouvait pas tirer : elle exige un retour d'erreur DECLARE, or le stub ne porte aucun `throws` (`Set<Point> getTerritory(int x, int y)`). Meme angle mort que go/trinary et go/octal, nomme et non comble apres coup.",
+   "preuve": "Toute la logique de comptage passe : whiteCenter5x5BoardTest, blackCorner5x5BoardTest, stoneNotTerritory5x5Board, twoRegionRectangularBoardTest. Les 4 qui tombent sont exactement les 4 cas de coordonnee hors plateau -- invalidXTooHigh, invalidXTooLow, invalidYTooHigh, invalidYTooLow -- et tous avec le meme message, « Expecting code to raise a throwable ». L'enonce fait 1 207 caracteres et ne contient AUCUNE occurrence de « error », « invalid », « must », « cannot », « exception », « throw », « outside » ni « range » -- verifie par grep le 27/08. Le stub ne declare pas d'erreur. Rien de visible n'annonce ce rejet. Meme phenomene que go/tree-building."
+  },
+  "java/forth": {
+   "classe": "fond",
+   "signature": "aucune",
+   "divergence": "contrat_d_entree_mal_lu",
+   "attention_ce_classement_arrange_la_prediction": "forth n'etait PAS signale. Le classer `fond` le RETIRE de la colonne des echecs non signales, donc cela sert la prediction. C'est pourquoi le critere lui est applique strictement et la preuve porte sur ce que l'agent POUVAIT LIRE, pas sur le compte d'echecs.",
+   "preuve": "Cause unique, ForthEvaluator.java:26 : `for (String token : input)`. `input` est un List<String> de LIGNES -- la suite passe Collections.singletonList(\"1 dup\") -- et l'agent traite la ligne entiere comme UN SEUL jeton. Il ne decoupe jamais sur les espaces. D'ou 46 « IllegalArgumentException: Unknown command » sur 54 echecs, et 54 tests sur 55 qui tombent. La condition (1) du critere -- la logique passe les cas voisins -- n'est donc pas remplie, et on ne peut nommer aucun cas officiel qui passe. Surtout, l'element divergent N'ETAIT PAS cache : l'enonce donne les regles de lexing (« a number is a sequence of one or more (ASCII) digits, a word is a sequence of one or more letters, digits, symbols or punctuation that is not a number ») et la syntaxe « : word-name definition ; ». Ces regles n'ont de sens que si l'agent decoupe lui-meme. Le reste de son code est complet et correct d'aspect -- pile, mots, definitions, garde de recursion.",
+   "lecon_variante_D": "L'agent a ecrit 35 tests maison, et LES 35 PASSENT, pendant que 54 des 55 tests officiels tombent. Des tests ecrits par l'agent confirment sa lecture du contrat au lieu de l'eprouver. C'est le risque propre de la variante D, et il ne se voit que parce que le juge est independant."
+  },
+  "java/food-chain": {
+   "classe": "ambiguite",
+   "signature": "S2",
+   "divergence": "separateur_terminal",
+   "mecanisme_signature": "OUI, au libelle pres, et c'est la DEUXIEME touche S2 exacte en java apres bottle-song. La pre-inscription annonce pour cet exercice : « bloc de sortie rendue sur 43 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible ». L'echec porte sur exactement un separateur terminal. Signale avant que java commence, et ce n'est pas un cas fondateur.",
+   "preuve": "10 tests sur 10 tombent, y compris le plus simple, fly(). Le juge sur fly() : attendu « ...I don't know why she swallowed the fly. Perhaps she'll die.\" » -- la chaine se ferme immediatement apres le point ; obtenu la meme chose SUIVIE D'UN SAUT DE LIGNE avant la fermeture. Verifie octet a octet (cat -A) sur juge_java_food-chain.txt le 27/08. Meme mecanisme que java/bottle-song et que go/beer-song : un separateur terminal est invisible dans un exemple rendu."
+  },
+  "java/custom-set": {
+   "classe": "ambiguite",
+   "signature": "aucune",
+   "divergence": "orientation_de_la_relation",
+   "mecanisme_signature": "AUCUNE signature ne pouvait tirer, et l'angle mort se nomme : S4 exige un retour d'erreur declare (il n'y en a pas), S2 et S3 exigent un bloc rendu (l'enonce fait 269 caracteres et ne contient aucun bloc). Le defaut porte sur le SENS d'une relation binaire dans une signature nue -- meme phenomene que go/simple-linked-list, ou le stub nomme Push et Pop sans dire sur quel bout ils agissent. Famille CANDIDATE, PAS une signature ajoutee apres coup : l'ajouter maintenant reviendrait a inscrire une regle apres avoir vu l'echec qu'elle attraperait.",
+   "preuve": "21 tests passent -- union, intersection, difference, egalite, disjonction, doublons. Les 2 qui tombent sont les seuls a porter sur le sens de isSubset. La suite vierge, CustomSetTest.java:55-59 : customSet = {1}, secondCustomSet = {} et `customSet.isSubset(secondCustomSet)` doit rendre TRUE ; lignes 63-67, customSet = {} et secondCustomSet = {'1'} doit rendre FALSE. Donc `a.isSubset(b)` veut dire « b est un sous-ensemble de a » : l'ARGUMENT est le sous-ensemble. L'agent a ecrit l'inverse (CustomSet.java:83-90, `for (T e : elements) if (!other.contains(e)) return false`), c'est-a-dire this ⊆ other -- la convention de set.issubset() en Python et de Set#subset? en Ruby. Le corpus inverse le sens usuel. L'enonce entier fait 269 caracteres et ne contient NI « subset », NI « empty », NI « contain » (grep le 27/08) ; le stub ne porte que `boolean isSubset(CustomSet<T> other)`, signature nue. Rien de visible ne donne le sens."
+  },
+  "java/bottle-song": {
+   "classe": "ambiguite",
+   "signature": "S2",
+   "divergence": "separateur_terminal",
+   "mecanisme_signature": "OUI, au libelle pres. La pre-inscription du 27/08 annonce pour cet exercice : « bloc de sortie rendue sur 40 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible ». L'echec porte sur exactement un separateur terminal. Exercice signale AVANT que java commence, et ce n'est PAS un cas fondateur.",
+   "preuve": "Meme mecanisme que go/beer-song, reproduit dans une autre langue et sur un autre exercice. Le juge sur lastGenericVerse : attendu et obtenu sont identiques caractere pour caractere jusqu'a « There'll be two green bottles hanging on the wall. » ; l'agent ajoute UNE LIGNE VIDE de plus avant la fermeture de la chaine. Verifie octet a octet (cat -A) sur juge_java_bottle-song.txt le 27/08. 7 des 13 tests tombent, tous sur l'assemblage des couplets."
+  },
+  "go/beer-song": {
+   "classe": "ambiguite",
+   "fondateur": true,
+   "preuve": "Les 5 cas de Verse et les 2 cas d'erreur passent ; seul l'assemblage echoue, et d'UN caractere. Un separateur terminal est invisible dans un exemple rendu."
+  },
+  "go/connect": {
+   "classe": "ambiguite",
+   "fondateur": true,
+   "preuve": "connect_test.go:8-16 retire tous les espaces avant l'appel mais AFFICHE le plateau espace dans son message d'erreur. La forme passee n'est ni dans l'enonce ni dans le stub."
+  },
+  "go/kindergarten-garden": {
+   "classe": "ambiguite",
+   "fondateur": true,
+   "preuve": "Le meme vocabulaire figure sous trois formes dans l'enonce (prose ligne 6, tableau lignes 19-22, liste ligne 58) ; rien ne dit laquelle fait foi. Et « error », « invalid », « duplicate », « odd » n'y figurent pas du tout."
+  },
+  "go/poker": {
+   "classe": "ambiguite",
+   "signature": "S4",
+   "mecanisme_signature": "oui -- l'echec EST le rejet manquant d'une entree invalide, ce que S4 annonce",
+   "preuve": "Tous les cas de classement et de departage passent ; seul le rejet d'une main invalide tombe. Le stub declare ([]string, error) ; l'enonce fait 4 lignes et n'emploie ni « error », ni « invalid », ni « must »."
+  },
+  "go/protein-translation": {
+   "classe": "ambiguite",
+   "signature": "S4",
+   "mecanisme_signature": "oui -- l'echec porte sur les sentinelles d'erreur elles-memes",
+   "preuve": "ErrStop et ErrInvalidBase n'apparaissent NI dans .docs/, NI dans le stub -- verifie par grep le 27/08. La suite les exige par leur nom exact et verifie qu'ils ne sont pas nil."
+  },
+  "go/simple-linked-list": {
+   "classe": "ambiguite",
+   "signature": "S4",
+   "mecanisme_signature": "NON -- S4 signale le contrat d'erreur de Pop() (int, error) ; l'echec porte sur le BOUT sur lequel Push et Pop agissent. La signature a designe le bon exercice pour la mauvaise raison, et le decompte le garde tel quel.",
+   "preuve": "L'enonce parle d'un lecteur de musique, demande « create a singly linked list » et « reverse the list », et ne nomme JAMAIS Push, Pop, Size ni Array -- verifie sur .docs/instructions.md entier. Ces quatre-la n'existent que comme signatures nues dans le stub, sans un mot de semantique : ni le bout sur lequel Push/Pop agissent, ni l'ordre que rend Array. Le juge : « Push to non empty list: [4 1 2 3], want [1 2 3 4] » et « Pop from non empty list: 1, want 3 »."
+  },
+  "go/tree-building": {
+   "classe": "ambiguite",
+   "signature": "S4",
+   "mecanisme_signature": "oui -- les trois cas qui tombent sont TROIS validations que l'enonce ne demande jamais",
+   "preuve": "L'enonce fait 24 lignes et ne contient AUCUNE occurrence de « error », « invalid », « cycle », « continuous », « must » ni « fail » -- verifie par grep le 27/08. Le stub declare Build(records []Record) (*Node, error). Le juge : « non-continuous », « cycle indirectly » et « higher id parent of lower id » « returned ... but was expected to fail ». Meme phenomene que go/kindergarten-garden 3b."
+  },
+  "go/pig-latin": {
+   "classe": "ambiguite",
+   "preuve": "xray, yttria, my, rhythm, quick, square passent tous ; seul yellow tombe. L'enonce ne dit nulle part si un « y » initial est voyelle ou consonne : il ne donne que l'exception de prefixe « yt »."
+  },
+  "go/trinary": {
+   "classe": "ambiguite",
+   "signature": "aucune",
+   "mecanisme_signature": "raté du detecteur -- S4 exige que le stub DECLARE un retour d'erreur ; ici le stub n'a pas de retour du tout, sa signature est cassee. Angle mort nomme, pas comble apres coup.",
+   "preuve": "LE STUB VIERGE EST FAUX : `func ParseTrinary(arg string, want int64, ok bool)`. Ce ne sont pas des parametres, ce sont les CHAMPS DE LA TABLE DE CAS DE TEST. L'agent doit donc inventer la signature. Tout ce qu'il voit pointe au mauvais endroit : le stub suggere un `ok bool`, et l'enonce (lignes 6-7) dit « strings specifying an invalid trinary as the value 0 », donc PAS d'erreur. La suite, elle, exige un `error` : « cannot use err (variable of type bool) as error value ». Deux exercices du corpus entier portent ce defaut -- octal et trinary, verifie par balayage des 225 le 27/08 -- et LES DEUX ont echoue."
+  },
+  "go/react": {
+   "classe": "fond",
+   "preuve": "react.go:119-122 : suppression par echange qui corrige l'index de l'entree RETIREE (e := cbs[c.idx]) au lieu de celle qui a BOUGE (cbs[last]). Le rescape garde un index perime -> index out of range [3] with length 2. Rien a voir avec l'enonce."
+  },
+  "go/robot-simulator": {
+   "classe": "fond",
+   "preuve": "Le stub NOMME ce qu'il faut definir (« Define N, E, S, W here. », « Define Action type here. ») et instructions.append.md:22 le redit. L'agent a utilise Action et Action3 dans ses signatures sans jamais declarer les types : build failed. Rien n'etait cache."
+  },
+  "java/twelve-days": {
+   "classe": "ambiguite",
+   "signature": "a verifier",
+   "divergence": "separateur_terminal",
+   "mecanisme_signature": "A VERIFIER contre prediction_enonces_ambigus.json. Le mecanisme est celui de S2 (bloc de sortie rendu, separateur terminal invisible), identique a bottle-song, food-chain et go/beer-song.",
+   "preuve": "22 tests executes, 15 tombent : LES 15 OFFICIELS, et ZERO des 7 tests maison. Cause UNIQUE, un caractere : TwelveDaysTest attend verse(1) == \"On the first day ... a Partridge in a Pear Tree.\\n\" ; l'agent rend la meme chaine SANS le saut de ligne final (TwelveDays.java, `return \"On the \" + ... + \".\";`). Ce seul manque explique aussi les 3 tests d'agregat : la suite attend les couplets separes par une ligne vide, ce que `String.join(\"\\n\")` produit exactement quand chaque couplet finit deja par « \\n ». Verifie sur juge_java_twelve-days.txt (19 285 car., 27/08).",
+   "pourquoi_indeductible": "L'enonce publie les paroles COMPLETES et dit « The lyrics your code returns should _exactly_ match the full song text shown below ». Le contenu est donc entierement donne -- et la forme reste invisible : un bloc de code markdown ne peut pas montrer un saut de ligne terminal. Mesure sur .docs/instructions.md (2 752 car.) : 0 occurrence de `newline`, `trailing`, `line break`, `blank line`, `each verse`, et AUCUNE mention des methodes verse/verses/sing, qui ne viennent que du stub. C'est le cas le plus net de la famille : publier le contenu au caractere pres ne publie pas sa terminaison.",
+   "tests_maison_confortent": "MaisonTest recopie les 12 couplets de l'enonce dans un tableau VERSES et affirme verse(i+1) == VERSES[i] -- sans « \\n ». Les 7 passent. L'agent a teste sa lecture, pas le contrat : meme phenomene qu'a java/forth (35 tests maison passants, 54 officiels sur 55 tombes)."
+  },
+  "java/state-of-tic-tac-toe": {
+   "classe": "ambiguite",
+   "signature": "a verifier",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "A VERIFIER contre prediction_enonces_ambigus.json.",
+   "preuve": "27 tests, 4 tombent, LES QUATRE en « Expecting message to be », zero comparaison de valeur : attendu « Wrong turn order: X went twice » et « Wrong turn order: O started », obtenu « Invalid board: wrong turn order » pour les deux ; attendu « Impossible board: game should have ended after the game was won », obtenu « Invalid board: two winners » (deux fois).",
+   "resultat_negatif": "IMPORTANT -- l'heuristique « recopier le vocabulaire de l'enonce » NE SAUVE PAS cet exercice, et c'est mesure. L'enonce (1 645 car.) a deux sous-titres d'invalidite : « #### Wrong turn order » (l.73) et « #### Continued playing after win » (l.87). L'agent a DEJA repris le premier. Insuffisant : la suite exige le titre + « : » + un suffixe distinctif (« X went twice », « O started ») absent de tout octet lisible -- 0 fichier pour « went twice », 0 pour « should have ended ». Pire, le second attendu ne reprend meme pas son titre : la suite dit « Impossible board », l'enonce dit « Continued playing after win » -- « Impossible board » : 0 fichier cote agent. L'enonce dit seulement « If the given board is invalid, throw an appropriate error » (l.20) ; « appropriate » n'est pas une specification.",
+   "sous_motif": "3e occurrence de LA SUITE DECOUPE LA OU L'AGENT REGROUPE, apres java/phone-number et java/queen-attack. Renforce PREDICTION_LIBELLES_ERREUR.md : meme avec le vocabulaire exact de l'enonce en main, l'egalite stricte au caractere pres n'est pas atteignable."
   }
+ }
 }
