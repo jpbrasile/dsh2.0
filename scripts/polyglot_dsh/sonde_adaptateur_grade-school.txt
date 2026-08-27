@@ -1,0 +1,43 @@
+
+> test
+> jest ./*
+
+FAIL ./maison.test.js
+  ● Test suite failed to run
+
+    Your test suite must contain at least one test.
+
+      at onResult (../../../../../../npm-install/node_modules/@jest/core/build/index.js:1054:18)
+      at ../../../../../../npm-install/node_modules/@jest/core/build/index.js:1125:165
+      at ../../../../../../npm-install/node_modules/emittery/index.js:363:13
+          at Array.map (<anonymous>)
+      at Emittery.emit (../../../../../../npm-install/node_modules/emittery/index.js:361:23)
+
+FAIL ./grade-school.spec.js
+  ● School › a student can't be in two different grades
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "Aimee",
+    + ]
+
+      82 |     school.add('Aimee', 1);
+      83 |
+    > 84 |     expect(school.grade(2)).toEqual([]);
+         |                             ^
+      85 |   });
+      86 | });
+      87 |
+
+      at Object.toEqual (grade-school.spec.js:84:29)
+
+Test Suites: 2 failed, 2 total
+Tests:       1 failed, 9 passed, 10 total
+Snapshots:   0 total
+Time:        1.587 s
+Ran all test suites matching ./LICENSE|./TASK.md|./babel.config.js|./grade-school.js|./grade-school.spec.js|./maison.test.js|./node_modules|./package-lock.json|./package.json.
