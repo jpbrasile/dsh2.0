@@ -1,0 +1,580 @@
+{
+  "gele_le": "2026-08-27 11:37:40",
+  "critere": "l'enonce (.docs/*.md) cite-t-il au moins un des identifiants declares par le stub editable ?",
+  "critere_source": {
+    "fichier": "contrat_muet.py",
+    "sha256": "112a573ce0c236fcc72866059fe7b7fb29766ab9066ba75b25115d83bb6e7581"
+  },
+  "gel_source": {
+    "fichier": "figer_sous_ensemble.py",
+    "sha256": "f213be9ea123ea7b3c288bc15ed743e17a0858bfcd20671714de126bbcdbcf22"
+  },
+  "corpus": {
+    "chemin": "C:\\Users\\test\\tools\\aider-bench\\aider\\tmp.benchmarks\\polyglot-benchmark",
+    "stubs_cpp_semes": 26
+  },
+  "preuve_d_anteriorite": {
+    "run": "pi_D_t1_dflash2",
+    "exercices_deja_juges_au_gel": 28,
+    "total_corpus": 225
+  },
+  "biais_du_critere": {
+    "sous_compte": "go/simple-linked-list est classe AUTO-SUFFISANT (l'enonce cite Reverse) alors que l'enonce ne dit pas que Push ajoute en fin -- FAIL mesure le 27/08.",
+    "sur_compte": "cpp/gigasecond est classe AMBIGU (l'enonce ne cite pas advance) alors qu'il decrit le comportement et PASSE en variante D -- pi_dimD2, PASS 459,7 s.",
+    "consequence": "la partition est un instrument reproductible, pas une verite ; toute correction se lira comme un diff contre ce fichier."
+  },
+  "comptes": {
+    "total_corpus": 225,
+    "evalues_par_le_critere": 225,
+    "ambigus": 70,
+    "auto_suffisants": 155,
+    "par_langue": {
+      "cpp": {
+        "ambigus": 6,
+        "evalues": 26
+      },
+      "go": {
+        "ambigus": 11,
+        "evalues": 39
+      },
+      "java": {
+        "ambigus": 20,
+        "evalues": 47
+      },
+      "javascript": {
+        "ambigus": 16,
+        "evalues": 49
+      },
+      "python": {
+        "ambigus": 7,
+        "evalues": 34
+      },
+      "rust": {
+        "ambigus": 10,
+        "evalues": 30
+      }
+    }
+  },
+  "ambigus": [
+    "cpp/allergies",
+    "cpp/gigasecond",
+    "cpp/knapsack",
+    "cpp/meetup",
+    "cpp/perfect-numbers",
+    "cpp/spiral-matrix",
+    "go/connect",
+    "go/hexadecimal",
+    "go/ledger",
+    "go/markdown",
+    "go/octal",
+    "go/pig-latin",
+    "go/poker",
+    "go/protein-translation",
+    "go/trinary",
+    "go/variable-length-quantity",
+    "go/word-search",
+    "java/affine-cipher",
+    "java/all-your-base",
+    "java/book-store",
+    "java/change",
+    "java/custom-set",
+    "java/food-chain",
+    "java/forth",
+    "java/go-counting",
+    "java/house",
+    "java/kindergarten-garden",
+    "java/mazy-mice",
+    "java/ocr-numbers",
+    "java/palindrome-products",
+    "java/phone-number",
+    "java/pythagorean-triplet",
+    "java/react",
+    "java/state-of-tic-tac-toe",
+    "java/two-bucket",
+    "java/wordy",
+    "java/zebra-puzzle",
+    "javascript/affine-cipher",
+    "javascript/alphametics",
+    "javascript/complex-numbers",
+    "javascript/go-counting",
+    "javascript/grade-school",
+    "javascript/ledger",
+    "javascript/parallel-letter-frequency",
+    "javascript/poker",
+    "javascript/queen-attack",
+    "javascript/react",
+    "javascript/resistor-color-trio",
+    "javascript/state-of-tic-tac-toe",
+    "javascript/tournament",
+    "javascript/twelve-days",
+    "javascript/two-bucket",
+    "javascript/word-search",
+    "python/affine-cipher",
+    "python/connect",
+    "python/dominoes",
+    "python/food-chain",
+    "python/poker",
+    "python/react",
+    "python/zebra-puzzle",
+    "rust/acronym",
+    "rust/alphametics",
+    "rust/book-store",
+    "rust/fizzy",
+    "rust/nucleotide-codons",
+    "rust/poker",
+    "rust/react",
+    "rust/say",
+    "rust/variable-length-quantity",
+    "rust/word-count"
+  ],
+  "ambigus_identifiants": {
+    "cpp/allergies": [
+      "allergy_test",
+      "get_allergies",
+      "is_allergic_to"
+    ],
+    "cpp/gigasecond": [
+      "advance"
+    ],
+    "cpp/knapsack": [
+      "maximum_value"
+    ],
+    "cpp/meetup": [
+      "first_friday",
+      "first_monday",
+      "first_saturday",
+      "first_sunday",
+      "first_thursday"
+    ],
+    "cpp/perfect-numbers": [
+      "classify"
+    ],
+    "cpp/spiral-matrix": [
+      "spiral_matrix"
+    ],
+    "go/connect": [
+      "ResultOf"
+    ],
+    "go/hexadecimal": [
+      "ParseHex"
+    ],
+    "go/ledger": [
+      "FormatLedger"
+    ],
+    "go/markdown": [
+      "Render"
+    ],
+    "go/octal": [
+      "ParseOctal"
+    ],
+    "go/pig-latin": [
+      "Sentence"
+    ],
+    "go/poker": [
+      "BestHand"
+    ],
+    "go/protein-translation": [
+      "FromCodon",
+      "FromRNA"
+    ],
+    "go/trinary": [
+      "ParseTrinary"
+    ],
+    "go/variable-length-quantity": [
+      "DecodeVarint",
+      "EncodeVarint"
+    ],
+    "go/word-search": [
+      "Solve"
+    ],
+    "python/affine-cipher": [
+      "decode",
+      "encode"
+    ],
+    "python/connect": [
+      "ConnectGame",
+      "__init__",
+      "get_winner"
+    ],
+    "python/dominoes": [
+      "can_chain"
+    ],
+    "python/food-chain": [
+      "recite"
+    ],
+    "python/poker": [
+      "best_hands"
+    ],
+    "python/react": [
+      "ComputeCell",
+      "InputCell",
+      "__init__",
+      "add_callback",
+      "remove_callback"
+    ],
+    "python/zebra-puzzle": [
+      "drinks_water",
+      "owns_zebra"
+    ],
+    "javascript/affine-cipher": [
+      "decode",
+      "encode"
+    ],
+    "javascript/alphametics": [
+      "solve"
+    ],
+    "javascript/complex-numbers": [
+      "ComplexNumber"
+    ],
+    "javascript/go-counting": [
+      "GoCounting"
+    ],
+    "javascript/grade-school": [
+      "GradeSchool"
+    ],
+    "javascript/ledger": [
+      "LedgerEntry",
+      "createEntry",
+      "formatEntries"
+    ],
+    "javascript/parallel-letter-frequency": [
+      "parallelLetterFrequency"
+    ],
+    "javascript/poker": [
+      "bestHands"
+    ],
+    "javascript/queen-attack": [
+      "QueenAttack"
+    ],
+    "javascript/react": [
+      "CallbackCell",
+      "ComputeCell",
+      "InputCell"
+    ],
+    "javascript/resistor-color-trio": [
+      "ResistorColorTrio"
+    ],
+    "javascript/state-of-tic-tac-toe": [
+      "gamestate"
+    ],
+    "javascript/tournament": [
+      "tournamentTally"
+    ],
+    "javascript/twelve-days": [
+      "recite"
+    ],
+    "javascript/two-bucket": [
+      "TwoBucket"
+    ],
+    "javascript/word-search": [
+      "WordSearch"
+    ],
+    "rust/acronym": [
+      "abbreviate"
+    ],
+    "rust/alphametics": [
+      "solve"
+    ],
+    "rust/book-store": [
+      "lowest_price"
+    ],
+    "rust/fizzy": [
+      "Fizzy",
+      "Matcher",
+      "add_matcher",
+      "apply",
+      "fizz_buzz"
+    ],
+    "rust/nucleotide-codons": [
+      "CodonsInfo",
+      "Error",
+      "name_for",
+      "of_rna",
+      "parse"
+    ],
+    "rust/poker": [
+      "winning_hands"
+    ],
+    "rust/react": [
+      "CallbackId",
+      "CellId",
+      "ComputeCellId",
+      "InputCellId",
+      "Reactor"
+    ],
+    "rust/say": [
+      "encode"
+    ],
+    "rust/variable-length-quantity": [
+      "Error",
+      "from_bytes",
+      "to_bytes"
+    ],
+    "rust/word-count": [
+      "word_count"
+    ],
+    "java/affine-cipher": [
+      "UnsupportedOperationException",
+      "decode",
+      "encode"
+    ],
+    "java/all-your-base": [
+      "BaseConverter",
+      "UnsupportedOperationException",
+      "convertToBase"
+    ],
+    "java/book-store": [
+      "UnsupportedOperationException",
+      "calculateBasketCost"
+    ],
+    "java/change": [
+      "ChangeCalculator",
+      "UnsupportedOperationException",
+      "computeMostEfficientChange"
+    ],
+    "java/custom-set": [
+      "CustomSet",
+      "UnsupportedOperationException",
+      "add",
+      "contains",
+      "getDifference"
+    ],
+    "java/food-chain": [
+      "UnsupportedOperationException",
+      "verse",
+      "verses"
+    ],
+    "java/forth": [
+      "UnsupportedOperationException",
+      "evaluateProgram"
+    ],
+    "java/go-counting": [
+      "GoCounting",
+      "UnsupportedOperationException",
+      "getTerritories",
+      "getTerritory",
+      "getTerritoryOwner"
+    ],
+    "java/house": [
+      "UnsupportedOperationException",
+      "sing",
+      "verse",
+      "verses"
+    ],
+    "java/kindergarten-garden": [
+      "KindergartenGarden",
+      "UnsupportedOperationException",
+      "getPlant",
+      "getPlantsOfStudent",
+      "switch"
+    ],
+    "java/mazy-mice": [
+      "UnsupportedOperationException",
+      "generatePerfectMaze"
+    ],
+    "java/ocr-numbers": [
+      "UnsupportedOperationException",
+      "parse"
+    ],
+    "java/palindrome-products": [
+      "UnsupportedOperationException",
+      "getPalindromeProductsWithFactors"
+    ],
+    "java/phone-number": [
+      "PhoneNumber",
+      "UnsupportedOperationException",
+      "getNumber"
+    ],
+    "java/pythagorean-triplet": [
+      "PythagoreanTriplet",
+      "UnsupportedOperationException",
+      "build",
+      "makeTripletsList",
+      "thatSumTo"
+    ],
+    "java/react": [
+      "UnsupportedOperationException",
+      "addCallback",
+      "computeCell",
+      "getValue",
+      "inputCell"
+    ],
+    "java/state-of-tic-tac-toe": [
+      "UnsupportedOperationException",
+      "determineState"
+    ],
+    "java/two-bucket": [
+      "TwoBucket",
+      "UnsupportedOperationException",
+      "getFinalBucket",
+      "getOtherBucket",
+      "getTotalMoves"
+    ],
+    "java/wordy": [
+      "UnsupportedOperationException",
+      "solve"
+    ],
+    "java/zebra-puzzle": [
+      "UnsupportedOperationException",
+      "getWaterDrinker",
+      "getZebraOwner"
+    ]
+  },
+  "auto_suffisants": [
+    "cpp/all-your-base",
+    "cpp/bank-account",
+    "cpp/binary-search-tree",
+    "cpp/circular-buffer",
+    "cpp/clock",
+    "cpp/complex-numbers",
+    "cpp/crypto-square",
+    "cpp/diamond",
+    "cpp/dnd-character",
+    "cpp/grade-school",
+    "cpp/kindergarten-garden",
+    "cpp/linked-list",
+    "cpp/parallel-letter-frequency",
+    "cpp/phone-number",
+    "cpp/queen-attack",
+    "cpp/robot-name",
+    "cpp/space-age",
+    "cpp/sublist",
+    "cpp/yacht",
+    "cpp/zebra-puzzle",
+    "go/alphametics",
+    "go/beer-song",
+    "go/book-store",
+    "go/bottle-song",
+    "go/bowling",
+    "go/counter",
+    "go/crypto-square",
+    "go/dnd-character",
+    "go/dominoes",
+    "go/error-handling",
+    "go/food-chain",
+    "go/forth",
+    "go/kindergarten-garden",
+    "go/matrix",
+    "go/paasio",
+    "go/palindrome-products",
+    "go/pov",
+    "go/react",
+    "go/robot-simulator",
+    "go/say",
+    "go/scale-generator",
+    "go/simple-linked-list",
+    "go/sublist",
+    "go/transpose",
+    "go/tree-building",
+    "go/two-bucket",
+    "go/wordy",
+    "go/zebra-puzzle",
+    "java/alphametics",
+    "java/bank-account",
+    "java/bottle-song",
+    "java/bowling",
+    "java/circular-buffer",
+    "java/connect",
+    "java/dominoes",
+    "java/hangman",
+    "java/ledger",
+    "java/pig-latin",
+    "java/poker",
+    "java/pov",
+    "java/protein-translation",
+    "java/queen-attack",
+    "java/rational-numbers",
+    "java/resistor-color-trio",
+    "java/rest-api",
+    "java/satellite",
+    "java/series",
+    "java/sgf-parsing",
+    "java/simple-linked-list",
+    "java/transpose",
+    "java/tree-building",
+    "java/twelve-days",
+    "java/variable-length-quantity",
+    "java/word-search",
+    "java/zipper",
+    "javascript/beer-song",
+    "javascript/binary",
+    "javascript/book-store",
+    "javascript/bottle-song",
+    "javascript/bowling",
+    "javascript/connect",
+    "javascript/food-chain",
+    "javascript/forth",
+    "javascript/grep",
+    "javascript/house",
+    "javascript/killer-sudoku-helper",
+    "javascript/list-ops",
+    "javascript/meetup",
+    "javascript/ocr-numbers",
+    "javascript/palindrome-products",
+    "javascript/phone-number",
+    "javascript/pig-latin",
+    "javascript/promises",
+    "javascript/rational-numbers",
+    "javascript/rectangles",
+    "javascript/rest-api",
+    "javascript/robot-name",
+    "javascript/say",
+    "javascript/scale-generator",
+    "javascript/simple-linked-list",
+    "javascript/space-age",
+    "javascript/sum-of-multiples",
+    "javascript/transpose",
+    "javascript/triangle",
+    "javascript/variable-length-quantity",
+    "javascript/wordy",
+    "javascript/zebra-puzzle",
+    "javascript/zipper",
+    "python/beer-song",
+    "python/book-store",
+    "python/bottle-song",
+    "python/bowling",
+    "python/dot-dsl",
+    "python/forth",
+    "python/go-counting",
+    "python/grade-school",
+    "python/grep",
+    "python/hangman",
+    "python/list-ops",
+    "python/paasio",
+    "python/phone-number",
+    "python/pig-latin",
+    "python/pov",
+    "python/proverb",
+    "python/rest-api",
+    "python/robot-name",
+    "python/scale-generator",
+    "python/sgf-parsing",
+    "python/simple-linked-list",
+    "python/transpose",
+    "python/tree-building",
+    "python/two-bucket",
+    "python/variable-length-quantity",
+    "python/wordy",
+    "python/zipper",
+    "rust/accumulate",
+    "rust/bowling",
+    "rust/decimal",
+    "rust/dot-dsl",
+    "rust/doubly-linked-list",
+    "rust/forth",
+    "rust/gigasecond",
+    "rust/grade-school",
+    "rust/grep",
+    "rust/luhn-from",
+    "rust/macros",
+    "rust/ocr-numbers",
+    "rust/parallel-letter-frequency",
+    "rust/pig-latin",
+    "rust/robot-name",
+    "rust/scale-generator",
+    "rust/simple-cipher",
+    "rust/two-bucket",
+    "rust/wordy",
+    "rust/xorcism"
+  ]
+}
