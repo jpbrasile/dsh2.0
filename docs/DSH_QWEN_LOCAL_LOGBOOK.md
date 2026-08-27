@@ -4936,3 +4936,79 @@ Les deux causes étaient bien réelles et **indépendantes** : la boîte MSVC fr
 `spiral-matrix` sans qu'aucune commande non bornée soit en cause, et le `find /`
 non borné a pendu `parallel-letter-frequency` sans qu'aucune boîte soit
 ouverte. Un seul des deux correctifs n'aurait couvert que la moitié des cas.
+
+### 27/08 11:20 — « On n'envoyait que l'énoncé seul » : vrai au tour 1, faux au tour 2
+
+Question de l'opérateur, déclenchée par `CMakeLists.txt` dans les `editables`.
+La vérification a trouvé plus gros que `CMakeLists.txt`.
+
+#### Ce que `CMakeLists.txt` fait là — écart déclaré, et mineur
+
+Ouvert à l'agent le 27/08 sur ordre de l'opérateur, parce que la consigne
+« pose tes tests dans `maison_test.cpp` » était **inapplicable** en cpp :
+`CMakeLists.txt` code en dur `${file}_test.cpp` comme unique source de test.
+L'agent en est informé mot pour mot :
+
+    You MAY edit CMakeLists.txt to compile and run your own tests.
+    It is reset to its original content before grading, so do
+    not rely on your changes to it for the hidden suite.
+
+Et il l'est : **0 écart sur 24** au diff octet à octet contre l'original.
+Fuite résiduelle : l'agent apprend le **nom** du fichier de test officiel
+(`phone_number_test.cpp`), pas son contenu.
+
+#### Le vrai écart est ailleurs : le tour 2 reçoit la suite officielle
+
+`pilote.py:930` puis `:947` :
+
+    erreurs = lancer_tests(ex_hote, fichiers_test)   # suite OFFICIELLE remise en place
+    ...
+    texte = erreurs + TEST_FAILURES.format(file_list=liste)   # -> TASK.md du tour 2
+
+Le `TASK.md` du tour 2 de `phone-number` fait **9 399 caractères** et contient
+les assertions officielles telles quelles :
+
+    REQUIRE_THROWS_AS( phone_number::phone_number("123456789"), std::domain_error )
+    because no exception was thrown where one was expected
+
+Soit la signature exacte, les entrées exactes, et le type d'exception attendu —
+suivis de `The tests are correct, don't try and change them`, à propos de tests
+que l'agent n'a **jamais vus**.
+
+**Ce n'est pas un défaut du pilote** : c'est la boucle d'aider, reproduite
+fidèlement — aider donne lui aussi la sortie des tests au tour suivant. La
+différence est que **chez aider le fichier de test est visible de toute façon**,
+donc ce retour n'apprend rien de neuf. En variante D il est masqué : le retour
+du juge devient alors le **seul** canal, et il rouvre ce que la variante D
+ferme.
+
+#### Conséquence sur le chiffre, et elle est nette
+
+| | valeur | ce que ça mesure |
+|---|---|---|
+| `pass_rate_1` | **84,0 %** (21/25) | **variante D pure** — énoncé nu, l'agent n'a jamais vu la suite officielle |
+| `pass_rate_2` | **96,0 %** (24/25) | inclut 3 sauvetages obtenus **après** avoir montré les assertions officielles |
+
+Les 3 sauvés au tour 2 : `all-your-base`, `bank-account`, `phone-number`.
+Le seul FAIL : `parallel-letter-frequency`.
+
+**Le chiffre de la variante D est donc `pass_rate_1`, pas `pass_rate_2`.**
+Publier `pass_rate_2` en l'appelant « variante D » reviendrait à dire que
+l'agent a réussi sans voir les tests, alors que 3 de ses 24 réussites viennent
+précisément de les avoir vus.
+
+#### Les deux issues, et le choix n'est pas à moi
+
+1. **Publier `pass_rate_1` comme le chiffre de la variante D**, et
+   `pass_rate_2` uniquement accompagné de ce paragraphe. Ne change rien au run
+   en cours.
+2. **Changer le protocole** : nourrir le tour 2 avec la sortie des tests **de
+   l'agent**, pas du juge. C'est plus fidèle à l'esprit de D — mais ça
+   s'éloigne d'aider, dont on reprend justement la boucle et la métrique, et
+   ça invalide les 25 exercices déjà jugés.
+
+Rappel : le carnet (ligne 4155) interdisait déjà la comparaison au
+`pass_rate_2 = 52,0 %` de 7quater et au tableau public, pour trois raisons.
+**Celle-ci est une quatrième**, et elle joue dans l'autre sens : les trois
+premières rendent D **plus dure**, celle-ci rend son `pass_rate_2` **plus
+facile** qu'annoncé.
