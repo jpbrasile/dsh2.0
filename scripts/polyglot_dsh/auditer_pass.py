@@ -125,6 +125,14 @@ def auditer(ex_hote, ex_vierge, res):
     #    c'est LA liste que le pilote a masquee. Un test que cette liste ignore
     #    est un test que le juge a pu ramasser.
     masques = {f.replace("\\", "/") for f in res.get("tests_ecrits_par_l_agent", [])}
+    # CE CHAMP A ETE FAUX JUSQU'AU 4e5e3e9 : le pilote y ecrivait la suite
+    # OFFICIELLE au lieu du test maison (`avant` pris apres `masquer`). L'audit
+    # signalait donc « test NON MASQUE au verdict : maison_test.cpp » sur 6 cpp
+    # qui avaient pourtant ete correctement masques -- six faux suspects, tous
+    # verifies le 28/08 en recalculant le champ avec la regle corrigee. Le
+    # chemin maison est CONNU sans passer par le champ : on l'ajoute, et
+    # l'audit redevient juste sur les runs deja ecrits.
+    masques.add(pilote.ou_poser_les_tests(solution).replace("\\", "/"))
     officiels = {f.replace("\\", "/") for f in tests}
     for cur, dirs, fics in os.walk(ex_hote):
         dirs[:] = [d for d in dirs if d not in
@@ -163,7 +171,18 @@ def main():
             if not os.path.isfile(rp):
                 continue
             res = json.load(open(rp, encoding="utf-8"))
-            ok = bool(res.get("tests_outcomes", [False])[-1])
+            # LA LISTE PEUT EXISTER ET ETRE VIDE, et le defaut de `get` ne joue
+            # alors pas : `[][-1]` leve. Ce n'est pas theorique -- un pilote qui
+            # plante avant le juge ecrit `"tests_outcomes": []` (java/bowling,
+            # 27/08 14:52, FileNotFoundError). Signale par le red team GLM-5.3
+            # (M3) et par l'audit du 27/08 ; corrige le 28/08. Un verdict absent
+            # n'est PAS un echec : il ne se compte pas, il se rejoue.
+            issues = res.get("tests_outcomes") or []
+            if not issues:
+                print("  %-12s %-28s VERDICT ABSENT (tests_outcomes vide) -- "
+                      "a rejouer, jamais a compter" % (langue, ex))
+                continue
+            ok = bool(issues[-1])
             if not ok and not tous:
                 continue
             vus += 1
