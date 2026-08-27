@@ -270,6 +270,34 @@
    "preuve": "27 tests, 4 tombent, LES QUATRE en « Expecting message to be », zero comparaison de valeur : attendu « Wrong turn order: X went twice » et « Wrong turn order: O started », obtenu « Invalid board: wrong turn order » pour les deux ; attendu « Impossible board: game should have ended after the game was won », obtenu « Invalid board: two winners » (deux fois).",
    "resultat_negatif": "IMPORTANT -- l'heuristique « recopier le vocabulaire de l'enonce » NE SAUVE PAS cet exercice, et c'est mesure. L'enonce (1 645 car.) a deux sous-titres d'invalidite : « #### Wrong turn order » (l.73) et « #### Continued playing after win » (l.87). L'agent a DEJA repris le premier. Insuffisant : la suite exige le titre + « : » + un suffixe distinctif (« X went twice », « O started ») absent de tout octet lisible -- 0 fichier pour « went twice », 0 pour « should have ended ». Pire, le second attendu ne reprend meme pas son titre : la suite dit « Impossible board », l'enonce dit « Continued playing after win » -- « Impossible board » : 0 fichier cote agent. L'enonce dit seulement « If the given board is invalid, throw an appropriate error » (l.20) ; « appropriate » n'est pas une specification.",
    "sous_motif": "3e occurrence de LA SUITE DECOUPE LA OU L'AGENT REGROUPE, apres java/phone-number et java/queen-attack. Renforce PREDICTION_LIBELLES_ERREUR.md : meme avec le vocabulaire exact de l'enonce en main, l'egalite stricte au caractere pres n'est pas atteignable."
+  },
+  "javascript/alphametics": {
+   "classe": "fond",
+   "signature": "a verifier",
+   "divergence": "regle_publiee_a_moitie_appliquee",
+   "mecanisme_signature": "A VERIFIER. Note pour le depouillement : cet exercice est NOMME dans PREDICTION_PISTES_RESTANTES.md au titre de P6 (enonce court de 659 car. portant un lien Wikipedia). Il est le PREMIER des six a etre juge, et il ne releve PAS de specification_deleguee -- P6 part avec un contre-exemple.",
+   "preuve": "9 tests, 2 tombent, MEME CAUSE : « leading zero solution is invalid » (solve('ACA + DD == BD') rend {A:0,B:3,C:2,D:1} au lieu de null) et « puzzle with four letters » (rend {A:8,M:0,O:9,S:2} au lieu de {A:9,M:1,O:0,S:2}) -- dans les deux cas l'agent accepte un chiffre de tete a zero. Les 7 autres passent, dont le puzzle a dix lettres et 199 termes : le solveur est bon.",
+   "pourquoi_fond_et_non_ambiguite": "L'enonce PUBLIE la regle, mot pour mot et en toutes lettres : « Each letter must represent a different digit, and the leading digit of a multi-digit number must not be zero. » L'agent a implemente la PREMIERE moitie de la phrase (chiffres distincts -- le test « solution must have unique value for each letter » passe) et omis la seconde. Le critere gele d'ambiguite exige que l'element divergent soit ABSENT du visible ; il est ici dans la meme phrase que la regle appliquee.",
+   "signature_repetee": "2e occurrence de UNE REGLE ENONCEE DANS UNE SEULE PHRASE, APPLIQUEE A MOITIE, apres java/mazy-mice (« The maze should be between 5 and 100 cells in size » -- borne basse implementee, borne haute omise). Dans les deux cas la moitie appliquee est testee et PASSE, ce qui prouve que l'agent avait lu la phrase.",
+   "consequence_p6": "P6 predisait qu'au moins la moitie des echecs juges parmi les six enonces courts a lien externe releverait de specification_deleguee. javascript/alphametics est le premier juge et n'en releve pas. Compte a ce jour : 0 sur 1. NE PAS reecrire P6."
+  },
+  "javascript/beer-song": {
+   "classe": "fond",
+   "signature": "a verifier",
+   "divergence": "separateur_interne_visible",
+   "mecanisme_signature": "A VERIFIER contre prediction_enonces_ambigus.json.",
+   "preuve": "`recite(n, k)` rend un TABLEAU de lignes. La suite attend un element `''` entre deux couplets : recite(99,2) -> ['99 bottles…', 'Take one down…', '', '98 bottles…', 'Take one down…']. Le diff du juge ne montre que des lignes `- \"\"` : tout le contenu est juste, seuls les separateurs manquent.",
+   "pourquoi_fond_et_non_ambiguite": "L'enonce MONTRE la ligne vide entre couplets dans son bloc de paroles (12 055 car.), a l'endroit exact ou la suite attend l'element vide. L'information etait visible ; l'agent ne l'a pas reportee dans la structure de retour.",
+   "distinction_avec_java_house": "IMPORTANT, la frontiere de la famille `separateur` se precise. java/house est une AMBIGUITE parce que l'enonce y montre des sauts de ligne que la suite veut JOINTS -- le visible INDUIT EN ERREUR. javascript/beer-song est du FOND parce que l'enonce montre exactement ce que la suite attend -- le visible dit VRAI et n'a pas ete suivi. Le critere gele tranche seul : l'element divergent est-il absent du visible, ou present ?"
+  },
+  "javascript/binary": {
+   "classe": "ambiguite",
+   "signature": "a verifier",
+   "divergence": "forme_du_rejet",
+   "famille_candidate": true,
+   "mecanisme_signature": "FAMILLE CANDIDATE, enregistree le 27/08. Regle 4 de PREDICTION_PISTES_RESTANTES.md : une famille NOUVELLE rencontree sur javascript/python/rust est enregistree comme candidate et NE COMPTE DANS AUCUNE des predictions P3-P7. Cet exercice ne compte donc PAS pour P5 (`exigence_de_rejet` en javascript), alors qu'un echec de rejet en apparence le ferait croire.",
+   "preuve": "10 tests, UN SEUL tombe : « invalid inputs are null », new Binary('2').toDecimal() rend 0 la ou null est attendu. Les 9 autres passent, zeros de tete compris.",
+   "pourquoi_distinct_de_exigence_de_rejet": "L'agent A BIEN VALIDE -- binary.js:7 : `if (typeof this.binary !== 'string' || !/^[01]+$/.test(this.binary)) return 0;`. Il n'a pas manque le rejet : il a choisi le mauvais sentinelle. Et l'enonce ANNONCE le rejet -- « The program should handle invalid inputs » -- sans jamais en publier la FORME (null ? 0 ? une exception ?). `exigence_de_rejet` designe un enonce MUET sur l'existence meme du rejet ; ici l'enonce parle et se tait sur la forme. Deux mecanismes distincts, deux corrections distinctes : l'un demande de deviner qu'il faut rejeter, l'autre de deviner comment. Coherent avec la mesure du corpus : binary ne figure PAS parmi les 6 enonces javascript muets sur un rejet exige."
   }
  }
 }
