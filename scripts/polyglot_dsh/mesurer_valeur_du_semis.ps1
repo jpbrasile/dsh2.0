@@ -123,11 +123,21 @@ Write-Output "bras AVEC semis : $($dejaCpp.Count)/$($tousCpp.Count) juges."
 if ($manquants) {
     $liste = ($manquants | ForEach-Object { "cpp/$_" }) -join ','
     Write-Output "  a rejouer AVEC semis : $liste"
+    # LE CHIEN DE GARDE NE S'ARMAIT PAS ICI. Mesure du 27/08 : le proxy ecrit
+    # dans wire_<Principal>_complement.jsonl (nom passe a Demarrer-Proxy),
+    # tandis que le pilote, faute de --journal-fil, DEDUIT le sien du nom du
+    # RUN -- wire_<Principal>.jsonl (pilote.py:1268-1271). Deux fichiers
+    # differents : celui que la veille surveille ne grossit jamais, la veille
+    # ne s'arme donc jamais, et un agent pendu consomme la laisse entiere de
+    # 1800 s au lieu d'etre coupe a 600 s. Le second appel du script, lui, est
+    # coherent (Demarrer-Proxy $Nu / pilote.py $Nu) : seul celui-ci l'etait pas.
+    $journalFil = Join-Path $banc "wire_${Principal}_complement.jsonl"
     Demarrer-Proxy "${Principal}_complement"
     python pilote.py $Principal --agent pi --accueil-pi $accueilPi --dotenv $dotenv `
         --tests-maison --conteneur pi-polyglot-tests `
         --exercices $liste `
         --tours 2 --delai-tour 1800 --delai-tour-2 600 --effort medium `
+        --veille-silence 600 --journal-fil $journalFil `
         --fournisseur local-mesure --modele $Modele
     Arreter-Proxy8013
 } else {
@@ -143,11 +153,16 @@ if ($LASTEXITCODE -ne 0) { Write-Output "REFUS : retrait du semis en echec ($LAS
 # --- 6. le bras SANS semis ----------------------------------------------------
 Write-Output ''
 Write-Output "=== 26 cpp SANS semis, run $Nu, $(Get-Date -Format 'HH:mm:ss') ==="
+# Ici le nom du proxy et celui du run coincident, donc la deduction du pilote
+# tombait juste -- par chance, pas par construction. On l'ecrit quand meme :
+# renommer l'un des deux suffirait a desarmer la veille en silence.
+$journalFilNu = Join-Path $banc "wire_$Nu.jsonl"
 Demarrer-Proxy $Nu
 python pilote.py $Nu --agent pi --accueil-pi $accueilPi --dotenv $dotenv `
     --tests-maison --conteneur pi-polyglot-tests `
     --langages cpp `
     --tours 2 --delai-tour 1800 --delai-tour-2 600 --effort medium `
+    --veille-silence 600 --journal-fil $journalFilNu `
     --fournisseur local-mesure --modele $Modele
 $codeNu = $LASTEXITCODE
 Arreter-Proxy8013
