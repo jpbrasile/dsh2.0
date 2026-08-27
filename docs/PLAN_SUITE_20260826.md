@@ -523,3 +523,76 @@ publiée, l'arbitrage est rendu à l'opérateur. Les deux issues, chiffrées :
 |---|---|---|
 | laisser finir (**en cours**) | carte prise jusqu'à ~12 h | GPQA complet, mais encadrement probablement encore trop large (R12/R13) |
 | fenêtre de ~45 min pour `dimensionner_pi_polyglot.ps1` | ~9 appels GPQA différés, rien de perdu (la reprise saute les couples déjà faits) | la durée réelle de la variante D, qui débloque les 225 |
+
+---
+
+# Révision du 27/08/2026, 05:05 — R15 à R18 : une affirmation retirée, et B2 remplacé
+
+## R15. RETRAIT de la R13 « le niveau absolu ne se publie pas »
+
+La révision de 23:55 (R13) affirmait que ~90 % sur GPQA Diamond n'était pas
+crédible pour un 27B et pointait une contamination. **Retiré.** Le chiffre publié
+par Qwen pour Qwen3.8-27B est **89,2** sur GPQA Diamond.
+
+| | GPQA Diamond |
+|---|---|
+| **publié (Qwen, officiel)** | **89,2** |
+| BF16 OpenRouter, mesuré ici | 89,2 % ± 9,2 pt (37 q) |
+| Q4 local 4090, mesuré ici | 92,7 % ± 5,7 pt (82 q) |
+
+Le harnais reproduit le chiffre constructeur. Ce qui reste vrai de R13 : 89,2 est
+un chiffre **constructeur**, non répliqué indépendamment ; et le 92,7 % **exclut**
+les tronqués — comptés faux le bras tombe à 76,0 %, donc l'encadrement
+**[76,0 % ; 94,0 %]** contient 89,2 sans le discriminer.
+
+## R16. Le mécanisme de la fugue est établi : la pensée ne se referme jamais
+
+    balise </think>     libres : 94/94        tronqués : 0/20
+    répétition 12-gr.   tronqués : 0,2 %      libres : 0,7 %
+
+Le modèle raisonne, **sans se répéter**, pendant 32 768 jetons, et n'émet jamais
+la transition vers la réponse. `pensee_car = -1` sur tous les tronqués.
+
+## R17. La fugue est une propriété de QUESTIONS, et le Q4 local y est moins sujet
+
+40 questions jouées des deux côtés :
+
+| | local finit | local FUIT |
+|---|---|---|
+| **BF16 finit** | 26 | **0** |
+| **BF16 fuit** | 9 | 5 |
+
+Zéro dans la case décisive : les fuites locales sont **strictement incluses** dans
+celles du BF16, et le Q4 en récupère 9 sur 14. Le déploiement quantifié n'est pas
+la cause.
+
+## R18. B2 est REMPLACÉ — « rattrapage 32768 » devient « forcer la transition »
+
+Deux remèdes écartés **par la mesure** :
+
+| écarté | preuve |
+|---|---|
+| pénalité de répétition / DRY | les tronqués se répètent **moins** (0,2 % contre 0,7 %) |
+| plafond 65 536 | 16k→32k n'a rien acheté (+1,3 ± 15,3 pt) et le coût double |
+
+**B2 nouvelle rédaction, en deux temps.**
+
+**B2a — publier le couple, sans carte, tout de suite.** Pas un nombre unique :
+« exactitude quand le modèle conclut seul » **et** « part des questions où il ne
+conclut pas », avec la liste nominative des questions. Déjà mesuré.
+
+**B2b — rattrapage ciblé.** Rejouer **seulement** les questions tronquées avec
+`--reasoning-budget 24000`, valeur prise sur le **p90 de la chimie qui finit**
+(23 226) pour ne mordre que sur la queue. Le budget injecte `</think>` : c'est le
+levier qui vise la panne réelle. Population **étiquetée** (`marque`), jamais
+fusionnée.
+
+- Coût : ~36 questions × ~600 s ≈ **6 h de carte**.
+- Biais **connu et déjà mesuré** : un appel coupé au budget répond juste
+  **64,0 %** contre 100 % pour un appel qui conclut seul. Le rattrapage ferme
+  l'encadrement **et** introduit ce biais : il se publie en troisième population.
+
+**Écarté pour l'instant, à rouvrir si la queue de journalisation monte** :
+reprendre le raisonnement déjà produit et ne demander que la conclusion — 10 min
+au lieu de 6 h, mais le journal ne garde que 40 000 des 101 344 caractères
+produits, soit un raisonnement amputé des deux tiers.

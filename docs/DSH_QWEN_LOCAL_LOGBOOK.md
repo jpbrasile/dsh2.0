@@ -3887,3 +3887,110 @@ explicitement, et huit heures d'une nuit déjà productive ne valent pas que je
 renverse seul une décision humaine. La fenêtre de ~45 min pour
 `dimensionner_pi_polyglot.ps1` reste ouverte au réveil, et coûte ~9 appels
 différés, rien de perdu.
+
+---
+
+## 27/08 05:05 — CORRECTION : le niveau absolu était bon, c'est mon a priori qui était périmé. Et la fugue chimie a un mécanisme
+
+Deux choses dans cette entrée : je retire une affirmation fausse que j'ai
+commitée cette nuit (`d201462`), et j'établis le mécanisme de la fugue.
+
+### 1. RETRAIT — « ~90 % n'est pas crédible, contamination probable »
+
+J'ai écrit cette nuit que ~90 % sur GPQA Diamond « mettrait un 27B au-dessus des
+modèles de frontière » et que la cause était donc en amont, contamination en
+tête. **C'est faux.** Recherche faite : **le chiffre publié par Qwen pour
+Qwen3.8-27B est 89,2 sur GPQA Diamond** (Qwen3.7-Plus est donné à 90,3).
+
+Je jugeais sur des a priori d'une génération en retard — Qwen3-32B à ~65-70 %.
+
+| | GPQA Diamond |
+|---|---|
+| **publié (Qwen, officiel)** | **89,2** |
+| BF16 OpenRouter, mesuré ici | 89,2 % ± 9,2 pt (37 q) |
+| Q4 local 4090, mesuré ici | 92,7 % ± 5,7 pt (82 q) |
+
+**Le harnais reproduit donc le chiffre constructeur**, et le Q4 local le
+reproduit aussi. C'est un bien meilleur résultat que ce que j'écrivais.
+
+**Deux réserves qui, elles, tiennent.** (a) 89,2 est un chiffre constructeur, pas
+une réplication indépendante. (b) Mes 92,7 % **excluent** les 18 % d'appels
+tronqués ; comptés faux, le bras tombe à 76,0 %. L'encadrement honnête reste
+**[76,0 % ; 94,0 %]**, et il *contient* 89,2 sans le discriminer. La comparaison
+ne sera à armes égales qu'une fois la troncature traitée — d'où la suite.
+
+### 2. LE MÉCANISME DE LA FUGUE — mesuré, pas supposé
+
+Trois causes possibles s'excluaient. Les trois sont départagées sur le disque.
+
+**Ce n'est pas une boucle dégénérée.** Répétition en 12-grammes :
+
+    tronqués : 0,2 %        libres (témoin) : 0,7 %
+
+Les appels qui fuient se répètent **moins** que ceux qui finissent. Une pénalité
+de répétition ou un échantillonneur DRY traiterait un symptôme qui n'existe pas.
+
+**Ce n'est pas un manque de place.** Doubler le plafond de 16 384 à 32 768 :
+16,7 % → 18,0 % de troncature, écart +1,3 ± 15,3 pt, **dans le bruit**. Et la
+chimie qui finit tient large : médiane 8 614, p90 23 226, max 30 416 jetons.
+
+**C'est la pensée qui ne se referme jamais :**
+
+    balise </think> présente     libres : 94/94        tronqués : 0/20
+
+Cent pour cent d'un côté, zéro de l'autre. Le modèle raisonne — sans se répéter —
+pendant 32 768 jetons et **n'émet jamais la transition vers la réponse**. Le
+champ `pensee_car` vaut `-1` sur tous les tronqués : la pensée n'a pas de fin à
+mesurer.
+
+### 3. LA FUGUE APPARTIENT À DES QUESTIONS PRÉCISES, ET LE Q4 LOCAL S'EN SORT MIEUX
+
+40 questions ont été jouées des deux côtés (BF16 OpenRouter et Q4 local) :
+
+| | local finit | local FUIT |
+|---|---|---|
+| **BF16 finit** | 26 | **0** |
+| **BF16 fuit** | 9 | 5 |
+
+**La case décisive est le zéro.** Aucune question que le BF16 mène à terme ne
+fuit en local. L'ensemble des fuites locales est **strictement inclus** dans
+celui du BF16 — et le Q4 local en récupère 9 sur 14. Le déploiement quantifié
+n'est pas la cause de la fugue ; il y est **moins** sujet que la référence.
+
+C'est une propriété de **questions identifiées**, reproductible à travers deux
+précisions et deux fournisseurs.
+
+### 4. QUE FAIRE — quatre options, deux écartées par la mesure
+
+| option | verdict |
+|---|---|
+| pénalité de répétition / DRY | **écartée** : ils se répètent moins que les autres (0,2 % contre 0,7 %) |
+| monter le plafond à 65 536 | **écartée** : 16k→32k n'a rien acheté, et le coût double (736 s → ~1 470 s par fuite) |
+| forcer la transition (`--reasoning-budget N`) | **retenue** : c'est le seul levier qui vise la panne réelle — l'absence de `</think>` |
+| publier la fugue comme résultat | **retenue, et gratuite** |
+
+**Recommandation, dans cet ordre.**
+
+**(a) Publier le couple, tout de suite et sans carte.** Pas un nombre unique :
+« exactitude quand le modèle conclut seul » **et** « part des questions où il ne
+conclut pas », avec la liste des questions concernées. C'est honnête, c'est
+complet, et c'est déjà mesuré.
+
+**(b) Rattrapage ciblé, budget choisi sur la mesure.** Rejouer **seulement** les
+questions tronquées avec `--reasoning-budget 24000` — valeur prise sur le p90 de
+la chimie qui finit (23 226), donc elle ne mord que sur la queue qui fuit. Le
+budget injecte `</think>` et force la conclusion : c'est exactement la panne
+constatée. Population **étiquetée** (`marque` existe déjà au journal), jamais
+fusionnée avec le bras principal.
+
+  Coût : ~36 questions sur 198 × ~600 s ≈ **6 h de carte**.
+  Effet secondaire déjà mesuré par la campagne : un appel coupé au budget
+  répond juste **64,0 %** du temps contre 100 % pour un appel qui conclut seul.
+  Donc le rattrapage **ferme l'encadrement mais introduit un biais connu** — il
+  se publie comme troisième population, pas fondu dans le chiffre.
+
+**(c) Ce que je n'ai pas retenu, et pourquoi.** Reprendre le raisonnement déjà
+produit pour ne demander que la conclusion coûterait 10 min au lieu de 6 h — mais
+le journal ne conserve que 40 000 des 101 344 caractères produits. L'idée
+redevient bonne si l'on relève d'abord la queue de journalisation ; en l'état
+elle travaillerait sur un raisonnement amputé des deux tiers.
