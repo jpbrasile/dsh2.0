@@ -836,7 +836,7 @@ def instantane(ex_hote):
     return vus
 
 
-def tests_de_l_agent(ex_hote, avant, editables):
+def tests_de_l_agent(ex_hote, avant, editables, ex_vierge):
     """Les fichiers de test que l'agent a crees pendant le tour.
 
     Pourquoi ce retrait est OBLIGATOIRE en variante D : `pytest` collecte
@@ -864,10 +864,35 @@ def tests_de_l_agent(ex_hote, avant, editables):
     Le rejeu du juge sans ce fichier rend `ok alphametics 5,103s` -- la
     solution etait juste. Le chemin maison est CONNU (`OU_LES_TESTS`) : on ne
     fait donc pas dependre son retrait d'une comparaison d'instantanes.
+
+    LE CORPUS VIERGE TRANCHE, PAS L'INSTANTANE. Defaut trouve le 27/08 en
+    lisant python/grade-school en entier. `avant` est pris APRES `masquer`
+    (l. 1095-1096) : toute la suite officielle -- sortie avant la photo, remise
+    par `demasquer` apres le tour -- tombe donc dans `apres - avant` et se fait
+    attribuer a l'agent. Mesure : les 225 exercices sur 225 du run
+    `pi_D_t1_dflash2` portent leur PROPRE suite dans
+    `tests_ecrits_par_l_agent`.
+
+    Sans consequence tant que `poser_tests` la repose depuis le vierge juste
+    apres. Mais `poser_tests` ne repose que `files.test` (l. 1138), alors que
+    depuis 42474af (27/08 18:21) `chemins_a_masquer` masque AUSSI les tests
+    officiels non declares (l. 1017). Les 18 exercices go qui portent
+    `cases_test.go` hors `files.test` auraient donc ete masques, attribues a
+    l'agent, re-masques, et JAMAIS reposes : tables de cas absentes, paquet non
+    compilable, FAIL impute a l'agent. Le correctif du trou de masquage armait
+    une mine ; elle n'a pas encore tire (le run a demarre a 07:47, le correctif
+    est de 18:21).
+
+    D'ou le critere qui ne peut pas se tromper, et qui ne depend d'aucun ordre
+    d'appel : un fichier qui EXISTE dans le corpus vierge est officiel, quoi
+    que dise la photo.
     """
     apres = instantane(ex_hote)
     edit = {e.replace("\\", "/") for e in editables}
     neufs = [f for f in sorted(apres - avant) if f not in edit]
+    neufs = [f for f in neufs
+             if not os.path.exists(
+                 os.path.join(ex_vierge, f.replace("/", os.sep)))]
     sortants = [f for f in neufs if any(re.search(m, f) for m in MOTIFS_TEST)]
     maison = ou_poser_les_tests(editables).replace("\\", "/")
     if maison in apres and maison not in edit and maison not in sortants:
@@ -1127,7 +1152,8 @@ def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
         # echoue ferait compter FAIL un exercice dont la VRAIE suite passe.
         # Ils reviennent parce que sans eux le tour 2 repartirait sans le
         # travail du tour 1 -- l'espace de travail EST la memoire de l'agent.
-        maison = tests_de_l_agent(ex_hote, avant, editables) if tests_maison else []
+        maison = (tests_de_l_agent(ex_hote, avant, editables, ex_vierge)
+                  if tests_maison else [])
         stash_maison = os.path.join(stash_ex, "_maison") if maison else None
         if maison:
             masquer(ex_hote, stash_maison, maison)
