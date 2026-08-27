@@ -4416,3 +4416,177 @@ pour qu'il ne rallume pas le bras GPQA.
 à **23 793 MiB utilisés, 346 MiB libres**. dflash2 consomme exactement les 3 GiB
 qu'on envisageait pour du CUDA en cohabitation. **Les deux idées s'excluent** sur
 cette carte — c'est l'un ou l'autre, et ça n'avait pas été vu avant de charger.
+
+## 27/08 07:12 — Le banc échantillonnait à 0,6 sans que personne l'ait décidé, et tout repart
+
+### Le rejeu dflash2 a rendu son tableau — puis s'est invalidé lui-même
+
+| exercice | plain | dflash2 | |
+|---|---|---|---|
+| cpp/gigasecond | PASS 459,7 s | PASS 86,6 s | *confondu (CMakeLists ouvert entre les deux)* |
+| go/simple-linked-list | FAIL 141,1 s | FAIL 36,8 s | identique |
+| java/sgf-parsing | FAIL 372,4 s | **PASS 670,5 s** | bascule |
+| javascript/say | FAIL 105,2 s | FAIL 84,2 s | identique |
+| python/two-bucket | PASS 495,7 s | PASS 279,2 s | identique |
+
+**2/5 (40 %) → 3/5 (60 %)**, 26,2 min → 19,3 min, audit des PASS : 0 suspect.
+Hors java — le seul exercice qui a produit beaucoup plus de jetons — le rapport
+de durée est **2,47×**.
+
+Puis j'ai lu l'argv du serveur, ce que j'aurais dû faire avant d'écrire la règle :
+
+    --temp 0.6 --top-k 20 --top-p 0.95 --min-p 0 --repeat-penalty 1.0
+    (aucun --seed)
+
+et le câblage client : ni `pilote.py` ni `cabler_local_mesure.py` n'envoient de
+température ni de graine. **Le banc échantillonne, graine tirée à chaque appel.**
+Deux runs *plain* du même exercice ne donnent donc pas forcément le même verdict.
+Ma règle pré-enregistrée (« un basculement ⇒ dflash2 refusé ») supposait
+implicitement le déterminisme. Elle ne s'applique pas : le basculement de
+java/sgf-parsing peut être du bruit d'échantillonnage pur.
+
+La mesure B1 tenait, elle — 12/12 divergences en **glouton, graine fixe**. La
+précaution n'avait simplement pas été transposée au banc agentique. C'est la
+faute, et elle est de moi.
+
+Détail qui va dans le même sens : le PASS a pris **1,8× plus de temps de paroi**
+que le FAIL plain, alors que le décodeur est 2 à 4× plus rapide. L'agent a donc
+produit beaucoup plus de jetons et, cette fois, a fini par écrire dans le fichier
+noté. Trajectoire différente, pas décodeur plus juste.
+
+### Le 0,6 n'avait jamais été décidé — et il désalignait le banc de sa propre référence
+
+La carte Qwen3.8-27B en **thinking** publie `1.0 / 0.95 / 20 / 0.0 / 0.0 / 1.0`.
+L'argv du serveur portait `--temp 0.6` **en dur**, et comme `pi` n'envoie pas de
+température, le bras variante D héritait de ce défaut. Or `pilote.py:37` le dit
+noir sur blanc : **le run aider de référence force 1.0**. Le bras mesurait donc
+à un réglage différent de la référence à laquelle on voulait le comparer, sans
+que ce soit écrit nulle part.
+
+**GPQA, lui, était juste, et c'est vérifié et non supposé** : les 115
+enregistrements portent tous `temperature 1.0, top_p 0.95, top_k 20, min_p 0,
+max_tokens 32768` — un seul jeu, aucune variation. GPQA envoie sa température
+dans la requête (`gpqa_diamond.py:177`), le défaut serveur ne l'a jamais touché.
+
+### Décision de l'opérateur, et remise à zéro
+
+« Il faut le setting optimal pour qwen3.8 avec temperature = 1, passe en dflash
+et relance tous les tests. »
+
+Le serveur porte désormais un argv identique au précédent **sauf `--temp`** :
+0.6 → 1.0. Contrôlé à blanc avant d'arrêter quoi que ce soit, puis relu sur le
+processus vivant. `--temp` est devenu un paramètre du lanceur, valeur par défaut
+1.0, avec la carte citée dans le commentaire.
+
+**Ce que la bascule invalide, et il faut le dire** : `pi_dimD2`,
+`pi_dimD2_dflash2` et les 4 exercices de B6 ont tous été mesurés à 0,6. Aucun ne
+se compare au run qui suit. Le témoin muet plain devient sans objet — le régime
+a changé sous lui. Et la question « dflash2 coûte-t-il de la justesse ? » reste
+**non mesurée** ; elle est tranchée par décision, pas par mesure, et c'est
+cohérent avec le comparable maison (`pass_rate_2 = 52,0 %`, 7quater) qui était
+lui aussi sous dflash2.
+
+### Deux tours, et c'est ce qui rend le chiffre comparable
+
+Le tour 2 était déjà câblé, et c'est la relance d'aider mot pour mot :
+
+    See the testing errors above.
+    The tests are correct, don't try and change them.
+    Fix the code in {file_list} to resolve the errors.
+
+L'agent reçoit la **sortie d'erreur** de la suite officielle, jamais son code.
+C'est la définition de `pass_rate_2` — et **tous** les chiffres auxquels on se
+compare en sont : 52,0 % (7quater), Qwen3 32B 40,0, Qwen3 235B-A22B 59,6. À
+`--tours 1` on produisait un `pass_rate_1`, qui ne se pose à côté d'aucune de ces
+lignes. Un seul run rend les deux taux : le journal enregistre `ok` par tour.
+
+Le tour 2 **dissout** aussi l'écart de perception de la variante D. js/say
+échouait sur `Number must be between 0 and 999,999,999,999.`, littéral présent
+nulle part ailleurs que dans le test caché ; au tour 2 l'agent le lit dans
+l'erreur. Ce qui échoue après avoir vu l'erreur n'a plus d'excuse de protocole.
+
+### Et une correction sur go/simple-linked-list
+
+J'avais classé cet échec « protocole, pas modèle ». Lecture faite du code : c'est
+**le modèle**. Ses propres commentaires disent
+
+    // Push adds an element to the front of the list.
+    // Pop removes and returns the last element of the list.
+
+Empiler en tête et dépiler en queue est incohérent pour une paire `Push`/`Pop`,
+et rien ne cachait cette contradiction. Une pile cohérente en queue passe tous
+les tests. Le bout où l'on empile n'est écrit nulle part, c'est vrai — mais
+l'agent a choisi le bon bout pour `Pop` et le mauvais pour `Push`.
+
+Décompte honnête des 5 sans dflash : 2 PASS, **2 échecs modèle**
+(go, java/sgf-parsing), 1 échec de protocole `--tours 1` (js/say, 14 tests
+officiels sur 16).
+
+### Le tri final : il documente, il ne déplace jamais un verdict
+
+Un juge qui reclasse un FAIL en « pas la faute du modèle » desserre la barre.
+Le taux publié reste le taux brut. Et l'essentiel du tri est mécanique :
+
+| classe | décidable par |
+|---|---|
+| littéral attendu introuvable dans l'énoncé + le stub | `grep` sur la chaîne de l'assertion |
+| rien écrit dans le fichier noté | diff contre le stub — `auditer_pass.py` le fait |
+| tour coupé à la laisse | `journal[].coupe`, déjà enregistré |
+| erreur de compilation | motif dans la sortie du test |
+| reste : erreur de logique | là seulement un agent apporte quelque chose |
+
+Résultat publié **à côté** du taux brut, comme ventilation des échecs.
+
+### Le danger repéré sur GPQA — voir la décision plus bas
+
+Les 115 enregistrements sont en **plain**. Le lanceur B6 rallume le bras GPQA à
+la fin ; sous serveur dflash2 il aurait écrit des enregistrements dflash2 à la
+suite des plain, dans le même fichier, sans que rien ne le signale au
+dépouillement. Premier réflexe : refuser. L'opérateur a tranché autrement dans
+la minute — voir la dernière section : on passe en dflash2, mais dans un fichier
+séparé, ce qui règle le mélange sans rien refuser.
+
+### Deux ratés d'outillage, consignés parce qu'ils se répéteront
+
+1. `Add-Content -Encoding utf8` sous PowerShell 5.1 a **double-encodé** tous les
+   accents du carnet (`é` → `ÃƒÂ©`) : `Get-Content` lit en ANSI un fichier UTF-8
+   sans BOM, puis réécrit en UTF-8. Annulé par `git restore`, refait en append
+   d'octets (`cat >>`). **Règle : un append de document passe par les octets,
+   jamais par le couple Get-Content/Add-Content.**
+2. Le splat par **tableau** en PowerShell passe les éléments en *positionnel* :
+   `@('-Config','q38-dflash2',…)` a fait prendre la chaîne `-Config` pour la
+   valeur de `$Config`. Table de hachage obligatoire.
+3. `& $lanceur -CheckOnly 2>&1` ne capturait rien : le lanceur écrit par
+   `Write-Host`, donc sur le flux d'information (6). `*>&1` requis.
+
+### GPQA passe aussi en dflash2 — décision de l'opérateur, et un fichier par régime
+
+« qa diamond : ça ne change pas grand chose ; la température est le facteur
+primordial, on passe en dflash et on fera plus tard le rétrofit. »
+
+R25 avait tranché l'inverse (GPQA reste plain). La décision revient dessus, et
+c'est assumé. Ce qui ne se fait pas pour autant : écrire du dflash2 **à la suite**
+des 115 plain dans le même fichier — le taux serait une moyenne sur deux
+décodeurs, qui ne caractérise ni l'un ni l'autre. Le lanceur choisit donc le
+fichier de sortie selon le régime servi : `local_q4_t1_libre_dflash2.jsonl` sous
+dflash2, le fichier existant sous plain. Les 115 plain restent un partiel daté,
+intact, disponible pour le rétrofit.
+
+Conséquence assumée : sur un fichier neuf la rotation repart de zéro, 198
+questions en dflash2. C'est le prix d'un chiffre à régime unique — environ
+2,5–3 h après B6.
+
+### Durée attendue de B6 dans le nouveau régime
+
+Base **mesurée** : dflash2, 1 tour, 5 exercices, 1 157,3 s, soit 231,5 s par
+exercice → 225 × 231,5 = **14,5 h**.
+
+Deux inconnues déclarées, aucune mesurée :
+* le tour 2 ne rejoue que les échecs (~40 % → 90 exercices) : **+2,9 h** s'il
+  coûte la moitié d'un tour 1, **+5,8 h** s'il coûte autant ;
+* l'effet de la température 1,0 contre 0,6 sur le nombre de jetons produits.
+
+Fourchette de travail : **17–23 h**, centrale ~19 h. Deux réserves poussent vers
+le haut — un PASS coûte 2,3× un FAIL, et le tour 2 fait monter le taux, donc
+l'allonge. L'estimation sera **remesurée sur les 10 premiers exercices du run
+réel**, ce qui ne coûte rien.

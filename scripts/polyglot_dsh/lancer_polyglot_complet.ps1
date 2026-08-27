@@ -35,10 +35,62 @@
 # depouillement publiera DEUX taux : sur les 225, et sur les 220 jamais vus.
 # 5 sur 225 = 2,2 %.
 
-param([string]$Nom = 'pi_D_complet')
+# REPRISE. Ce lanceur est rejouable tel quel : `pilote.py:1044` saute tout
+# exercice qui porte deja son `.dsh.results.json`. Relance avec le MEME $Nom et
+# il repart ou il s'est arrete, sans rejuger ce qui est deja juge.
+#
+# DECODEUR. `-Modele` choisit l'alias servi. Le run du 27/08 est parti en
+# `specdec-q38-plain` ; le rejeu apparie de 5 exercices (R25) decide si la suite
+# passe en `specdec-q38-dflash2`. Le garde-fou ci-dessous refuse de partir si le
+# serveur VIVANT ne correspond pas a l'alias demande -- un bras est sorti
+# estampille du mauvais modele le 26/08 faute de ce controle.
+
+# DEUX TOURS, ET C'EST CE QUI REND LE CHIFFRE COMPARABLE.
+#
+# ORDRE OPERATEUR, 27/08 07:10. Au tour 2, `pilote.py` renvoie a l'agent la
+# SORTIE D'ERREUR de la suite officielle (jamais son code source) avec la
+# relance mot pour mot d'aider :
+#
+#     See the testing errors above.
+#     The tests are correct, don't try and change them.
+#     Fix the code in {file_list} to resolve the errors.
+#
+# C'est la definition de `pass_rate_2`. Les chiffres publies auxquels on se
+# compare -- 52,0 % (fenetre 7quater), Qwen3 32B 40,0, Qwen3 235B-A22B 59,6 --
+# sont TOUS des pass_rate_2. A `--tours 1` on produisait un pass_rate_1, qui ne
+# se pose a cote d'aucune de ces lignes.
+#
+# UN SEUL RUN REND LES DEUX TAUX : le journal enregistre `ok` par tour, donc
+# pass_1 = fraction dont le tour 1 passe, pass_2 = verdict final.
+#
+# Le tour 2 dissout aussi l'ecart de perception de la variante D : js/say
+# echouait sur un litteral present nulle part ailleurs que dans le test cache ;
+# au tour 2 l'agent lit le litteral dans l'erreur et corrige. Ce qui echoue
+# APRES avoir vu l'erreur n'a plus d'excuse de protocole.
+
+param(
+    [string]$Nom = 'pi_D_complet',
+    [string]$Modele = 'specdec-q38-plain',
+    [int]$Tours = 2
+)
 
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
+
+$vu = (Get-CimInstance Win32_Process -Filter "Name='llama-server.exe'").CommandLine
+if (-not $vu) { Write-Output 'REFUS : aucun llama-server en vie.'; exit 6 }
+$veutDflash = $Modele -match 'dflash'
+$sertDflash = $vu -match 'draft-dflash'
+if ($veutDflash -ne $sertDflash) {
+    Write-Output "REFUS : alias demande '$Modele' mais le serveur vivant sert $(if ($sertDflash) { 'dflash2' } else { 'plain' })."
+    exit 6
+}
+if ($vu -notmatch '--ctx-size 163840' -or $vu -notmatch 'cache-type-k q8_0' -or $vu -notmatch 'cache-type-v q4_0') {
+    Write-Output 'REFUS : le serveur vivant ne porte pas ctx 163840 + KV q8_0/q4_0.'
+    Write-Output "  argv vu : $vu"
+    exit 6
+}
+Write-Output "=== serveur verifie : $Modele, ctx 163840, KV q8_0/q4_0 ==="
 
 $racine = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
 $banc = Join-Path $racine 'scripts\bench_julia_effort'
@@ -75,11 +127,11 @@ Start-Process -FilePath 'node' -ArgumentList 'proxy.mjs' `
 Start-Sleep -Seconds 3
 
 Write-Output ''
-Write-Output '=== LIVRABLE 1 : 225 exercices, VARIANTE D, 1 tour, laisse 1800 s ==='
+Write-Output "=== LIVRABLE 1 : 225 exercices, VARIANTE D, $Tours tour(s), laisse 1800 s ==="
 python pilote.py $Nom --agent pi --accueil-pi $accueilPi --dotenv $dotenv `
     --tests-maison --conteneur pi-polyglot-tests `
-    --tours 1 --delai-tour 1800 --effort medium `
-    --fournisseur local-mesure --modele specdec-q38-plain
+    --tours $Tours --delai-tour 1800 --effort medium `
+    --fournisseur local-mesure --modele $Modele
 
 Write-Output ''
 Write-Output "=== fin du polyglot $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') ==="
@@ -95,6 +147,30 @@ python auditer_pass.py $Nom --tous
 Write-Output ''
 Write-Output '=== remise en etat : le bras GPQA reprend la carte ==='
 Arreter-Proxy8013
+
+# UN FICHIER PAR REGIME. Decision de l'operateur, 27/08 07:15 : « qa diamond :
+# ca ne change pas grand chose ; la temperature est le facteur primordial, on
+# passe en dflash et on fera plus tard le retrofit. » GPQA passe donc en dflash2,
+# ce qui revient sur R25 -- et c'est assume.
+#
+# Ce qui NE se fait pas pour autant : ecrire les enregistrements dflash2 A LA
+# SUITE des 115 plain dans le meme fichier. Verifie : les 115 portent tous
+# modele=specdec-q38-plain, temperature 1.0, top_p 0.95, top_k 20, min_p 0,
+# max_tokens 32768 -- un seul jeu. Les melanger donnerait un taux moyen sur deux
+# decodeurs, qui ne caracterise ni l'un ni l'autre. Le fichier de sortie suit
+# donc le regime servi, et les 115 plain restent un partiel date, intact.
+#
+# Consequence assumee : sur un fichier neuf, la rotation repart de zero et joue
+# les 198 questions en dflash2. C'est le prix d'un chiffre a regime unique.
+$vuFin = (Get-CimInstance Win32_Process -Filter "Name='llama-server.exe'").CommandLine
+if ($vuFin -match 'draft-dflash') {
+    $sortieGpqa = 'local_q4_t1_libre_dflash2.jsonl'
+    Write-Output '  serveur dflash2 : le bras GPQA ecrit dans un fichier NEUF.'
+    Write-Output "    sortie : $sortieGpqa   (les 115 enregistrements plain restent intacts)"
+} else {
+    $sortieGpqa = 'local_q4_t1_libre_tournant.jsonl'
+    Write-Output "  serveur plain : reprise du fichier existant ($sortieGpqa)."
+}
 Set-Location $gpqa
 powershell -NoProfile -ExecutionPolicy Bypass -File lancer_bras_production.ps1 `
-    -Sortie local_q4_t1_libre_tournant.jsonl
+    -Sortie $sortieGpqa

@@ -217,6 +217,24 @@ param(
     #
     # Vide => le drapeau est absent de l'argv, comportement inchange.
     [string]$ReasoningBudgetMessage = "",
+    # TEMPERATURE -- valeur de la CARTE Qwen3.8-27B en mode thinking.
+    #
+    # La carte publie deux jeux, et un seul axe : thinking vs non-thinking.
+    #   thinking     : 1.0 / 0.95 / 20 / 0.0 / 0.0 / 1.0
+    #   non-thinking : 0.7 / 0.80 / 20 / 0.0 / 1.5 / 1.0
+    # Aucune distinction codage/raisonnement n'est publiee, et nos deux bancs
+    # sont en thinking.
+    #
+    # POURQUOI CE PARAMETRE EXISTE. L'argv portait "0.6" en dur. Ni le pilote
+    # polyglot ni son cablage n'envoient de temperature : le defaut serveur
+    # s'appliquait donc, et le bras variante D a tourne a 0,6 -- alors que le
+    # run aider de REFERENCE, lui, force 1.0 (pilote.py:37). L'ecart n'etait
+    # declare nulle part. Le defaut passe a 1.0, ce qui aligne le bras sur sa
+    # propre reference.
+    #
+    # ATTENTION : GPQA envoie sa temperature dans la requete ; ce defaut ne le
+    # concerne donc pas, il ne touche que les clients qui n'en envoient pas.
+    [string]$Temp = "1.0",
     [switch]$CheckOnly,
     [switch]$AssumeDflash2Capable
 )
@@ -485,7 +503,7 @@ $cmdArgs += @(
     "--jinja",
     "--reasoning-format", "none",
     "--reasoning-budget", "$ReasoningBudget",
-    "--temp",             "0.6",
+    "--temp",             $Temp,
     "--top-k",            "20",
     "--top-p",            "0.95",
     "--min-p",            "0",

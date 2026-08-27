@@ -1013,3 +1013,110 @@ pas le bras GPQA.
 tombent à ~9–10 h au débit de 2,2×, et B6 finirait dans l'après-midi du 27 au
 lieu de la nuit du 28. Cette accélération ne sera annoncée qu'une fois mesurée
 sur le rejeu — le 2,2× vient du banc de débit, pas du banc agentique.
+
+---
+
+# Révision du 27/08/2026, 07:15 — R26 : régime unique, température de carte, deux tours
+
+## R26a. La faute de méthode qui invalide R25b
+
+R25b présentait le rejeu dflash2 comme une comparaison appariée « un facteur ».
+Vérification faite **après** l'avoir écrit :
+
+    serveur : --temp 0.6 --top-k 20 --top-p 0.95 --min-p 0 --repeat-penalty 1.0
+              (aucun --seed)
+    client  : ni pilote.py ni cabler_local_mesure.py n'envoient temperature/seed
+
+Le banc **échantillonne**, graine tirée à chaque appel. Deux runs *plain* du même
+exercice peuvent diverger. La règle « un basculement ⇒ dflash2 refusé »
+supposait le déterminisme : elle ne s'applique pas. Le basculement observé
+(java/sgf-parsing, FAIL → PASS) **n'est pas attribuable au décodeur**.
+
+B1 restait valide : elle mesurait en glouton, graine fixe. La précaution n'avait
+pas été transposée au banc agentique.
+
+Résultat du rejeu, publié pour ce qu'il vaut : **2/5 → 3/5**, 26,2 → 19,3 min,
+2,47× hors java, audit 0 suspect. **Non concluant sur la justesse.**
+
+## R26b. Température : 0,6 subi, 1,0 décidé
+
+Carte Qwen3.8-27B **thinking** : `1.0 / 0.95 / 20 / 0.0 / 0.0 / 1.0`.
+
+L'argv du serveur portait `--temp 0.6` en dur. `pi` n'envoyant pas de
+température, le bras variante D héritait de ce défaut — alors que le run aider
+de **référence** force 1.0 (`pilote.py:37`). Le bras mesurait à un réglage
+différent de sa propre référence, sans que ce soit écrit nulle part.
+
+**GPQA était juste**, et c'est vérifié : 115/115 enregistrements portent
+`temperature 1.0, top_p 0.95, top_k 20, min_p 0, max_tokens 32768`. GPQA envoie
+sa température dans la requête (`gpqa_diamond.py:177`).
+
+`--temp` devient un paramètre du lanceur serveur, défaut **1.0**.
+
+**Invalidé par la bascule** : `pi_dimD2`, `pi_dimD2_dflash2`, et les 4 exercices
+de B6 — tous mesurés à 0,6. Le témoin muet plain devient sans objet.
+
+## R26c. Deux tours — la seule façon d'être comparable
+
+`pilote.py` renvoie au tour 2 la **sortie d'erreur** de la suite officielle
+(jamais son code) avec la relance d'aider mot pour mot. C'est la définition de
+`pass_rate_2`, et **tous** les comparables en sont : 52,0 % (7quater), Qwen3 32B
+40,0, Qwen3 235B-A22B 59,6. À `--tours 1` on produisait un `pass_rate_1`
+comparable à rien.
+
+Un seul run rend les **deux** taux : le journal enregistre `ok` par tour.
+
+Le tour 2 dissout aussi l'écart de perception de la variante D (js/say et son
+littéral invisible). Ce qui échoue après avoir vu l'erreur n'a plus d'excuse de
+protocole.
+
+## R26d. Le tri final documente, il ne déplace jamais un verdict
+
+Le taux publié reste brut. La ventilation des échecs se fait d'abord
+**mécaniquement** — littéral absent de l'énoncé et du stub (`grep`), rien écrit
+dans le fichier noté (diff, déjà dans `auditer_pass.py`), tour coupé
+(`journal[].coupe`), erreur de compilation (motif) — et un agent ne traite que
+le résidu « erreur de logique ». Publiée **à côté** du taux, jamais à sa place.
+
+## R26e. GPQA en dflash2, un fichier par régime
+
+Décision opérateur : GPQA passe en dflash2, rétrofit plus tard. R25 disait
+l'inverse ; on revient dessus et c'est assumé.
+
+Ce qui ne se fait pas : concaténer. Le lanceur choisit la sortie selon le régime
+servi — `local_q4_t1_libre_dflash2.jsonl` sous dflash2, le fichier existant sous
+plain. Les 115 plain restent un partiel daté, intact, matière du rétrofit.
+Conséquence assumée : rotation neuve, 198 questions en dflash2, ~2,5–3 h.
+
+## R26f. Configuration en vol et durée attendue
+
+    llama-server (fork build-faq) --ctx-size 163840 --flash-attn on
+      --cache-type-k q8_0 --cache-type-v q4_0 --parallel 1
+      --temp 1.0 --top-k 20 --top-p 0.95 --min-p 0
+      --presence-penalty 0.0 --repeat-penalty 1.0
+      --alias specdec-q38-dflash2 --spec-type draft-dflash
+      -md Qwen3.8-27B-DFlash2-Q4_K_M.gguf --spec-draft-n-max 7
+    VRAM 23 764 MiB utilisés / 375 MiB libres
+
+B6 relancé **à zéro** sous le nom `pi_D_t1_dflash2`, 225 exercices, variante D,
+**2 tours**, laisse 1 800 s, départ 07:12.
+
+| poste | valeur | statut |
+|---|---|---|
+| dflash2, 1 tour, 5 exercices | 231,5 s/exercice | mesuré (à 0,6) |
+| × 225, 1 tour | 14,5 h | extrapolé de 5 |
+| tour 2 sur ~40 % d'échecs | +2,9 h (×0,5) à +5,8 h (×1,0) | **non mesuré** |
+| température 1,0 vs 0,6 | inconnu | **non mesuré** |
+
+**Fourchette 17–23 h, centrale ~19 h**, fin entre 00 h et 06 h le 28/08. Deux
+réserves poussent vers le haut : un PASS coûte 2,3× un FAIL, et le tour 2 fait
+monter le taux. À remesurer sur les 10 premiers exercices du run réel.
+
+## R26g. Trois ratés d'outillage, consignés
+
+1. `Add-Content -Encoding utf8` (PS 5.1) **double-encode** les accents d'un
+   fichier UTF-8 sans BOM. Un append de document passe par les **octets**
+   (`cat >>`), jamais par Get-Content/Add-Content.
+2. Le splat par **tableau** passe en positionnel : `@('-Config','q38-dflash2')`
+   fait prendre `-Config` pour la valeur. Table de hachage obligatoire.
+3. `2>&1` ne capture pas `Write-Host` (flux 6). `*>&1` requis.
