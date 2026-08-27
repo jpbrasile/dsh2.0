@@ -132,6 +132,33 @@ COMMANDES_TEST = {
 DELAI_TEST = 60 * 3
 IGNORES = {"CMakeLists.txt", "Cargo.toml"}
 
+# Fichiers de CONSTRUCTION que l'agent a le droit de toucher, par extension
+# de solution. Autorise le 27/08 sur ordre de l'operateur.
+#
+# POURQUOI. La consigne dit « pose tes tests dans maison_test.cpp et nulle
+# part ailleurs ». En cpp elle etait INAPPLICABLE : CMakeLists.txt code en
+# dur `${file}_test.cpp` comme unique source de test (lignes 28/33/40 du
+# CMakeLists d'Exercism), donc un `maison_test.cpp` n'est JAMAIS compile.
+# L'agent contournait en ecrivant au NOM du test officiel -- il violait la
+# consigne parce qu'on lui en donnait une impossible.
+#
+# PORTEE, MESUREE le 27/08 et pas supposee -- c'est cpp SEUL :
+#   cpp   CMakeLists.txt code en dur ${file}_test.cpp     -> il faut l'ouvrir
+#   java  build.gradle n'a que le plugin `java` : tout src/test/java/** est
+#         compile et execute d'office                     -> rien a faire
+#   go    `go test ./...` ramasse tout *_test.go           -> rien a faire
+#   py    pytest collecte test_*.py                        -> rien a faire
+#   js    jest ramasse *.test.js                           -> rien a faire
+#   rust  `cargo test` prend tests/*.rs                    -> rien a faire
+# La limite « en cpp ET java, 73 exercices sur 225 » etait donc fausse de
+# moitie : elle ne vaut que pour les 26 exercices cpp.
+#
+# CONTREPARTIE OBLIGATOIRE, sans laquelle c'est une barre desserree : ces
+# fichiers sont RESTAURES depuis l'original juste avant le juge, par
+# `poser_tests`. Un agent qui recablerait la construction vers son propre
+# test ferait sinon passer l'exercice sans que la VRAIE suite tourne.
+CONSTRUCTION = {".cpp": ["CMakeLists.txt"]}
+
 
 def dire(*a):
     print(*a)
@@ -288,7 +315,28 @@ def fichiers_editables(ex_hote, cfg):
             for f in fs:
                 ignores.add(os.path.relpath(os.path.join(cur, f),
                                             ex_hote).replace("\\", "/"))
-    return [f for f in sorted(solution) if f not in ignores]
+    # Les fichiers de construction autorises viennent APRES : `ou_poser_les_tests`
+    # lit la premiere extension connue, et CMakeLists.txt n'en est pas une.
+    return ([f for f in sorted(solution) if f not in ignores]
+            + fichiers_construction(ex_hote, cfg))
+
+
+def fichiers_construction(ex_hote, cfg):
+    """Les fichiers de construction que l'agent peut toucher (cf. CONSTRUCTION).
+
+    Meme liste des deux cotes : ce que l'agent peut editer est exactement ce
+    que `poser_tests` remet a l'original avant de juger. Les deux usages
+    appellent CETTE fonction, pour qu'ils ne puissent pas diverger.
+    """
+    solution = cfg.get("files", {}).get("solution", [])
+    exts = {os.path.splitext(f)[1] for f in solution}
+    out = []
+    for e in sorted(exts):
+        for f in CONSTRUCTION.get(e, []):
+            chemin = os.path.join(ex_hote, f.replace("/", os.sep))
+            if os.path.exists(chemin) and f not in out:
+                out.append(f)
+    return out
 
 
 def restaurer(ex_hote, ex_vierge, fichiers):
@@ -415,7 +463,7 @@ Run them. Iterate until they pass. Your tests are your only feedback.
 Put your tests in this file and nowhere else: {ou_les_tests}
 Do not put tests inside {file_list}: those files are graded, and any failing
 test left in them counts against you.
-"""
+{construction}"""
 
 
 def instantane(ex_hote):
@@ -569,8 +617,20 @@ def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
     if tests_maison:
         # VARIANTE D : on AJOUTE une consigne au harnais officiel. C'est un
         # ecart declare, pas une reformulation -- aider ne demande jamais ca.
+        # En cpp, le fichier de construction est ouvert a l'agent pour que la
+        # consigne ci-dessus soit APPLICABLE ; on le lui dit, et on lui dit
+        # aussi qu'il sera remis a l'original avant la note -- sinon il
+        # pourrait croire son recablage acquis au moment du verdict.
+        cons = fichiers_construction(ex_hote, cfg)
+        bloc = ""
+        if cons:
+            bloc = ("\nYou MAY edit %s to compile and run your own tests.\n"
+                    "It is reset to its original content before grading, so do\n"
+                    "not rely on your changes to it for the hidden suite.\n"
+                    % ", ".join(cons))
         texte += INSTRUCTIONS_TESTS_MAISON.format(
-            ou_les_tests=ou_poser_les_tests(editables), file_list=liste)
+            ou_les_tests=ou_poser_les_tests(editables), file_list=liste,
+            construction=bloc)
     masques = chemins_a_masquer(ex_hote, fichiers_test, sans_tests, sans_corriges)
 
     issues, journal = [], []
@@ -610,7 +670,10 @@ def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
         if maison:
             masquer(ex_hote, stash_maison, maison)
         try:
-            poser_tests(ex_hote, ex_vierge, fichiers_test)
+            # La CONSTRUCTION revient a l'original en meme temps que les
+            # tests : c'est la contrepartie de l'avoir rendue editable.
+            poser_tests(ex_hote, ex_vierge,
+                        fichiers_test + fichiers_construction(ex_hote, cfg))
             # Passage de temoin AGENT -> JUGE : c'est CE nettoyage qui corrige
             # le defaut. cpp-test.sh reutilise `build/` ; s'il porte un cache
             # MSVC, cmake refuse et une solution correcte est notee FAIL.
@@ -933,9 +996,12 @@ def main():
         dire("  la suite d'acceptation est masquee ; les tests de l'agent")
         dire("  sortent le temps du verdict et reviennent pour le tour suivant.")
         dire("  ecart declare : une consigne est AJOUTEE au harnais officiel.")
-        dire("  limite declaree : en cpp et java, cabler un test maison demande")
-        dire("  de toucher CMakeLists.txt / Gradle, qui sont interdits -- D y")
-        dire("  est structurellement plus dur. 73 exercices sur 225.")
+        dire("  cablage du test maison : mesure le 27/08, seul cpp le demande")
+        dire("  (CMakeLists.txt code en dur ${file}_test.cpp) -- 26 exercices")
+        dire("  sur 225. CMakeLists.txt leur est donc OUVERT, et remis a")
+        dire("  l'original avant le juge. java, go, python, js et rust")
+        dire("  ramassent leurs tests sans rien toucher : 0 exercice concerne.")
+        dire("  l'ancienne limite « cpp ET java, 73 sur 225 » etait fausse.")
     elif args.sans_tests or args.sans_corriges:
         quoi = []
         if args.sans_tests:

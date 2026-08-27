@@ -861,3 +861,81 @@ distinctes désormais nommées :
   un témoin séquentiel — sans quoi les deux séries ne se comparent pas.
 - **Publier la variante D avec ses trois limites** (ci-dessus) et le témoin
   officiel à côté, jamais le chiffre D seul.
+
+---
+
+# Révision du 27/08/2026, 05:50 — R24 : B6 est dimensionné (**≈ 20 h**) et le câblage cpp est ouvert
+
+## R24a. Le dimensionnement est rendu
+
+`pi_dimD2`, 5 exercices, variante D, `--tours 1`, laisse 1 800 s :
+
+| langue | exercice | verdict | s |
+|---|---|---|---|
+| cpp | gigasecond | **PASS** | 459,7 |
+| go | simple-linked-list | FAIL | 141,1 |
+| java | sgf-parsing | FAIL | 372,4 |
+| javascript | say | FAIL | 105,2 |
+| python | two-bucket | **PASS** | 495,7 |
+
+**1 574,1 s (26,2 min), moyenne 314,8 s.** Donc :
+
+    225 x 314,8 s = 19,7 h
+
+**L'intervalle 8 h – 53 h du plan se referme sur ≈ 20 h.** Une nuit et une
+matinée : B6 est finançable en une seule passe.
+
+**Le taux joue dans le mauvais sens** — un PASS coûte 2,3× un FAIL (477,7 s
+contre 206,2 s). À 52 % de réussite le run monterait à **21,7 h**. Fourchette
+retenue pour la planification : **20 à 22 h**.
+
+Ce 2/5 **n'est pas un `pass_rate`** et ne sera pas publié comme tel : 5 exercices
+n'en rendent pas un. C'est une durée.
+
+## R24b. Deux des trois échecs sont du protocole, pas du modèle
+
+| exercice | cause | imputable à |
+|---|---|---|
+| java/sgf-parsing | 368 s de délibération, **rien écrit** dans le fichier noté | **le modèle** |
+| javascript/say | **14/16** passent (vérifié par exécution) ; échec sur le littéral `Number must be between 0 and 999,999,999,999.`, présent seulement dans la spec cachée | **R22** |
+| go/simple-linked-list | logique juste, `Push` empile en tête là où le test l'exige en fin | **R22** |
+
+R22 se confirme donc sur deux exercices supplémentaires, et sous sa forme la plus
+dure : un **littéral à reproduire au caractère près**. Le juge un-skippe tout
+(`npm-test.sh` : `sed -i 's/\bxtest(/test(/g'`), donc ces tests-là comptent.
+
+**Conséquence de planification** : le taux que rendra B6 en variante D sera
+mécaniquement inférieur au banc officiel, d'une quantité qu'on ne sait pas
+chiffrer. Publier le témoin officiel à côté n'est pas une politesse, c'est la
+seule façon de rendre le chiffre lisible.
+
+## R24c. `CMakeLists.txt` ouvert en cpp — sur ordre de l'opérateur
+
+La consigne « pose tes tests dans `maison_test.cpp` et nulle part ailleurs » était
+**inapplicable** : `CMakeLists.txt` code en dur `${file}_test.cpp` comme unique
+source de test. L'agent contournait en écrivant au nom du test officiel.
+
+Portée **lue dans les fichiers de construction** : **cpp seul, 26 exercices**.
+java (`build.gradle` = plugin `java`), go, python, js et rust ramassent leurs
+tests sans rien toucher. **La limite « cpp ET java, 73 sur 225 » était fausse de
+moitié** ; bannière corrigée.
+
+`CONSTRUCTION = {".cpp": ["CMakeLists.txt"]}` + **contrepartie obligatoire** :
+`poser_tests` remet le fichier à l'original **juste avant le juge**. Les deux
+côtés appellent la même fonction. Sans cette moitié, un recâblage vers le test
+maison ferait passer l'exercice sans que la vraie suite tourne — barre
+desserrée, pas mesure.
+
+**Écart supplémentaire à déclarer au livrable 1** : en cpp, l'agent peut éditer
+`CMakeLists.txt` pendant son tour. Il ne peut pas s'en servir pour la note.
+
+## R24d. Ce que B6 attend encore
+
+1. **Décider la population** : les 225, ou le lot de test disjoint du `--decalage`
+   (le SPLIT est déjà câblé). Les 225 coûtent 20–22 h.
+2. **Rejouer un dimensionnement après l'ouverture cpp** ? Non — l'ouverture ne
+   change pas la durée (l'agent écrivait déjà ses tests, au mauvais nom). Le
+   chiffre de 314,8 s tient.
+3. **Ordre** : B6 après le bras GPQA, tranché par l'opérateur. Le bras est reparti
+   (PID 37012, 114 enregistrements conservés) ; il lui reste ~84 appels, soit
+   ~7 h. B6 démarrerait donc vers 13 h pour finir vers 9 h le lendemain.

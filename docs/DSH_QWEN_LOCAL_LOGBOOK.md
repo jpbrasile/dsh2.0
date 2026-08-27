@@ -4167,3 +4167,98 @@ le silence ressemblait à un échec. Filtre corrigé. Consigné parce que c'est
 exactement la faute que le mode d'emploi du moniteur décrit : « si ce processus
 plantait maintenant, mon filtre émettrait-il quelque chose ? » — ici la question
 symétrique, « et s'il réussissait ? », n'avait pas été posée.
+
+## 27/08 05:50 — Le dimensionnement est rendu : **≈ 20 h** pour les 225, et les 5 verdicts disent pourquoi
+
+### La mesure
+
+`pi_dimD2`, variante D, `--tours 1`, laisse 1 800 s, `specdec-q38-plain`,
+5 exercices tirés à `--pas 45 --decalage 10`.
+
+| langue | exercice | verdict | secondes |
+|---|---|---|---|
+| cpp | gigasecond | **PASS** | 459,7 |
+| go | simple-linked-list | FAIL | 141,1 |
+| java | sgf-parsing | FAIL | 372,4 |
+| javascript | say | FAIL | 105,2 |
+| python | two-bucket | **PASS** | 495,7 |
+
+**5 joués, 2 passés, 1 574,1 s au total — 26,2 min.** Moyenne **314,8 s** par
+exercice.
+
+### Le chiffre qui manquait
+
+    225 x 314,8 s = 70 830 s = 19,7 h
+
+Le plan encadrait entre **8 h et 53 h** — un intervalle sur lequel aucune
+décision ne se prend. Il se referme sur **≈ 20 h** : une nuit et une matinée.
+
+**Sensibilité au taux, parce qu'elle joue dans le mauvais sens.** Un PASS coûte
+**2,3×** un FAIL : 477,7 s de moyenne (n=2) contre 206,2 s (n=3). Un taux plus
+élevé rend donc le run **plus long**, pas plus court.
+
+| taux supposé | durée/exercice | 225 exercices |
+|---|---|---|
+| 40 % (celui de l'échantillon) | 314,8 s | **19,7 h** |
+| 52 % (`pass_rate_2` de 7quater) | 347,4 s | **21,7 h** |
+
+Fourchette de travail : **20 à 22 h**.
+
+### Ce que ce 2/5 n'est pas
+
+**Ce n'est pas un `pass_rate`.** Cinq exercices n'en rendent pas un, et le plan
+le disait avant la mesure. Il est publié comme durée, et rien d'autre.
+
+Et il est en plus **déprimé par le protocole** : sur les trois échecs, **un seul**
+tient au modèle sur le fond.
+
+| exercice | ce qui s'est passé | imputable à |
+|---|---|---|
+| java/sgf-parsing | 368 s de délibération, **rien écrit** dans le fichier noté ; il essayait de se *souvenir* du test caché | **le modèle** |
+| javascript/say | **14 tests sur 16 passent** (vérifié par exécution). Les 2 échecs : le message d'erreur exact `Number must be between 0 and 999,999,999,999.`, littéral qui n'existe que dans la spec cachée | **le protocole (R22)** |
+| go/simple-linked-list | logique juste, mais `Push` empile **en tête** quand le test le veut **en fin** — convention écrite nulle part de lisible | **le protocole (R22)** |
+
+### Le câblage du test maison est ouvert en cpp — sur ordre, et avec sa contrepartie
+
+Constat : la consigne « pose tes tests dans `maison_test.cpp` et nulle part
+ailleurs » était **inapplicable**. `CMakeLists.txt` code en dur `${file}_test.cpp`
+comme unique source de test — un `maison_test.cpp` n'est jamais compilé. L'agent
+contournait en écrivant **au nom du test officiel**. Il désobéissait à une
+consigne impossible.
+
+Portée **lue dans les fichiers de construction, pas supposée** :
+
+| langue | ce que la construction ramasse | ouverture nécessaire |
+|---|---|---|
+| **cpp** | `${file}_test.cpp` en dur | **oui — 26 exercices** |
+| java | `build.gradle` = plugin `java` seul, tout `src/test/java/**` | non |
+| go | `go test ./...` | non |
+| python | `pytest` collecte `test_*.py` | non |
+| javascript | jest ramasse `*.test.js` | non |
+| rust | `cargo test` prend `tests/*.rs` | non |
+
+**La limite déclarée « en cpp ET java, 73 exercices sur 225 » était fausse de
+moitié.** Elle vaut **26**, cpp seul. Bannière corrigée. C'est la troisième
+mauvaise attribution à java de la journée (après 26/47 stubs muets, corrigé à
+0/47) : le motif est constant — je supposais une contrainte java au lieu de lire
+son fichier de construction.
+
+`CONSTRUCTION = {".cpp": ["CMakeLists.txt"]}`, et **la contrepartie sans laquelle
+ce serait une barre desserrée** : `poser_tests` remet `CMakeLists.txt` à
+l'original **juste avant le juge**, exactement comme les fichiers de test. Un
+agent qui recâblerait la construction vers son propre test ferait sinon passer
+l'exercice sans que la vraie suite tourne. Les deux côtés — ce que l'agent peut
+éditer, ce qui est restauré — appellent **la même fonction**, pour qu'ils ne
+puissent pas diverger. L'agent en est informé dans sa consigne.
+
+Contrôle sur exercices réels :
+
+    cpp/gigasecond      editables : gigasecond.cpp, gigasecond.h, CMakeLists.txt
+                        construction : CMakeLists.txt
+    java/sgf-parsing    construction : (aucune)
+    go/simple-linked-l. construction : (aucune)
+
+### État à la sortie
+
+Le lanceur a fait sa remise en état : bras GPQA relancé (PID 37012), 114
+enregistrements conservés.
