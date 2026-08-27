@@ -1,0 +1,12 @@
+
+> test
+> jest ./*
+
+PASS ./maison.test.js
+PASS ./meetup.spec.js
+
+Test Suites: 2 passed, 2 total
+Tests:       163 passed, 163 total
+Snapshots:   0 total
+Time:        3.124 s
+Ran all test suites matching ./LICENSE|./TASK.md|./babel.config.js|./maison.test.js|./meetup.js|./meetup.spec.js|./node_modules|./package-lock.json|./package.json.
