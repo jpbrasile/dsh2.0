@@ -6653,3 +6653,145 @@ sans `.dsh.results.json`, et une copie par `*` les saute silencieusement — j'a
 lu pendant plusieurs minutes une sortie perimee en croyant sonder) ; et la
 sortie reelle du juge doit etre sauvegardee avant la sonde, puisque
 `rejuger.py` ecrit au meme chemin.
+
+---
+
+## R30 — 27/08 au soir : le red team casse ma regle de sonde, la cellule est remesuree, et javascript revient a parite
+
+### 1. La trouvaille HIGH est juste, et elle porte sur mon instrument
+
+Le red team GLM-5.3 (`redteam/sonde-adaptateur-27-08.md`, 66 appels, 2 049 s)
+a attaque la sonde d'adaptateur. Une trouvaille HIGH, et je l'accepte sans
+discussion parce qu'elle me coute :
+
+> **rational-numbers** : la substitution remplace le corps de retour de `exp`
+> par un appel a une autre formule. Intention defendable, mais la regle L6573
+> l'interdit mot pour mot.
+
+C'est exact. R29 ecrit : « Ce qui est interdit : toucher une comparaison, une
+borne, un tri, **une formule**. » Et la sonde de `java/rational-numbers`
+remplace bien `Math.pow(num, e) / Math.pow(den, e)` par `expOf(exponent)`.
+Que la cible soit une methode que l'AGENT a ecrite et que je n'ai pas touchee
+ne change rien a la lettre de la regle.
+
+### 2. La regle, recrite en deux classes au lieu d'une
+
+Plutot que d'elargir la regle en silence pour y faire entrer le cas qui
+m'arrange — exactement la derive reprochee sur `java/poker` —, je la coupe en
+deux, et la seconde classe est declaree plus faible que la premiere.
+
+**Classe A — sonde d'adaptateur.** UNE substitution portant sur la lecture de
+l'entree ou sur la FORME de la sortie : nom de cle, casse, separateur,
+notation, structure de retour. Aucune expression calculee n'est touchee.
+C'est la sonde forte. Sept cas : killer-sudoku-helper, palindrome-products,
+meetup, grep, grade-school, rest-api, variable-length-quantity, forth.
+
+Le red team releve en MEDIUM que quatre de ces sondes portent sur la SORTIE et
+non sur « la lecture de l'entree ». La clause « ou la convention en cause » les
+couvrait, mais la frontiere n'etait pas ecrite. Elle l'est maintenant : entree
+ET forme de sortie sont dans la classe A ; le calcul n'y est jamais.
+
+**Classe B — sonde d'aiguillage.** L'agent a implemente PLUSIEURS operations,
+chacune exacte, et n'avait qu'a deviner laquelle un nom unique du stub designe.
+La substitution ne cree aucune logique : elle rebranche le nom sur l'une des
+implementations de l'agent, non modifiee. C'est une sonde plus faible, parce
+qu'elle suppose etabli que les deux implementations sont justes — ce qui se
+verifie separement, ou pas du tout.
+
+Un seul cas : `java/rational-numbers`, ou l'agent avait ecrit `exp` (r^x) ET
+`expOf` (x^r), et ou le stub n'offre qu'une methode. **Ce resultat se cite
+comme classe B, jamais melange aux sept autres.**
+
+### 3. Deux corrections de compte, a moi
+
+- **R29 disait « sept entrees non sondees ».** Faux : cinq reelles, et j'y
+  comptais `custom-set` qui n'est pas de la meme famille tout en omettant
+  `variable-length-quantity`. Le red team a raison sur l'arithmetique. La
+  limite est de toute facon eteinte par les faits : les dix sont sondees.
+- **Le libelle du confondu `ledger` est faux dans mes textes.** J'ecrivais
+  « leur suite est dans le fichier de solution ». C'est la SOLUTION DE
+  REFERENCE qui est semee dans le stub, pas la suite de tests. L'exclusion
+  reste justifiee ; sa raison etait mal dite.
+
+### 4. La copie de sonde : LOW confirme sur pieces
+
+`killer-sudoku-helper` : la copie a perdu six fichiers — `.eslintrc`, `.npmrc`,
+`.docs/instructions.md`, `.meta/config.json`, `.meta/tests.toml`,
+`.meta/proof.ci.js`. Tous inertes pour le juge. Et le dernier merite d'etre
+nomme : `.meta/proof.ci.js` est **la solution de reference**. Son absence de la
+copie ne peut que durcir la sonde. Les neuf autres copies sont rigoureusement
+identiques au run.
+
+La regle se lit desormais « copie INTEGRALE, fichiers caches compris ».
+
+### 5. La jurisprudence `meetup`, ecrite au lieu d'etre sous-entendue
+
+Le red team demande que la faiblesse litterale de `meetup` soit inscrite comme
+regle et non laissee implicite. Elle l'est :
+
+> **La majuscule d'un nom propre dans une phrase anglaise n'est pas une
+> specification de format de chaine.** Un enonce qui ecrit « the first Friday
+> of next month » l'ecrirait identiquement si l'argument attendu etait
+> `'friday'`, `'FRIDAY'` ou l'entier 5. Cette lecture vaut pour tous les
+> exercices ou une valeur apparait UNIQUEMENT dans la prose narrative. Elle NE
+> vaut PAS quand la valeur apparait dans un bloc de code, un tableau ou un
+> schema de sortie — voir `javascript/queen-attack`, ou le plateau attendu est
+> DESSINE en majuscules dans un bloc `text` et ou l'exercice part donc en
+> `fond`.
+
+### 6. La cellule, remesuree ce soir
+
+Le red team a mesure pendant que le run avancait, et donne
++14,9 (n = 94, p = 0,024). J'ai remesure apres : les deux chiffres sont vrais
+a des instants differents. L'instant de lecture est **147 exercices juges sur
+225**, `comparer_protocoles.py pi_D_t1_dflash2 2026-08-25-11-54-27--dsh-q8q4-160k-dflash2`.
+
+| cellule | n | D | board | ecart | b/c | p |
+|---|---|---|---|---|---|---|
+| zero exclusion | 141 | 50,4 % | 17,7 % | +32,6 | 57/11 | ~0 |
+| hors fuite F1 | 122 | 46,7 % | 17,2 % | +29,5 | 46/10 | ~0 |
+| **publiable** | **99** | **34,3 %** | **18,2 %** | **+16,2** | **26/10** | **0,011** |
+
+Par piste, cellule publiable :
+
+| piste | n | D | board | ecart |
+|---|---|---|---|---|
+| go | 20 | 55,0 % | 20,0 % | +35,0 |
+| java | 44 | 31,8 % | 11,4 % | +20,5 |
+| javascript | 35 | 25,7 % | 25,7 % | **+0,0** |
+
+**Ce qui a bouge depuis R28z** (+16,5 a n = 79) :
+
+- l'ecart global tient a **+16,2** avec vingt exercices de plus, et le p passe
+  de 0,024 a **0,011** ;
+- **javascript est remonte de -20,0 (n = 15) a exactement 0,0 (n = 35)**, neuf
+  reussites de chaque cote. Le red team, a n = 30, mesurait -6,7 : meme
+  direction, run moins avance. Le deficit javascript de R28z etait un effet de
+  petit n. **La phrase de R29 point 2 — « la piste des trois PASS est celle ou
+  l'agent PERD » — est donc perimee et doit etre retiree de toute
+  publication.** Elle etait vraie a n = 15 ; elle ne l'est plus.
+
+### 7. Trois chiffres qui ne sont pas des echecs de contenu
+
+Sur les echecs juges, la separation a ete faite et elle change ce qui se
+classe :
+
+- **5 coupes** — l'agent n'a jamais rendu : `cpp/parallel-letter-frequency`
+  (1 150 s), `go/octal` (636 s), `java/connect` (838 s),
+  `java/tree-building` (699 s), `javascript/connect` (767 s).
+- **1 panne d'infra** — `go/palindrome-products` : `toolchain not available`,
+  le conteneur du juge n'a pas pu telecharger go1.24.
+- Verifie : **aucune** des 57 entrees classees avant cette separation n'etait
+  une coupe ou une panne. Le fichier de classement etait propre.
+
+**`go/octal` merite sa ligne.** Le fichier de l'agent est identique octet pour
+octet au stub vierge. Or ce stub declare
+
+    func ParseOctal(input string, expectedNum int64, expectErr bool)
+
+sans valeur de retour, tandis que `octal_test.go:21` appelle
+`ParseOctal(test.input)` et en attend deux. **L'exercice est inpassable en
+aveugle** : respecter le seul contrat visible garantit l'echec de compilation.
+Confondu structurel, a declarer comme tel — au meme titre que
+`javascript/resistor-color-trio`, dont le stub declare `label()` methode quand
+la suite lit `.label` propriete.
