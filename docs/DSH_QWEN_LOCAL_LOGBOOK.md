@@ -4892,3 +4892,47 @@ chien et le tueur restent éprouvés au banc seulement.
 commandes d'agent — ce sont mes propres guetteurs en `sleep 60`, parent
 `claude`, 0 s de CPU, sur un journal `..._b.log` qui n'existe plus. Sans effet
 sur la mesure.
+
+### 27/08 11:00 — Le tueur de boîtes a mordu cinq fois en conditions réelles
+
+R28e portait la réserve : « aucune coupure sur silence **ni boîte tuée** n'est
+encore survenue en conditions réelles ». **La moitié de cette réserve tombe.**
+
+    41:   BOITE DE DIALOGUE tuee : PID 52048 « Microsoft Visual C++ Runtime Library » (descendant de l'agent 37868)
+    42:   BOITE DE DIALOGUE tuee : PID 62056 « Microsoft Visual C++ Runtime Library » (descendant de l'agent 37868)
+    43:   BOITE DE DIALOGUE tuee : PID 65520 « Microsoft Visual C++ Runtime Library » (descendant de l'agent 37868)
+    44:   BOITE DE DIALOGUE tuee : PID 56112 « Microsoft Visual C++ Runtime Library » (descendant de l'agent 37868)
+    45:   BOITE DE DIALOGUE tuee : PID 60460 « Microsoft Visual C++ Runtime Library » (descendant de l'agent 37868)
+
+`cpp/spiral-matrix`, tour 1 démarré **10:57:57**. Cinq boîtes du CRT MSVC en
+quelques minutes — exactement celle que l'opérateur signalait (« abandon,
+retry »), titre pour titre.
+
+#### Ce que ça prouve, et ce que ça ne prouve pas
+
+**Prouvé** : la condition de descendance tient sur un cas réel. Les cinq PID
+tués sont bien des descendants de l'agent du tour ; les **9 fenêtres de
+l'opérateur** (Chrome, VS Code, Docker, FreeLLMAPI, Notepad, NVIDIA, Taskmgr,
+TextInputHost, Word) sont **toutes vivantes** après coup, et il ne reste
+**aucune** fenêtre `#32770` ouverte.
+
+**Prouvé aussi, et c'est le point qui compte** : l'agent **37868 est toujours
+vivant à 11:00:51**, trois minutes après la première boîte. Il a encaissé les
+cinq et continue. C'est le comportement visé : le binaire planté rend un code
+non nul, `bash` reprend la main, et l'agent **voit** que son test a planté au
+lieu d'attendre un clic qui ne viendra jamais.
+
+**Non prouvé** : le gain en temps n'est pas chiffré. Sans le tueur, la première
+boîte aurait tenu le tour jusqu'à la laisse (1 800 s) ; avec, le tour travaille
+encore. Le chiffre ne sera bon qu'à la fin du tour, et il ne sera pas apparié.
+
+**Toujours non prouvé** : aucune ligne `COUPE : silence`. Le chien de garde
+reste éprouvé au banc seulement — aucun tour 1 n'a pendu depuis le correctif
+(21 résultats, plus long tour 1 **525,0 s**, 0 coupé).
+
+#### Ce que ça dit du diagnostic R28a
+
+Les deux causes étaient bien réelles et **indépendantes** : la boîte MSVC frappe
+`spiral-matrix` sans qu'aucune commande non bornée soit en cause, et le `find /`
+non borné a pendu `parallel-letter-frequency` sans qu'aucune boîte soit
+ouverte. Un seul des deux correctifs n'aurait couvert que la moitié des cas.
