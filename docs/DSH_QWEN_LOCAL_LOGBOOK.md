@@ -5012,3 +5012,115 @@ Rappel : le carnet (ligne 4155) interdisait déjà la comparaison au
 **Celle-ci est une quatrième**, et elle joue dans l'autre sens : les trois
 premières rendent D **plus dure**, celle-ci rend son `pass_rate_2` **plus
 facile** qu'annoncé.
+
+---
+
+### R28i — deux FAIL go analysés : l'un est faux, l'autre est vrai et instructif
+
+Sur ordre de l'opérateur (« alphametics FAIL 75,5 s, beer-song FAIL 55,4 s :
+tu analyses ? »), les deux premiers verdicts du run à 1 tour ont été
+**rejoués à la main** contre la suite officielle. Ils n'ont rien en commun.
+
+#### go/alphametics — le FAIL est FAUX, et c'est le banc qui l'a produit
+
+Rejeu du juge officiel, `maison_test.go` écarté :
+
+```
+ok  	alphametics	5.103s
+```
+
+La solution de l'agent est **juste**. Le verdict enregistré est un artefact.
+
+Chaîne causale, vérifiée ligne à ligne :
+
+1. `pilote.py:845` `restaurer(ex_hote, ex_vierge, editables)` ne remet à neuf
+   que les **éditables** — pas le répertoire.
+2. `pilote.py:880` prend l'instantané `avant` **après** cette restauration.
+3. `reparer_amputes.py --appliquer`, lancé par moi juste avant la relance,
+   avait remis en place les 5 fichiers en souffrance de go/alphametics, dont
+   le `maison_test.go` du run interrompu.
+4. Ce fichier était donc **déjà dans `avant`** → `tests_de_l_agent` ne l'a pas
+   vu comme neuf → il n'a **pas** été écarté avant le verdict.
+5. `go test ./...` a compilé le `maison_test.go` de l'agent **avec** la suite
+   officielle. Les deux déclarent `func TestSolve` dans le paquet
+   `alphametics` : erreur de compilation, FAIL en ~0,5 s.
+
+C'est bien la signature qui avait mis la puce à l'oreille : `duration` 75,5 s
+pour un tour de 75,0 s, soit un juge qui rend son verdict en une demi-seconde
+— une suite go qui tourne vraiment met 5 s.
+
+**Portée mesurée, et elle est close** (`exposition_maison.py`) :
+
+```
+deja juges              : 29
+pas juges, sans maison  : 195  (sains)
+pas juges, AVEC maison  : 0  <- EXPOSES
+corpus vierge : 0 fichier(s) maison qui traine(nt)
+```
+
+Un seul exercice touché sur 225, et il l'a été parce que **j'ai** réparé un
+stash avant de relancer. Aucun des 195 restants n'est exposé.
+
+**Correctif** (`tests_de_l_agent`) : le fichier maison est désormais écarté
+**même s'il n'est pas neuf**. Son chemin est connu d'avance (`OU_LES_TESTS`) ;
+faire dépendre son retrait d'une comparaison d'instantanés était le défaut.
+Vérifié : `avant` contenant déjà `maison_test.go` → sortants
+`['alphametics_test.go', 'maison_test.go']`.
+
+#### go/beer-song — le FAIL est VRAI, et tient à un seul « \n »
+
+```
+--- FAIL: TestSeveralVerses/multiple_verses
+     got:"…5 bottles of beer on the wall.\n"
+    want:"…5 bottles of beer on the wall.\n\n"
+```
+
+Tout le reste passe : les 5 cas de `Verse` (8, 3, 2, 1, 0, y compris les
+irrégularités « 1 bottle » et « Take it down ») et les 2 cas d'erreur. Le
+défaut est unique et entier : `Verses` ne pose pas de ligne vide **après le
+dernier** couplet.
+
+Or l'énoncé ne le dit pas, et **suggère le contraire** : il affiche la chanson
+rendue, où le dernier couplet n'est évidemment suivi d'aucune ligne vide.
+Rien n'y décrit la forme du retour de `Verses(start, stop)`.
+
+#### Ce que beer-song apprend sur la partition figée : un TROISIÈME biais
+
+`go/beer-song` est classé **AUTO-SUFFISANT**. Le critère cherche si l'énoncé
+cite un identifiant du stub ; « Note that not all **verses** are identical »
+suffit à faire passer `Verse`. Mais la convention muette ici n'est pas un
+identifiant — c'est la **forme de la valeur de retour**.
+
+Le fichier figé nomme deux biais, tous deux sur les identifiants :
+sous-compte (`go/simple-linked-list`) et sur-compte (`cpp/gigasecond`). En
+voici un troisième, d'une autre nature : **le critère ne peut par construction
+rien dire des conventions de format** — séparateur final, ordre, casse,
+arrondi. Aucun réglage de seuil ne l'atteindra ; `durcir_le_critere.py` non
+plus. C'est une limite de l'instrument, pas de son calibrage. Elle s'inscrit
+ici et non dans le JSON figé : la partition ne se réécrit pas.
+
+#### Second défaut trouvé au passage : un FAIL ne disait pas pourquoi
+
+`journal.append` ne gardait du verdict qu'un booléen `ok`. À 2 tours la sortie
+du juge repartait dans la consigne du tour suivant, donc restait lisible ; à
+**1 tour** elle était calculée puis **jetée** (`pilote.py:960`, `texte` mort).
+Il a fallu rejouer le juge à la main pour apprendre les deux diagnostics
+ci-dessus.
+
+Corrigé : le journal porte désormais `erreurs` (queue de 3 000 caractères).
+
+**Non appliqué au run en cours**, et c'est délibéré : le pilote 64844 a chargé
+son module, le corriger demanderait de le tuer. Ce n'est pas nécessaire — la
+raison d'un échec est **reconstructible après coup**, le répertoire de
+l'exercice conservant la solution de l'agent et la suite officielle remise en
+place. `rejouer_juge_go.sh` l'a fait deux fois aujourd'hui. Le classement des
+échecs se paiera d'une passe de rejeu en fin de run, pas d'un redémarrage.
+
+#### Compte rendu honnête de l'état
+
+`stat_pass.py` affiche go à `pass_1 33,3 %` (1/3). Le vrai chiffre est
+**2/3** : alphametics passe. Le fichier `.dsh.results.json` de go/alphametics
+porte toujours `tests_outcomes [false]` — **il n'a pas été édité**. Un
+résultat ne se corrige pas à la main ; soit l'exercice est rejoué proprement,
+soit le faux FAIL est publié avec ce paragraphe. Le choix revient à
+l'opérateur.

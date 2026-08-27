@@ -725,11 +725,25 @@ def tests_de_l_agent(ex_hote, avant, editables):
     est execute par `cargo test` et ne peut pas etre retire sans reecrire le
     fichier juge. La consigne demande explicitement de poser les tests dans
     tests/ ; si l'agent desobeit, l'echec lui est imputable et reste visible.
+
+    LE FICHIER MAISON EST RETIRE MEME S'IL N'EST PAS NEUF. Mesure du 27/08 sur
+    go/alphametics : `avant` est pris APRES `restaurer`, qui ne remet a neuf
+    que les EDITABLES. Un `maison_test.go` laisse par un run interrompu (ici
+    remis en place par `reparer_amputes.py`) etait donc deja dans `avant`, n'a
+    pas ete vu comme neuf, et a ete compile avec la suite officielle : deux
+    `func TestSolve` dans le meme paquet, erreur de compilation, FAIL en 0,5 s.
+    Le rejeu du juge sans ce fichier rend `ok alphametics 5,103s` -- la
+    solution etait juste. Le chemin maison est CONNU (`OU_LES_TESTS`) : on ne
+    fait donc pas dependre son retrait d'une comparaison d'instantanes.
     """
     apres = instantane(ex_hote)
     edit = {e.replace("\\", "/") for e in editables}
     neufs = [f for f in sorted(apres - avant) if f not in edit]
-    return [f for f in neufs if any(re.search(m, f) for m in MOTIFS_TEST)]
+    sortants = [f for f in neufs if any(re.search(m, f) for m in MOTIFS_TEST)]
+    maison = ou_poser_les_tests(editables).replace("\\", "/")
+    if maison in apres and maison not in edit and maison not in sortants:
+        sortants.append(maison)
+    return sortants
 
 
 def ou_poser_les_tests(editables):
@@ -940,7 +954,16 @@ def un_exercice(ex_hote, ex_vierge, cmd_dsh, env, tours, delai_tour,
                         # sans dire pourquoi : il a fallu relancer dsh a la main
                         # pour lire « MISSING_CREDENTIAL ». Un banc doit porter
                         # sa propre explication.
-                        "sortie_queue": (sortie or "")[-600:]})
+                        "sortie_queue": (sortie or "")[-600:],
+                        # LE VERDICT DIT POURQUOI. A 2 tours, la sortie du juge
+                        # repartait dans la consigne du tour suivant et etait
+                        # donc lisible ; a 1 tour elle etait calculee puis
+                        # jetee, et chaque FAIL perdait sa raison. Mesure du
+                        # 27/08 : il a fallu rejouer le juge a la main pour
+                        # apprendre que go/beer-song echoue sur un unique
+                        # « \n » final. Sans ce champ, classer 225 echecs
+                        # demande 225 rejeux.
+                        "erreurs": (erreurs or "")[-3000:]})
         if erreurs is None:
             break
         texte = erreurs + TEST_FAILURES.format(file_list=liste)
