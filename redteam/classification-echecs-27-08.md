@@ -60,3 +60,47 @@ Une seule erreur dans le sens du narratif (pig-latin), une seule dans l'autre se
 ## Decision humaine
 
 _(a remplir : pour chaque trouvaille HIGH, « corrige dans <commit> » ou « acceptee : <raison> »)_
+
+## Suites donnees par l'agent (27/08) -- EN ATTENTE DE REVUE HUMAINE
+
+La section « Decision humaine » ci-dessus reste vide : elle appartient a
+l'operateur. Ce qui suit est ce que l'agent a fait de chaque trouvaille, pour
+que la decision porte sur des faits verifiables et non sur une promesse.
+
+| trouvaille | suite donnee | commit |
+|---|---|---|
+| **1 HIGH** go/pig-latin | **CORRIGE** — reclasse `fond`. Verifie sur piece : `cases_test.go:104-106` porte `description: "y is treated like a consonant at the beginning of a word"` et est declare sous `files.editor`, donc visible pendant le tour. Le point aggravant est accepte : balayage systematique des 4 entrees `ambiguite` dont un fichier de test etait visible. | `msg8` |
+| — relecture go/connect | **CONFIRMEE** — `cases_test.go` : aucune manipulation d'espaces (`grep Replace\|TrimSpace\|strings.\|Fields` vide). Le strip vit dans `connect_test.go`, bien masque. | idem |
+| — relecture go/poker | **CONFIRMEE** — `cases_test.go` : aucun champ d'erreur. | idem |
+| — relecture java/satellite | **CONFIRMEE** — non traitee par le red team, faite ici. `TreeTest.java`, 44 lignes lues : ne teste que les parcours ; aucune occurrence de `IllegalArgument`, `Exception`, `different`, `length`, `inconsistent`. | idem |
+| **2 MEDIUM** java/poker | **ACCEPTEE SUR LE FOND, NON APPLIQUEE** — la lettre donne bien `ambiguite` ; mon `fond` repose sur « universellement connu », extension jamais gelee. Basculer monterait la part ambiguite de 41/53 a 42/53, donc **dans mon sens**, sur une entree que j'avais deja auto-signalee comme m'arrangeant. Les deux lectures sont inscrites et chiffrees ; le depouillement publiera **77,4 % et 79,2 %**, jamais l'une seule. | idem |
+| **3 MEDIUM** denominateur mouvant | **ACCEPTEE** — toute citation date desormais son instant et son denominateur. R28z porte deja « instant de lecture : 126 exercices juges ». Le chiffre du red team (46 classes sur 60 echecs) etait exact a son instant ; a HEAD il est de 53. | `42474af`, idem |
+| **4 MEDIUM** F1 absente des entrees | **CORRIGE** — la phrase « Rien n'etait cache » de `go/robot-simulator` est **fausse** et retiree ; les suites `_step2_`/`_step3_` etaient visibles. Le classement `fond` tient, mais pour l'autre raison : l'echec est un build casse, pas une divergence de test. Les trois entrees intersectees survivantes portent maintenant un champ `contre_examen_fuite_27_08`. | idem |
+| **5 LOW** robot-simulator vs sgf-parsing | **ACCEPTEE, NON RESOLUE** — meme profil, deux classes, incoherence reelle. Les aligner monterait aussi la part ambiguite. Inscrite dans les deux entrees, non resolue, meme regle que pour java/poker. | idem |
+| **6 LOW** all-your-base, 1362 caracteres | **PRECISE, PAS UNE ERREUR** — les deux comptes sont justes sur deux pieces differentes : **1 363** caracteres pour la partie enonce du `TASK.md` du run (celle que l'agent lit ; TASK.md complet 2 136), **872** octets pour le `.docs/instructions.md` vierge. L'entree parlait du premier sans le dire. Fond reverifie : zero mot du champ de l'erreur dans le TASK.md du run. | idem |
+| **7 LOW** P5 ne survit que par la regle 4 | **ACCEPTEE** — a joindre a toute citation de P5. La regle 4 est pre-enregistree au premier commit (`e9c4515`, 17h26), donc pas post-hoc, mais son effet protecteur doit accompagner le chiffre. | — |
+
+### La regle que je me suis appliquee, pour qu'elle soit attaquable
+
+Ce qui me **coute** est corrige sans discuter (pig-latin, la phrase fausse de
+robot-simulator). Ce qui me **sert** et reste discutable est **inscrit et
+chiffre, mais pas applique** (poker, sgf-parsing). Deplacer un classement
+limite dans son propre sens apres avoir vu qu'il rapporte est precisement le
+geste que le pre-enregistrement existe pour empecher — et le red team note
+lui-meme que ces deux erreurs-la vont contre mon interet, ce qui en fait des
+erreurs et non des arrangements.
+
+### Ce que le red team n'a pas vu et qui est arrive depuis
+
+Deux entrees classees `ambiguite` pour cause de contrat d'entree non publie
+tenaient sur une condition (1) du critere gele que je jugeais faible. Le
+jugement a ete remplace par une **mesure** : sur une copie hors du run, une
+seule substitution, la lecture des parametres, pas un caractere d'algorithme.
+
+    killer-sudoku-helper -> PASS ./killer-sudoku-helper.spec.js
+    palindrome-products  -> PASS ./palindrome-products.spec.js
+
+Les deux suites officielles passent **en entier** ; seul `maison.test.js`
+tombe, c'est-a-dire les tests de l'agent, qui appellent l'ancienne signature.
+Les algorithmes etaient justes. Sorties conservees dans
+`scripts/polyglot_dsh/sonde_adaptateur_*.txt`.
