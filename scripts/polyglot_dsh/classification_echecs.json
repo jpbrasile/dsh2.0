@@ -21,6 +21,27 @@
       "mecanisme_signature": "aucune signature ne pouvait tirer : l'enonce fait 1 362 caracteres et ne contient AUCUN mot du champ de l'erreur, et le stub ne porte que le remplisseur UnsupportedOperationException commun a 46 stubs java sur 47. Rien de visible n'annonce l'exception.",
       "preuve": "Les cas de conversion passent. Ceux qui tombent (testFirstBaseIsOne, testFirstBaseIsZero, testSecondBaseIsZero...) le font tous sur le TEXTE : attendu « Bases must be at least 2. », obtenu « base must be >= 2 ». Meme sens, autre redaction."
     },
+    "java/alphametics": {
+      "classe": "ambiguite",
+      "signature": "S2+S3+S4",
+      "divergence": "separateur_d_entree",
+      "mecanisme_signature": "OUI, et c'est S3 -- « entree presentee alignee/espacee pour l'oeil : sa tokenisation n'est pas dite ». L'enonce ne donne JAMAIS le puzzle comme une chaine de code : il le donne comme un bloc rendu en colonnes (`  S E N D` / `  M O R E +` / `-----------` / `M O N E Y`) et, en prose, comme « SEND + MORE = MONEY » avec UN SEUL `=`. La suite, elle, passe « I + BB == ILL » avec `==`. Le separateur reel n'est ecrit nulle part.",
+      "preuve": "Analyseur de l'agent, Alphametics.java:15 : `userInput.split(\"=\")`. Ses propres tests emploient « A + B = C », « AS + A = MOM », « ABC + DEF = GHIJ » -- un seul `=`, repris de l'enonce -- et les 4 passent (MaisonTest 4/4), donc le solveur fonctionne, portage des retenues compris. Sur « I + BB == ILL », split(\"=\") rend [\"I + BB \", \"\", \" ILL\"] : le membre droit est vide, l'equation devient insoluble, et l'agent leve UnsolvablePuzzleException a Alphametics.java:95 sur les 9 cas non triviaux. testLeadingZero PASSE parce qu'il ATTEND une exception -- il passe pour la mauvaise raison. Verifie sur la suite vierge AlphameticsTest.java:12 et sur .docs/instructions.md lignes 7-13 le 27/08."
+    },
+    "java/bank-account": {
+      "classe": "ambiguite",
+      "signature": "aucune",
+      "divergence": "exigence_et_libelle",
+      "mecanisme_signature": "S4 a RENONCE, et c'etait correct : elle exige les DEUX conditions, or si le stub declare bien `throws BankAccountActionInvalidException` sur les cinq methodes, l'enonce n'est pas muet sur l'erreur -- ligne 8 : « operations against a closed account must fail ». La signature n'est pas en defaut ; l'enonce annonce UNE erreur et en exige QUATRE.",
+      "preuve": "Les cas de fond passent, y compris le plus dur : multipleDeposits, withdrawTwice, singleDeposit, reopenedAccountDoesNotRetainBalance et canHandleConcurrentTransactions (l'acces concurrent, seul sujet reellement traite par l'enonce). Ce qui tombe n'est jamais dans l'enonce de 749 caracteres : cannotDepositNegativeAmount et cannotWithdrawNegativeAmount (« Expecting code to raise a throwable » -- les montants negatifs n'y sont pas mentionnes), cannotWithdrawMoreThanWasDeposited (pas davantage), et cannotDepositIntoUnopenedAccount sur le TEXTE : attendu « Account closed », obtenu « Account is closed ». NON compte pour P1 : la divergence n'est pas SEULEMENT un libelle."
+    },
+    "java/bottle-song": {
+      "classe": "ambiguite",
+      "signature": "S2",
+      "divergence": "separateur_terminal",
+      "mecanisme_signature": "OUI, au libelle pres. La pre-inscription du 27/08 annonce pour cet exercice : « bloc de sortie rendue sur 40 lignes, sans ponctuation de code : un separateur TERMINAL y est invisible ». L'echec porte sur exactement un separateur terminal. Exercice signale AVANT que java commence, et ce n'est PAS un cas fondateur.",
+      "preuve": "Meme mecanisme que go/beer-song, reproduit dans une autre langue et sur un autre exercice. Le juge sur lastGenericVerse : attendu et obtenu sont identiques caractere pour caractere jusqu'a « There'll be two green bottles hanging on the wall. » ; l'agent ajoute UNE LIGNE VIDE de plus avant la fermeture de la chaine. Verifie octet a octet (cat -A) sur juge_java_bottle-song.txt le 27/08. 7 des 13 tests tombent, tous sur l'assemblage des couplets."
+    },
     "go/beer-song": {
       "classe": "ambiguite",
       "fondateur": true,

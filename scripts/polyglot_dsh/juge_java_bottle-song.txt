@@ -1,0 +1,293 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+
+> Task :test FAILED
+
+BottleSongTest > lastThreeVerses() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "Three green bottles hanging on the wall,
+      Three green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be two green bottles hanging on the wall.
+  
+      Two green bottles hanging on the wall,
+      Two green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be one green bottle hanging on the wall.
+  
+      One green bottle hanging on the wall,
+      One green bottle hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be no green bottles hanging on the wall.
+      "
+     but was: 
+      "Three green bottles hanging on the wall,
+      Three green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be two green bottles hanging on the wall.
+  
+      Two green bottles hanging on the wall,
+      Two green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be one green bottle hanging on the wall.
+  
+      One green bottle hanging on the wall,
+      One green bottle hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be no green bottles hanging on the wall.
+  
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//BottleSongTest.lastThreeVerses(BottleSongTest.java:73)
+
+BottleSongTest > lastGenericVerse() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "Three green bottles hanging on the wall,
+      Three green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be two green bottles hanging on the wall.
+      "
+     but was: 
+      "Three green bottles hanging on the wall,
+      Three green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be two green bottles hanging on the wall.
+  
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//BottleSongTest.lastGenericVerse(BottleSongTest.java:28)
+
+BottleSongTest > allVerses() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "Ten green bottles hanging on the wall,
+      Ten green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be nine green bottles hanging on the wall.
+  
+      Nine green bottles hanging on the wall,
+      Nine green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be eight green bottles hanging on the wall.
+  
+      Eight green bottles hanging on the wall,
+      Eight green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be seven green bottles hanging on the wall.
+  
+      Seven green bottles hanging on the wall,
+      Seven green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be six green bottles hanging on the wall.
+  
+      Six green bottles hanging on the wall,
+      Six green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be five green bottles hanging on the wall.
+  
+      Five green bottles hanging on the wall,
+      Five green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be four green bottles hanging on the wall.
+  
+      Four green bottles hanging on the wall,
+      Four green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be three green bottles hanging on the wall.
+  
+      Three green bottles hanging on the wall,
+      Three green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be two green bottles hanging on the wall.
+  
+      Two green bottles hanging on the wall,
+      Two green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be one green bottle hanging on the wall.
+  
+      One green bottle hanging on the wall,
+      One green bottle hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be no green bottles hanging on the wall.
+      "
+     but was: 
+      "Ten green bottles hanging on the wall,
+      Ten green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be nine green bottles hanging on the wall.
+  
+      Nine green bottles hanging on the wall,
+      Nine green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be eight green bottles hanging on the wall.
+  
+      Eight green bottles hanging on the wall,
+      Eight green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be seven green bottles hanging on the wall.
+  
+      Seven green bottles hanging on the wall,
+      Seven green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be six green bottles hanging on the wall.
+  
+      Six green bottles hanging on the wall,
+      Six green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be five green bottles hanging on the wall.
+  
+      Five green bottles hanging on the wall,
+      Five green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be four green bottles hanging on the wall.
+  
+      Four green bottles hanging on the wall,
+      Four green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be three green bottles hanging on the wall.
+  
+      Three green bottles hanging on the wall,
+      Three green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be two green bottles hanging on the wall.
+  
+      Two green bottles hanging on the wall,
+      Two green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be one green bottle hanging on the wall.
+  
+      One green bottle hanging on the wall,
+      One green bottle hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be no green bottles hanging on the wall.
+  
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//BottleSongTest.allVerses(BottleSongTest.java:94)
+
+BottleSongTest > verseWithOneBottle() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "One green bottle hanging on the wall,
+      One green bottle hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be no green bottles hanging on the wall.
+      "
+     but was: 
+      "One green bottle hanging on the wall,
+      One green bottle hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be no green bottles hanging on the wall.
+  
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//BottleSongTest.verseWithOneBottle(BottleSongTest.java:48)
+
+BottleSongTest > verseWithTwoBottles() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "Two green bottles hanging on the wall,
+      Two green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be one green bottle hanging on the wall.
+      "
+     but was: 
+      "Two green bottles hanging on the wall,
+      Two green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be one green bottle hanging on the wall.
+  
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//BottleSongTest.verseWithTwoBottles(BottleSongTest.java:38)
+
+BottleSongTest > firstGenericVerse() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "Ten green bottles hanging on the wall,
+      Ten green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be nine green bottles hanging on the wall.
+      "
+     but was: 
+      "Ten green bottles hanging on the wall,
+      Ten green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be nine green bottles hanging on the wall.
+  
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//BottleSongTest.firstGenericVerse(BottleSongTest.java:18)
+
+BottleSongTest > firstTwoVerses() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: 
+      "Ten green bottles hanging on the wall,
+      Ten green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be nine green bottles hanging on the wall.
+  
+      Nine green bottles hanging on the wall,
+      Nine green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be eight green bottles hanging on the wall.
+      "
+     but was: 
+      "Ten green bottles hanging on the wall,
+      Ten green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be nine green bottles hanging on the wall.
+  
+      Nine green bottles hanging on the wall,
+      Nine green bottles hanging on the wall,
+      And if one green bottle should accidentally fall,
+      There'll be eight green bottles hanging on the wall.
+  
+      "
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//BottleSongTest.firstTwoVerses(BottleSongTest.java:58)
+
+MaisonTest > verseWhereBottlesGoToSingular() PASSED
+
+MaisonTest > allVerses() PASSED
+
+MaisonTest > twoVerses() PASSED
+
+MaisonTest > oneVerseFromOne() PASSED
+
+MaisonTest > threeVerses() PASSED
+
+MaisonTest > oneVerseFromTenToOne() PASSED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 2 executed, 1 up-to-date
+
+13 tests completed, 7 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/pi_D_t1_dflash2/java/exercises/practice/bottle-song/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 2s

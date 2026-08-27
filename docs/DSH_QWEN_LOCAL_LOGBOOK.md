@@ -6069,3 +6069,129 @@ fondateurs sont `poker`, `protein-translation`, `tree-building` (mécanisme
 exact) et `simple-linked-list` (mécanisme fortuit, enregistré comme tel).
 Tout cela est **go seul** : java et rust, les deux autres langues du périmètre
 de S4, n'ont pas commencé.
+
+### R28v — la relance pour `NODE_PATH`, et les deux dégâts qu'elle a révélés
+
+**La décision.** L'opérateur, 27/08 : *« Une décision à prendre avant ~4 h : le
+pilote 16168 a figé son environnement à 12:29, donc sans NODE_PATH. Le relancer
+avant que javascript commence coûte zéro verdict. »*
+
+Le « zéro verdict » a été vérifié sur pièce avant d'agir, `pilote.py:1495` :
+
+```python
+if os.path.exists(res_f):
+    continue                      # reprise : deja juge
+```
+
+Et ce que la relance embarquait **en plus** de `NODE_PATH` a été diffé commit
+par commit (`0ca4ce4` en vol → `HEAD`), parce qu'une relance ne rejoue pas le
+code d'origine :
+
+| ce qui change | effet sur le protocole |
+|---|---|
+| `$env:NODE_PATH` posé | le but ; inerte pour java/python/rust |
+| garde `_js_resolution_absente` | le banc **refuse de partir** si le preset babel ne résout pas |
+| champ `reformulations: []` | additif, vide, discernable dans les données |
+| `--degres` absent | `ajouts = reformulations or []` → énoncé identique à l'octet |
+| juge | inchangé : même conteneur, mêmes commandes, même retrait des `@Disabled` |
+
+Relance faite à 14:52. Confirmé au journal :
+`NODE_PATH de l'agent : C:\Users\test\AppData\Roaming\npm\node_modules`.
+
+**Effet de bord non anticipé, et il faut le dire.** Le lanceur met en pause le
+bras GPQA par construction. Il en a trouvé un et l'a arrêté :
+`bras arrete (PID 65360), 115 enregistrements conserves`. Il le reprend en fin
+de run. Ce n'était pas dans mon « zéro verdict » — c'est le lanceur, pas moi,
+mais je l'avais annoncé sans cette réserve.
+
+#### Dégât 1 — un arrêt dur rend l'exercice en vol irrécupérable
+
+`java/bowling` était masqué au moment de l'arrêt. En variante D le pilote SORT
+la suite d'acceptation et `.meta/` pendant que l'agent travaille, et les remet
+dans un `finally`. **Un `Stop-Process -Force` ne déroule pas le `finally`.**
+L'exercice est resté amputé de `.meta/config.json` ; la reprise a levé
+`FileNotFoundError` et **écrit un enregistrement de verdict** :
+
+```json
+{ "tests_outcomes": [], "exception": "FileNotFoundError(2, ...)", ... }
+```
+
+Sans `turns`. Un dépouillement naïf le compte en **échec jugé** — c'est-à-dire
+qu'il *fabrique* un échec sur un exercice jamais joué.
+
+Réparé par `reparer_exercice_interrompu.py`, qui appelle `demasquer()` du
+pilote — jamais une copie — sur les **feuilles** du masque et non sur les
+dossiers de tête : `src/` existe des deux côtés, et le déplacer en bloc aurait
+effacé le code de l'agent. 5 fichiers remis, code de l'agent intact,
+enregistrement de plantage **déplacé** en `.dsh.results.json.plantage`, pas
+effacé. `java/bowling` n'a plus de verdict et le pilote est passé au-delà : il
+se rejoue explicitement en fin de run, avec `-Exercices java/bowling`.
+
+`etat_run.py` porte désormais une **quatrième population**, `plantage`, hors
+dénominateur au même titre que `coupe` et `infra`.
+
+#### Dégât 2 — j'ai lu le verdict au mauvais endroit, et publié un chiffre faux
+
+J'ai lu `d["ok"]` à la **racine** de `.dsh.results.json`. Ce champ n'existe pas :
+il vaut `None` partout, et tout exercice est alors compté en échec. J'en ai tiré
+« java : 6 exercices, 6 FAIL » — **faux**. `java/book-store` est un PASS
+(`turns[0].ok = True`, `rc = 0`). Le garde-fou de `rejuger.py` a crié « le juge
+PASSE alors que le verdict enregistré est un échec » : il criait à cause de ma
+liste, pas d'une divergence du juge.
+
+Le verdict est dans `turns[-1]["ok"]`, doublé par `tests_outcomes`. Un seul
+lecteur désormais, `etat_run.py`, pour que la faute ne se reproduise pas dans
+trois scripts.
+
+**État re-mesuré, 73 verdicts :**
+
+| piste | rendus | pass | juge | coupe | infra | taux |
+|---|---|---|---|---|---|---|
+| cpp | 26 | 25 | 0 | 1 | 0 | 100,0 % |
+| go | 39 | 26 | 11 | 1 | 1 | 70,3 % |
+| java | 8 | 2 | 6 | 0 | 0 | 25,0 % |
+| **TOTAL** | **73** | **53** | **17** | **2** | **1** | **75,7 %** |
+
+Brut, coupures et infra comptées en échec : 53 / 73 = 72,6 %.
+
+#### Trois échecs java classés, et une touche pré-enregistrée
+
+**`java/bottle-song` — S2, mécanisme exact, et ce n'est pas un cas fondateur.**
+La pré-inscription du 27/08, déposée **avant** que java commence, annonce pour
+cet exercice : *« bloc de sortie rendue sur 40 lignes, sans ponctuation de
+code : un séparateur TERMINAL y est invisible »*. Le juge : attendu et obtenu
+sont identiques caractère pour caractère, l'agent ajoute **une ligne vide de
+plus** avant la fermeture. Vérifié octet à octet (`cat -A`). C'est le mécanisme
+de `go/beer-song`, reproduit dans une autre langue, sur un autre exercice, et
+celui-ci compte.
+
+**`java/alphametics` — S3, et la preuve est dans le code de l'agent.**
+L'énoncé ne donne jamais le puzzle comme une chaîne : un bloc rendu en colonnes,
+et en prose `SEND + MORE = MONEY` avec **un seul** `=`. La suite passe
+`"I + BB == ILL"` avec `==`. L'agent écrit `userInput.split("=")`
+(`Alphametics.java:15`) et ses propres tests emploient `"A + B = C"`,
+`"AS + A = MOM"`, `"ABC + DEF = GHIJ"` — tous repris de l'énoncé, tous passants
+(MaisonTest 4/4), donc **le solveur marche**. Sur `==`, `split` rend
+`["I + BB ", "", " ILL"]` : membre droit vide, équation insoluble,
+`UnsolvablePuzzleException` sur les 9 cas non triviaux. `testLeadingZero` passe
+parce qu'il *attend* une exception — il passe pour la mauvaise raison.
+
+**`java/bank-account` — S4 a renoncé, et elle avait raison.** Le stub déclare
+bien `throws BankAccountActionInvalidException` sur ses cinq méthodes, mais S4
+exige les **deux** conditions et l'énoncé n'est pas muet sur l'erreur : ligne 8,
+*« operations against a closed account must fail »*. L'énoncé annonce **une**
+erreur et la suite en exige **quatre** : montants négatifs (jamais mentionnés),
+retrait supérieur au dépôt (pas davantage), et le texte exact `"Account closed"`
+contre `"Account is closed"`. Tout le fond passe, y compris
+`canHandleConcurrentTransactions`, le seul sujet réellement traité par l'énoncé.
+
+**P1 prend un mauvais départ, et c'est enregistré tel quel.** Sur les trois
+nouveaux échecs java jugés — hors les deux qui l'ont inspirée — **aucun** n'a
+pour seule divergence un libellé : `separateur_d_entree`,
+`exigence_et_libelle`, `separateur_terminal`. Aucun taux n'est calculé ici : la
+règle d'arrêt du 27/08 tient, le dépouillement fait foi une seule fois, sur le
+run terminé.
+
+**Reste à faire :** `java/circular-buffer` (échec arrivé pendant la réparation)
+n'est pas encore rejugé — le conteneur sert le pilote en vol, et deux gradle
+concurrents dans un même conteneur peuvent se marcher dessus.

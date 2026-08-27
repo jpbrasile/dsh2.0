@@ -1,0 +1,95 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+
+> Task :test
+
+BookStoreTest > oneGroupOfOneAndFourIsCheaperThanOneGroupOfTwoAndThree() PASSED
+
+BookStoreTest > fourDifferentBooks() PASSED
+
+BookStoreTest > threeDifferentBooks() PASSED
+
+BookStoreTest > groupOfFourPlusGroupOfTwoIsCheaperThanTwoGroupsOfThree() PASSED
+
+BookStoreTest > onlyASingleBook() PASSED
+
+BookStoreTest > threeCopiesOfFirstBookAnd2EachOfRemaining() PASSED
+
+BookStoreTest > fiveDifferentBooks() PASSED
+
+BookStoreTest > twoOfSameBook() PASSED
+
+BookStoreTest > emptyBasket() PASSED
+
+BookStoreTest > twoGroupsOfFourIsCheaperThanGroupsOfFiveAndThree() PASSED
+
+BookStoreTest > twoEachOfFirst4BooksAnd1CopyEachOfRest() PASSED
+
+BookStoreTest > oneGroupOfOneAndTwoPlusThreeGroupsOfFourIsCheaperThanOneGroupOfEachSize() PASSED
+
+BookStoreTest > twoCopiesOfEachBook() PASSED
+
+BookStoreTest > fourGroupsOfFourAreCheaperThanTwoGroupsEachOfFiveAndThree() PASSED
+
+BookStoreTest > groupsOfFourAreCreatedEvenWhenThereAreMoreGroupsOfThreeThanGroupsOfFive() PASSED
+
+BookStoreTest > twoGroupsOfFourIsCheaperThanGroupOfFivePlusGroupOfThree() PASSED
+
+BookStoreTest > twoDifferentBooks() PASSED
+
+BookStoreTest > threeEachOFirst2BooksAnd2EachOfRemainingBooks() PASSED
+
+MaisonTest > fourBooksOneDuplicate() PASSED
+
+MaisonTest > threeBooksWithOneDuplicate() PASSED
+
+MaisonTest > fiveBooksTwoDuplicates() PASSED
+
+MaisonTest > twoDifferentBooksGet5PercentDiscount() PASSED
+
+MaisonTest > nineBooks() PASSED
+
+MaisonTest > allTenBooksTwoOfEach() PASSED
+
+MaisonTest > twoCopiesOfSameBookNoDiscount() PASSED
+
+MaisonTest > fiveBooksOneDuplicate() PASSED
+
+MaisonTest > fourteenBooks() PASSED
+
+MaisonTest > fourDifferentBooksGet20PercentDiscount() PASSED
+
+MaisonTest > fifteenBooksFiveOfEach() PASSED
+
+MaisonTest > emptyBasket() PASSED
+
+MaisonTest > sixBooks() PASSED
+
+MaisonTest > singleBook() PASSED
+
+MaisonTest > threeCopiesOfSameBookNoDiscount() PASSED
+
+MaisonTest > fiveDifferentBooksGet25PercentDiscount() PASSED
+
+MaisonTest > fiveAndThreeGroupsShouldBecomeTwoFourGroups() PASSED
+
+MaisonTest > threeDifferentBooksGet10PercentDiscount() PASSED
+
+MaisonTest > eightBooksFromExample() PASSED
+
+MaisonTest > allSameBooks() PASSED
+
+MaisonTest > sixBooksFourTitles() PASSED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD SUCCESSFUL in 2s
+3 actionable tasks: 2 executed, 1 up-to-date
