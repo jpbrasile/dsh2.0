@@ -124,6 +124,39 @@ $accueilPi = Join-Path $env:USERPROFILE '.pi-bench-polyglot'
 $dotenv = Join-Path $racine '.env'
 $env:DSH_LOCAL_API_KEY = 'local'
 
+# CHAINE D'OUTILS DE L'AGENT -- ajoutee le 27/08 (R28k).
+#
+# L'agent tourne sur l'HOTE, le juge dans le CONTENEUR, et ils n'etaient pas
+# outilles pareil : `go` absent du PATH, `java` absent du disque, alors que le
+# conteneur avait les deux. La variante D demande pourtant a l'agent
+# d'executer ses propres tests. Sur go (39) et java (47), il ne le pouvait
+# pas -- 86 exercices sur 225 mesures sous un autre protocole, sans que rien
+# ne le dise. `go/bottle-song` a ete coupe apres 601 s de silence passes a
+# chercher `gofmt` avec un `find /`.
+#
+# Les deux chaines sont PORTABLES : rien n'est installe dans le systeme, rien
+# ne demande d'administrateur, et tout se defait en supprimant un dossier.
+#   go   : deja present, jamais mis au PATH (go1.22.5, GOROOT C:\Users\test\go)
+#   java : Temurin 21.0.12.1, extrait le 27/08 depuis l'archive officielle
+#          Adoptium, sha256 verifie AVANT ouverture. Le juge est en 21.0.11 --
+#          meme majeure ; en cas d'ecart c'est le juge qui tranche.
+# gradle n'est pas necessaire : le `gradlew` de chaque exercice le telecharge,
+# et gradle-8.7 est deja dans ~/.gradle/wrapper/dists.
+$goBin = Join-Path $env:USERPROFILE 'go\bin'
+$jdk = Get-ChildItem (Join-Path $env:USERPROFILE 'jdk21') -Directory -ErrorAction SilentlyContinue |
+    Select-Object -First 1
+foreach ($d in @($goBin, $(if ($jdk) { Join-Path $jdk.FullName 'bin' }))) {
+    if ($d -and (Test-Path $d) -and ($env:PATH -notlike "*$d*")) {
+        $env:PATH = "$d;$env:PATH"
+        Write-Output "  chaine ajoutee au PATH de l'agent : $d"
+    }
+}
+if ($jdk) { $env:JAVA_HOME = $jdk.FullName }
+foreach ($t in 'cmake', 'go', 'java', 'node', 'python', 'cargo') {
+    $c = Get-Command $t -ErrorAction SilentlyContinue
+    if (-not $c) { Write-Output "  ATTENTION : '$t' reste introuvable cote agent." }
+}
+
 function Arreter-Proxy8013 {
     foreach ($x in (Get-NetTCPConnection -LocalPort 8013 -State Listen -ErrorAction SilentlyContinue)) {
         Stop-Process -Id $x.OwningProcess -Force -Confirm:$false -ErrorAction SilentlyContinue

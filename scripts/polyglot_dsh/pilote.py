@@ -78,6 +78,7 @@ depouillement se fait donc avec les memes outils.
 """
 
 import argparse
+import collections
 import io
 import json
 import os
@@ -132,6 +133,45 @@ COMMANDES_TEST = {
 }
 DELAI_TEST = 60 * 3
 IGNORES = {"CMakeLists.txt", "Cargo.toml"}
+
+# La chaine d'outils que l'AGENT doit avoir, par langage. A ne pas confondre
+# avec COMMANDES_TEST ci-dessus, qui est ce dont le JUGE a besoin DANS le
+# conteneur : le juge tourne dans docker, l'agent tourne sur l'hote, et rien
+# ne garantit que les deux sont outilles pareil.
+#
+# POURQUOI CE CONTROLE EXISTE (mesure du 27/08, R28k). `go` etait absent du
+# PATH de l'hote et `java` absent du disque, alors que le conteneur avait les
+# deux. La variante D demande a l'agent d'executer ses propres tests -- « Run
+# them. Iterate until they pass. Your tests are your only feedback. » Sur go
+# (39 exercices) et java (47), il ne le pouvait pas : il ecrivait des tests
+# qu'il n'executerait jamais, puis partait chercher l'outil manquant avec un
+# `find /` sur tout le disque. Un exercice a ete coupe apres 601 s de silence
+# pour cette seule raison. 86 exercices sur 225 se mesuraient sous un autre
+# protocole que les 139 autres, et RIEN ne le disait.
+CHAINE_DE_L_AGENT = {
+    "cpp":        "cmake",
+    "go":         "go",
+    "java":       "java",
+    "javascript": "node",
+    "python":     "python",
+    "rust":       "cargo",
+}
+
+
+def chaines_manquantes(liste, env):
+    """Langages du peri metre dont l'agent n'a pas l'outil, avec leur poids.
+
+    Rend [(langage, outil, nombre d'exercices)]. On regarde le PATH de l'ENV
+    transmis a l'agent, pas celui du pilote : c'est l'agent qui lancera la
+    commande.
+    """
+    poids = collections.Counter(l for l, _e in liste)
+    manque = []
+    for langue in sorted(poids):
+        outil = CHAINE_DE_L_AGENT.get(langue)
+        if outil and not shutil.which(outil, path=env.get("PATH")):
+            manque.append((langue, outil, poids[langue]))
+    return manque
 
 # Fichiers de CONSTRUCTION que l'agent a le droit de toucher, par extension
 # de solution. Autorise le 27/08 sur ordre de l'operateur.
@@ -1110,6 +1150,14 @@ def main():
                          "le temps du verdict (sinon le juge les ramasse et "
                          "produit de FAUX echecs) et reviennent pour le tour "
                          "suivant.")
+    ap.add_argument("--sans-chaine-outils", action="store_true",
+                    help="demarrer MEME SI l'agent n'a pas la chaine d'outils "
+                         "d'un langage du perimetre. Par defaut le pilote "
+                         "REFUSE : sans la chaine, l'agent ne peut pas "
+                         "executer les tests que la consigne lui demande "
+                         "d'ecrire, et son taux n'est pas comparable a celui "
+                         "d'un langage outille. L'ecart devient alors une "
+                         "limite A DECLARER, pas un defaut invisible.")
     ap.add_argument("--effort", default="medium")
     ap.add_argument("--accueil",
                     default=os.path.join(os.path.expanduser("~"), ".dsh-bench-dflash2"),
@@ -1281,6 +1329,26 @@ def main():
         liste = liste[:args.limite]
     dire("exercices a jouer : %d   tours : %d   delai/tour : %d s"
          % (len(liste), args.tours, args.delai_tour))
+
+    # GARDE-FOU DE LA CHAINE D'OUTILS. Il vient AVANT le premier exercice :
+    # decouvrir apres 86 exercices que l'agent n'avait pas `go` coute 86
+    # exercices.
+    manque = chaines_manquantes(liste, env)
+    if manque:
+        total = sum(n for _l, _o, n in manque)
+        dire("")
+        dire("CHAINE D'OUTILS ABSENTE COTE AGENT :")
+        for langue, outil, n in manque:
+            dire("  %-12s `%s` introuvable  -> %d exercices" % (langue, outil, n))
+        dire("  soit %d exercices sur %d." % (total, len(liste)))
+        if not args.sans_chaine_outils:
+            raise SystemExit(
+                "REFUS : l'agent ne pourra pas executer ses propres tests sur "
+                "ces langages, alors que la consigne le lui demande. Le taux "
+                "melangerait deux protocoles dans une meme colonne. Installer "
+                "la chaine, ou assumer l'ecart avec --sans-chaine-outils.")
+        dire("  --sans-chaine-outils : ECART ASSUME, a declarer a la publication.")
+        dire("")
     if args.delai_tour_2:
         dire("  laisse des tours 2+ : %d s (le tour 1 garde %d s)"
              % (args.delai_tour_2, args.delai_tour))
