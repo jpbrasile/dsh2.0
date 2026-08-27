@@ -993,8 +993,19 @@ NOMS_TEST = re.compile(r"(^|/)(.*_test\.go|.*Test\.java|.*\.spec\.js"
 # Un fichier ne compte que s'il PORTE des cas. `cpp/*/test/tests-main.cpp` porte
 # le nom d'un test mais ne contient que `#define CATCH_CONFIG_MAIN` : le masquer
 # casserait la construction sans rien cacher.
+#
+# LA TABLE NE S'APPELLE PAS TOUJOURS `testCases`, defaut signale par le red team
+# GLM-5.3 (M1) et verifie le 28/08 : go/wordy porte `var tests = []wordyTest{`
+# et go/dnd-character `var modifierTests = []struct {`. Ni l'un ni l'autre ne
+# contient `testCases` ou `func Test` -- le detecteur les laissait passer, donc
+# `tests_hors_config` ne les masquait pas, donc l'agent les lisait. D'ou
+# l'alternative sur la FORME et non sur le nom : dans un fichier deja retenu par
+# NOMS_TEST, une tranche declaree au niveau paquet EST une table de cas. Le
+# `^` impose re.M ; il n'y a pas de `var` au niveau paquet en C++, donc
+# `tests-main.cpp` reste exclu.
 FLAIRS_TEST = re.compile(r"[Tt]estCases|func Test|TEST_CASE|@Test|#\[test\]"
-                         r"|def test_|describe\(|\bit\(")
+                         r"|def test_|describe\(|\bit\("
+                         r"|^var\s+\w+\s*=\s*\[\]", re.M)
 
 
 def tests_hors_config(ex_hote, deja):
