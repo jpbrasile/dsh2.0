@@ -1,0 +1,183 @@
+> Task :compileJava
+> Task :processResources NO-SOURCE
+> Task :classes
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+
+> Task :test
+
+CustomSetTest > setsWithElementsAreNotEmpty() PASSED
+
+CustomSetTest > intersectionOfTwoEmptySetsIsAnEmptySet() PASSED
+
+CustomSetTest > intersectionOfTwoSetsWithNoSharedElementsIsAnEmptySet() PASSED
+
+CustomSetTest > differenceOfAnEmptySetAndNonEmptySetIsAnEmptySet() PASSED
+
+CustomSetTest > setIsASubsetOfLargerSetWithSameElements() PASSED
+
+CustomSetTest > addToNonEmptySet() PASSED
+
+CustomSetTest > emptySetIsASubsetOfAnotherEmptySet() PASSED
+
+CustomSetTest > whenTheElementIsNotInTheSet() PASSED
+
+CustomSetTest > emptySetIsNotEqualToNonEmptySet() PASSED
+
+CustomSetTest > theEmptySetIsDisjointWithItself() PASSED
+
+CustomSetTest > setsAreDisjointIfTheyShareNoElements() PASSED
+
+CustomSetTest > unionOfTwoNonEmptySetsContainsAllUniqueElements() PASSED
+
+CustomSetTest > emptySetIsDisjointWithNonEmptySet() PASSED
+
+CustomSetTest > setsWithTheSameElementsAreEqual() PASSED
+
+CustomSetTest > nonEmptySetIsNotEqualToEmptySet() PASSED
+
+CustomSetTest > intersectionOfANonEmptySetAndAnEmptySetIsAnEmptySet() PASSED
+
+CustomSetTest > unionOfTwoEmptySetsIsAnEmptySet() PASSED
+
+CustomSetTest > secondSetWithDuplicatesIsEqualToFirstSet() PASSED
+
+CustomSetTest > differenceOfTwoNonEmptySetsIsASetOfElementsThatAreOnlyInTheFirstSet() PASSED
+
+CustomSetTest > setsAreNotDisjointIfTheyShareAnElement() PASSED
+
+CustomSetTest > unionOfAnEmptySetAndNonEmptySetIsTheNonEmptySet() PASSED
+
+CustomSetTest > differenceOfTwoEmptySetsIsAnEmptySet() PASSED
+
+CustomSetTest > differenceOfANonEmptySetAndAnEmptySetIsTheNonEmptySet() PASSED
+
+CustomSetTest > setsWithNoElementsAreEmpty() PASSED
+
+CustomSetTest > intersectionOfAnEmptySetAndNonEmptySetIsAnEmptySet() PASSED
+
+CustomSetTest > emptySetIsASubsetOfNonEmptySet() PASSED
+
+CustomSetTest > addToEmptySet() PASSED
+
+CustomSetTest > nonEmptySetIsDisjointWithEmptySet() PASSED
+
+CustomSetTest > setIsASubsetOfSetWithExactSameElements() PASSED
+
+CustomSetTest > addingAnExistingElementDoesNotChangeTheSet() PASSED
+
+CustomSetTest > setIsNotEqualToLargerSetWithSameElements() PASSED
+
+CustomSetTest > firstSetWithDuplicatesIsEqualToSecondSet() PASSED
+
+CustomSetTest > intersectionOfTwoSetsWithSharedElementsIsASetOfTheSharedElements() PASSED
+
+CustomSetTest > unionOfANonEmptySetAndAnEmptySetIsTheNonEmptySet() PASSED
+
+CustomSetTest > nonEmptySetIsNotASubsetOfEmptySet() PASSED
+
+CustomSetTest > emptySetsAreEqual() PASSED
+
+CustomSetTest > setIsNotASubsetOfSetThatDoesNotContainItsElements() PASSED
+
+CustomSetTest > whenTheElementIsInTheSet() PASSED
+
+CustomSetTest > setsWithDifferentElementsAreNotEqual() PASSED
+
+CustomSetTest > nothingIsContainedInAnEmptySet() PASSED
+
+MaisonTest > properSubset() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting value to be true but was false
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.properSubset(MaisonTest.java:182)
+
+MaisonTest > differenceOfEmptySetAndNonEmptySet() PASSED
+
+MaisonTest > containsElement() PASSED
+
+MaisonTest > differenceOfEmptySets() PASSED
+
+MaisonTest > notSubsetWhenMissingElement() PASSED
+
+MaisonTest > unionOfNonEmptySets() PASSED
+
+MaisonTest > setsAreNotEqualIfDifferentElements() PASSED
+
+MaisonTest > intersectionOfEmptySets() PASSED
+
+MaisonTest > differenceIgnoresElementsInOtherSetNotInThisSet() PASSED
+
+MaisonTest > intersectionOfNonEmptySets() PASSED
+
+MaisonTest > unionOfEmptySetAndNonEmptySet() PASSED
+
+MaisonTest > nonEmptySetIsNotEqualToEmptySet() PASSED
+
+MaisonTest > originalSetUnchangedByOperations() PASSED
+
+MaisonTest > genericTypeWorks() PASSED
+
+MaisonTest > subsetOfIdenticalSets() PASSED
+
+MaisonTest > nonEmptySetIsNotSubsetOfEmptySet() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting value to be false but was true
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.nonEmptySetIsNotSubsetOfEmptySet(MaisonTest.java:164)
+
+MaisonTest > addElement() PASSED
+
+MaisonTest > disjointFromEmptySet() PASSED
+
+MaisonTest > differenceOfNonEmptySets() PASSED
+
+MaisonTest > intersectionOfEmptySetAndNonEmptySet() PASSED
+
+MaisonTest > setsAreEqualRegardlessOfOrder() PASSED
+
+MaisonTest > subsetOfEmptySet() PASSED
+
+MaisonTest > disjointFromDisjointSet() PASSED
+
+MaisonTest > emptySet() PASSED
+
+MaisonTest > emptySetIsSubsetOfNonEmptySet() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting value to be true but was false
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.emptySetIsSubsetOfNonEmptySet(MaisonTest.java:169)
+
+MaisonTest > disjointFromNonDisjointSet() PASSED
+
+MaisonTest > setsIgnoreDuplicateElements() PASSED
+
+MaisonTest > emptySetsAreEqual() PASSED
+
+MaisonTest > unionOfEmptySets() PASSED
+
+> Task :test FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 3 executed
+
+69 tests completed, 3 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/_sonde_adaptateur/java/exercises/practice/custom-set/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 22s

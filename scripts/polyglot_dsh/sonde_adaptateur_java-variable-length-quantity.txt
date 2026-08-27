@@ -1,0 +1,365 @@
+> Task :compileJava
+> Task :processResources NO-SOURCE
+> Task :classes
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+
+> Task :test
+
+MaisonTest > encodeAllExamples() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["0x0",
+        "0x40",
+        "0x7f",
+        "0x81",
+        "0x0",
+        "0xc0",
+        "0x0",
+        "0xff",
+        "0x7f",
+        "0x81",
+        "0x80",
+        "0x0",
+        "0xc0",
+        "0x80",
+        "0x0",
+        "0xff",
+        "0xff",
+        "0x7f",
+        "0x81",
+        "0x80",
+        "0x80",
+        "0x0",
+        "0xc0",
+        "0x80",
+        "0x80",
+        "0x0",
+        "0xff",
+        "0xff",
+        "0xff",
+        "0x7f"]
+    to contain exactly (and in same order):
+      ["00",
+        "40",
+        "7F",
+        "81 00",
+        "C0 00",
+        "FF 7F",
+        "81 80 00",
+        "C0 80 00",
+        "FF FF 7F",
+        "81 80 80 00",
+        "C0 80 80 00",
+        "FF FF FF 7F"]
+    but some elements were not found:
+      ["00",
+        "40",
+        "7F",
+        "81 00",
+        "C0 00",
+        "FF 7F",
+        "81 80 00",
+        "C0 80 00",
+        "FF FF 7F",
+        "81 80 80 00",
+        "C0 80 80 00",
+        "FF FF FF 7F"]
+    and others were not expected:
+      ["0x0",
+        "0x40",
+        "0x7f",
+        "0x81",
+        "0x0",
+        "0xc0",
+        "0x0",
+        "0xff",
+        "0x7f",
+        "0x81",
+        "0x80",
+        "0x0",
+        "0xc0",
+        "0x80",
+        "0x0",
+        "0xff",
+        "0xff",
+        "0x7f",
+        "0x81",
+        "0x80",
+        "0x80",
+        "0x0",
+        "0xc0",
+        "0x80",
+        "0x80",
+        "0x0",
+        "0xff",
+        "0xff",
+        "0xff",
+        "0x7f"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.encodeAllExamples(MaisonTest.java:56)
+
+MaisonTest > decodeMaxValues() PASSED
+
+MaisonTest > decodeSingleByte() PASSED
+
+MaisonTest > encodeLargeNumbers() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["0xff", "0xff", "0x7f", "0x81", "0x80", "0x80", "0x0"]
+    to contain exactly (and in same order):
+      ["FF FF 7F", "81 80 80 00"]
+    but some elements were not found:
+      ["FF FF 7F", "81 80 80 00"]
+    and others were not expected:
+      ["0xff", "0xff", "0x7f", "0x81", "0x80", "0x80", "0x0"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.encodeLargeNumbers(MaisonTest.java:37)
+
+MaisonTest > encodeZero() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["0x0"]
+    to contain exactly (and in same order):
+      ["00"]
+    but some elements were not found:
+      ["00"]
+    and others were not expected:
+      ["0x0"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.encodeZero(MaisonTest.java:14)
+
+MaisonTest > encodeMaxValues() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["0xc0",
+        "0x80",
+        "0x80",
+        "0x0",
+        "0x81",
+        "0x80",
+        "0x80",
+        "0x80",
+        "0x0",
+        "0xff",
+        "0xff",
+        "0xff",
+        "0x7f"]
+    to contain exactly (and in same order):
+      ["C0 80 80 00", "81 80 80 80 00", "FF FF FF 7F"]
+    but some elements were not found:
+      ["C0 80 80 00", "81 80 80 80 00", "FF FF FF 7F"]
+    and others were not expected:
+      ["0xc0",
+        "0x80",
+        "0x80",
+        "0x0",
+        "0x81",
+        "0x80",
+        "0x80",
+        "0x80",
+        "0x0",
+        "0xff",
+        "0xff",
+        "0xff",
+        "0x7f"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.encodeMaxValues(MaisonTest.java:43)
+
+MaisonTest > roundTrip() FAILED
+    java.lang.NumberFormatException: For input string: "0x0" under radix 16
+        at java.base/java.lang.NumberFormatException.forInputString(NumberFormatException.java:67)
+        at java.base/java.lang.Long.parseLong(Long.java:709)
+        at MaisonTest.lambda$roundTrip$1(MaisonTest.java:91)
+        at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+        at java.base/java.util.Spliterators$ArraySpliterator.forEachRemaining(Spliterators.java:1024)
+        at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+        at java.base/java.util.stream.ReferencePipeline$7$1.accept(ReferencePipeline.java:276)
+        at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+        at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+        at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+        at java.base/java.util.stream.ReduceOps$ReduceOp.evaluateSequential(ReduceOps.java:921)
+        at java.base/java.util.stream.AbstractPipeline.evaluate(AbstractPipeline.java:234)
+        at java.base/java.util.stream.ReferencePipeline.collect(ReferencePipeline.java:682)
+        at MaisonTest.roundTrip(MaisonTest.java:92)
+
+MaisonTest > decodeLargeValue() PASSED
+
+MaisonTest > encodeMaxUnsigned32() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["0x8f", "0xff", "0xff", "0xff", "0x7f"]
+    to contain exactly (and in same order):
+      ["8F FF FF FF 7F"]
+    but some elements were not found:
+      ["8F FF FF FF 7F"]
+    and others were not expected:
+      ["0x8f", "0xff", "0xff", "0xff", "0x7f"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.encodeMaxUnsigned32(MaisonTest.java:48)
+
+MaisonTest > decodeMultipleValues() PASSED
+
+MaisonTest > encode128() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["0x81", "0x0"]
+    to contain exactly (and in same order):
+      ["81 00"]
+    but some elements were not found:
+      ["81 00"]
+    and others were not expected:
+      ["0x81", "0x0"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.encode128(MaisonTest.java:25)
+
+MaisonTest > encodeMixed() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["0xff", "0x7f", "0x81", "0x80", "0x0"]
+    to contain exactly (and in same order):
+      ["FF 7F", "81 80 00"]
+    but some elements were not found:
+      ["FF 7F", "81 80 00"]
+    and others were not expected:
+      ["0xff", "0x7f", "0x81", "0x80", "0x0"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.encodeMixed(MaisonTest.java:31)
+
+MaisonTest > encodeSmallNumbers() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["0x40", "0x7f"]
+    to contain exactly (and in same order):
+      ["40", "7F"]
+    but some elements were not found:
+      ["40", "7F"]
+    and others were not expected:
+      ["0x40", "0x7f"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//MaisonTest.encodeSmallNumbers(MaisonTest.java:20)
+
+VariableLengthQuantityTest > testLargestDoubleByte() PASSED
+
+VariableLengthQuantityTest > testLargestTripleByte() PASSED
+
+VariableLengthQuantityTest > testLargestSingleByte() PASSED
+
+VariableLengthQuantityTest > testArbitraryDoubleByte() PASSED
+
+VariableLengthQuantityTest > testSmallestDoubleByte() PASSED
+
+VariableLengthQuantityTest > testArbitraryTripleByte() PASSED
+
+VariableLengthQuantityTest > testSmallestTripleByte() PASSED
+
+VariableLengthQuantityTest > testArbitrarySingleByte() PASSED
+
+VariableLengthQuantityTest > testMaximum32BitIntegerInput() PASSED
+
+VariableLengthQuantityTest > testDecodeMultipleBytes() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: ["0x2000", "0x123456", "0xfffffff", "0x0", "0x3fff", "0x4000"]
+     but was: [8192L, 1193046L, 268435455L, 0L, 16383L, 16384L]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//VariableLengthQuantityTest.testDecodeMultipleBytes(VariableLengthQuantityTest.java:230)
+
+VariableLengthQuantityTest > testTwoSingleByteValues() PASSED
+
+VariableLengthQuantityTest > testZero() PASSED
+
+VariableLengthQuantityTest > testDecodeFourBytes() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: ["0x200000"]
+     but was: [2097152L]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//VariableLengthQuantityTest.testDecodeFourBytes(VariableLengthQuantityTest.java:192)
+
+VariableLengthQuantityTest > testCannotDecodeIncompleteSequence() FAILED
+    java.lang.AssertionError: 
+    Expecting code to raise a throwable.
+        at VariableLengthQuantityTest.testCannotDecodeIncompleteSequence(VariableLengthQuantityTest.java:208)
+
+VariableLengthQuantityTest > testDecodeTwoBytes() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: ["0x2000"]
+     but was: [8192L]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//VariableLengthQuantityTest.testDecodeTwoBytes(VariableLengthQuantityTest.java:176)
+
+VariableLengthQuantityTest > testManyMultiByteValues() PASSED
+
+VariableLengthQuantityTest > testTwoMultiByteValues() PASSED
+
+VariableLengthQuantityTest > testDecodeThreeBytes() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: ["0x1fffff"]
+     but was: [2097151L]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//VariableLengthQuantityTest.testDecodeThreeBytes(VariableLengthQuantityTest.java:184)
+
+VariableLengthQuantityTest > testArbitraryQuadrupleByte() PASSED
+
+VariableLengthQuantityTest > testSmallestQuadrupleByte() PASSED
+
+VariableLengthQuantityTest > testDecodeOneByte() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: ["0x7f"]
+     but was: [127L]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//VariableLengthQuantityTest.testDecodeOneByte(VariableLengthQuantityTest.java:168)
+
+VariableLengthQuantityTest > testCannotDecodeIncompleteSequenceEvenIfValueIsZero() FAILED
+    java.lang.AssertionError: 
+    Expecting code to raise a throwable.
+        at VariableLengthQuantityTest.testCannotDecodeIncompleteSequenceEvenIfValueIsZero(VariableLengthQuantityTest.java:217)
+
+VariableLengthQuantityTest > testLargestQuadrupleByte() PASSED
+
+VariableLengthQuantityTest > testDecodeMaximum32BitInteger() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: ["0xffffffff"]
+     but was: [4294967295L]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//VariableLengthQuantityTest.testDecodeMaximum32BitInteger(VariableLengthQuantityTest.java:200)
+
+VariableLengthQuantityTest > testArbitraryQuintupleByte() PASSED
+
+VariableLengthQuantityTest > testSmallestQuintupleByte() PASSED
+
+> Task :test FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 3 executed
+
+39 tests completed, 17 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/_sonde_adaptateur/java/exercises/practice/variable-length-quantity/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 11s

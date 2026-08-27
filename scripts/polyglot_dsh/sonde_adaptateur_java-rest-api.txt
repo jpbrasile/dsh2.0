@@ -1,0 +1,183 @@
+> Task :compileJava
+> Task :processResources NO-SOURCE
+> Task :classes
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+
+> Task :test
+
+MaisonTest > getUsersEmpty() PASSED
+
+MaisonTest > iouReversesExistingDebt() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{},"balance":15,"name":"Alice","owedBy":{"Bob":15}},{"owes":{"Alice":15},"balance":-15,"name":"Bob","owedBy":{}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.iouReversesExistingDebt(MaisonTest.java:236)
+
+MaisonTest > iouCancelsOutExistingDebt() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{},"balance":0,"name":"Alice","owedBy":{}},{"owes":{},"balance":0,"name":"Bob","owedBy":{}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.iouCancelsOutExistingDebt(MaisonTest.java:223)
+
+MaisonTest > addUser() FAILED
+    org.opentest4j.AssertionFailedError: added user keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.addUser(MaisonTest.java:182)
+
+MaisonTest > iouBetweenUsers() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{},"balance":3.25,"name":"Adam","owedBy":{"Bob":3.25}},{"owes":{"Adam":3.25},"balance":-3.25,"name":"Bob","owedBy":{}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.iouBetweenUsers(MaisonTest.java:198)
+
+MaisonTest > getUsersWithoutPayload() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{"Dan":9.5,"Bob":12,"Chuck":4},"balance":-16.25,"name":"Adam","owedBy":{"Dan":2.75,"Bob":6.5}},{"owes":{"Adam":6.5,"Dan":3},"balance":2.5,"name":"Bob","owedBy":{"Adam":12}},{"owes":{},"balance":6.5,"name":"Chuck","owedBy":{"Adam":4,"Dan":2.5}},{"owes":{"Adam":2.75,"Bob":3,"Chuck":2.5},"balance":4.25,"name":"Dan","owedBy":{"Adam":9.5,"Bob":3}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.getUsersWithoutPayload(MaisonTest.java:151)
+
+MaisonTest > iouDoesNotAffectThirdParties() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{"Dan":9.5,"Bob":12,"Chuck":3},"balance":-15.25,"name":"Adam","owedBy":{"Dan":2.75,"Bob":6.5}},{"owes":{"Adam":6.5,"Dan":3},"balance":2.5,"name":"Bob","owedBy":{"Adam":12}},{"owes":{},"balance":5.5,"name":"Chuck","owedBy":{"Dan":2.5,"Adam":3}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.iouDoesNotAffectThirdParties(MaisonTest.java:283)
+
+MaisonTest > iouWhereLenderOwesBorrower() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{"Bob":4.359999999999999},"balance":-4.359999999999999,"name":"Alice","owedBy":{}},{"owes":{},"balance":4.359999999999999,"name":"Bob","owedBy":{"Alice":4.359999999999999}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.iouWhereLenderOwesBorrower(MaisonTest.java:210)
+
+MaisonTest > getUsersWithPayloadSortedByName() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{"Adam":6.5,"Dan":3},"balance":2.5,"name":"Bob","owedBy":{"Adam":12}},{"owes":{"Adam":2.75,"Bob":3,"Chuck":2.5},"balance":4.25,"name":"Dan","owedBy":{"Adam":9.5,"Bob":3}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.getUsersWithPayloadSortedByName(MaisonTest.java:163)
+
+MaisonTest > iouIsPersistedForSubsequentGets() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{},"balance":2,"name":"Adam","owedBy":{"Bob":2}},{"owes":{"Adam":2},"balance":-2,"name":"Bob","owedBy":{}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.iouIsPersistedForSubsequentGets(MaisonTest.java:247)
+
+MaisonTest > multipleIousAccumulate() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{},"balance":2,"name":"Adam","owedBy":{"Bob":2}},{"owes":{"Adam":2},"balance":-2,"name":"Bob","owedBy":{}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.multipleIousAccumulate(MaisonTest.java:273)
+
+MaisonTest > iouSortedByLenderAndBorrowerNames() FAILED
+    org.opentest4j.AssertionFailedError: users[0] in {"users":[{"owes":{"Zoe":1.5},"balance":-1.5,"name":"Ann","owedBy":{}},{"owes":{},"balance":1.5,"name":"Zoe","owedBy":{"Ann":1.5}}]} keys. expected=[owes, balance, name, owed_by] actual=[owes, balance, name, owedBy] ==> expected: <[owes, balance, name, owed_by]> but was: <[owes, balance, name, owedBy]>
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.build(AssertionFailureBuilder.java:151)
+        at app//org.junit.jupiter.api.AssertionFailureBuilder.buildAndThrow(AssertionFailureBuilder.java:132)
+        at app//org.junit.jupiter.api.AssertEquals.failNotEqual(AssertEquals.java:197)
+        at app//org.junit.jupiter.api.AssertEquals.assertEquals(AssertEquals.java:182)
+        at app//org.junit.jupiter.api.Assertions.assertEquals(Assertions.java:1152)
+        at app//MaisonTest.assertJsonEqual(MaisonTest.java:45)
+        at app//MaisonTest.assertUserEqual(MaisonTest.java:71)
+        at app//MaisonTest.assertUsers(MaisonTest.java:80)
+        at app//MaisonTest.iouSortedByLenderAndBorrowerNames(MaisonTest.java:259)
+
+MaisonTest > unknownUrlThrows() PASSED
+
+RestApiTest > lenderOwesBorrowerLessThanNewLoan() PASSED
+
+RestApiTest > addUser() PASSED
+
+RestApiTest > lenderOwesBorrowerSameAsNewLoan() PASSED
+
+RestApiTest > bothUsersHave0Balance() PASSED
+
+RestApiTest > lenderHasNegativeBalance() PASSED
+
+RestApiTest > getSingleUser() PASSED
+
+RestApiTest > lenderOwesBorrower() PASSED
+
+RestApiTest > borrowerHasNegativeBalance() PASSED
+
+RestApiTest > noUsers() PASSED
+
+> Task :test FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 3 executed
+
+22 tests completed, 11 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/_sonde_adaptateur/java/exercises/practice/rest-api/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 7s

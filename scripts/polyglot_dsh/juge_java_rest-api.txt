@@ -1,0 +1,122 @@
+> Task :compileJava UP-TO-DATE
+> Task :processResources NO-SOURCE
+> Task :classes UP-TO-DATE
+> Task :compileTestJava
+> Task :processTestResources NO-SOURCE
+> Task :testClasses
+
+> Task :test
+
+RestApiTest > lenderOwesBorrowerLessThanNewLoan() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: "{"users":[{"owes":{},"balance":1,"name":"Adam","owedBy":{"Bob":1}},{"owes":{"Adam":1},"balance":-1,"name":"Bob","owedBy":{}}]}"
+     but was: "{"users":[{"owes":{},"balance":1,"name":"Adam","owed_by":{"Bob":1}},{"owes":{"Adam":1},"balance":-1,"name":"Bob","owed_by":{}}]}"
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//RestApiTest.lenderOwesBorrowerLessThanNewLoan(RestApiTest.java:246)
+
+RestApiTest > addUser() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: "{"owes":{},"balance":0,"name":"Adam","owedBy":{}}"
+     but was: "{"owes":{},"balance":0,"name":"Adam","owed_by":{}}"
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//RestApiTest.addUser(RestApiTest.java:30)
+
+RestApiTest > lenderOwesBorrowerSameAsNewLoan() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: "{"users":[{"owes":{},"balance":0,"name":"Adam","owedBy":{}},{"owes":{},"balance":0,"name":"Bob","owedBy":{}}]}"
+     but was: "{"users":[{"owes":{},"balance":0,"name":"Adam","owed_by":{}},{"owes":{},"balance":0,"name":"Bob","owed_by":{}}]}"
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//RestApiTest.lenderOwesBorrowerSameAsNewLoan(RestApiTest.java:279)
+
+RestApiTest > bothUsersHave0Balance() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: "{"users":[{"owes":{},"balance":3,"name":"Adam","owedBy":{"Bob":3}},{"owes":{"Adam":3},"balance":-3,"name":"Bob","owedBy":{}}]}"
+     but was: "{"users":[{"owes":{},"balance":3,"name":"Adam","owed_by":{"Bob":3}},{"owes":{"Adam":3},"balance":-3,"name":"Bob","owed_by":{}}]}"
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//RestApiTest.bothUsersHave0Balance(RestApiTest.java:90)
+
+RestApiTest > lenderHasNegativeBalance() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: "{"users":[{"owes":{"Bob":3},"balance":-3,"name":"Adam","owedBy":{}},{"owes":{"Chuck":3},"balance":0,"name":"Bob","owedBy":{"Adam":3}}]}"
+     but was: "{"users":[{"owes":{"Bob":3},"balance":-3,"name":"Adam","owed_by":{}},{"owes":{"Chuck":3},"balance":0,"name":"Bob","owed_by":{"Adam":3}}]}"
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//RestApiTest.lenderHasNegativeBalance(RestApiTest.java:172)
+
+RestApiTest > getSingleUser() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: "{"users":[{"owes":{},"balance":0,"name":"Bob","owedBy":{}}]}"
+     but was: "{"users":[{"owes":{},"balance":0,"name":"Bob","owed_by":{}}]}"
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//RestApiTest.getSingleUser(RestApiTest.java:53)
+
+RestApiTest > lenderOwesBorrower() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: "{"users":[{"owes":{"Bob":1},"balance":-1,"name":"Adam","owedBy":{}},{"owes":{},"balance":1,"name":"Bob","owedBy":{"Adam":1}}]}"
+     but was: "{"users":[{"owes":{"Bob":1},"balance":-1,"name":"Adam","owed_by":{}},{"owes":{},"balance":1,"name":"Bob","owed_by":{"Adam":1}}]}"
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//RestApiTest.lenderOwesBorrower(RestApiTest.java:209)
+
+RestApiTest > borrowerHasNegativeBalance() FAILED
+    org.opentest4j.AssertionFailedError: 
+    expected: "{"users":[{"owes":{},"balance":3,"name":"Adam","owedBy":{"Bob":3}},{"owes":{"Adam":3,"Chuck":3},"balance":-6,"name":"Bob","owedBy":{}}]}"
+     but was: "{"users":[{"owes":{},"balance":3,"name":"Adam","owed_by":{"Bob":3}},{"owes":{"Adam":3,"Chuck":3},"balance":-6,"name":"Bob","owed_by":{}}]}"
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//RestApiTest.borrowerHasNegativeBalance(RestApiTest.java:130)
+
+RestApiTest > noUsers() PASSED
+
+MaisonTest > getUsersEmpty() PASSED
+
+MaisonTest > iouReversesExistingDebt() PASSED
+
+MaisonTest > iouCancelsOutExistingDebt() PASSED
+
+MaisonTest > addUser() PASSED
+
+MaisonTest > iouBetweenUsers() PASSED
+
+MaisonTest > getUsersWithoutPayload() PASSED
+
+MaisonTest > iouDoesNotAffectThirdParties() PASSED
+
+MaisonTest > iouWhereLenderOwesBorrower() PASSED
+
+MaisonTest > getUsersWithPayloadSortedByName() PASSED
+
+MaisonTest > iouIsPersistedForSubsequentGets() PASSED
+
+MaisonTest > multipleIousAccumulate() PASSED
+
+MaisonTest > iouSortedByLenderAndBorrowerNames() PASSED
+
+MaisonTest > unknownUrlThrows() PASSED
+
+> Task :test FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 2 executed, 1 up-to-date
+
+22 tests completed, 8 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/pi_D_t1_dflash2/java/exercises/practice/rest-api/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 9s
