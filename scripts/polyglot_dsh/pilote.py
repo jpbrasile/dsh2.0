@@ -639,6 +639,8 @@ def fichiers_editables(ex_hote, cfg):
         d = os.path.join(ex_hote, sous)
         for cur, _s, fs in os.walk(d):
             for f in fs:
+                if est_peripherique_reserve(f):   # cf. PERIPHERIQUES_RESERVES
+                    continue
                 ignores.add(os.path.relpath(os.path.join(cur, f),
                                             ex_hote).replace("\\", "/"))
     # Les fichiers de construction autorises viennent APRES : `ou_poser_les_tests`
@@ -792,11 +794,43 @@ test left in them counts against you.
 {construction}"""
 
 
+# NOMS DE PERIPHERIQUES RESERVES DE WINDOWS.
+#
+# LE CAS QUI A MOTIVE CECI, 27/08. `javascript/food-chain` et `java/bowling`
+# sont morts a 0,0 s, tours=0, sur :
+#
+#     ValueError: path is on mount '\\\\.\\nul', start on mount 'C:'
+#
+# L'agent avait ecrit `... > nul` -- l'idiome de cmd.exe pour jeter une sortie --
+# depuis bash. bash ne connait pas ce peripherique : il a CREE un fichier vide
+# nomme `nul` dans le repertoire de l'exercice. `os.path.relpath` appelle
+# `abspath`, qui sur Windows mappe tout chemin finissant par un nom reserve vers
+# `\\.\nul`, un autre « point de montage » -- d'ou la levee, et l'exercice perdu
+# avant meme d'avoir commence.
+#
+# Deux exercices perdus pour un fichier de zero octet. Le pilote les ignore
+# desormais : ils ne sont ni du code, ni des tests, et l'agent n'a jamais voulu
+# les creer.
+PERIPHERIQUES_RESERVES = frozenset(
+    ["con", "prn", "aux", "nul"]
+    + ["com%d" % i for i in range(1, 10)]
+    + ["lpt%d" % i for i in range(1, 10)])
+
+
+def est_peripherique_reserve(nom):
+    """`nul`, `NUL`, `nul.txt`... : Windows les resout tous vers le peripherique."""
+    return nom.split(".")[0].lower() in PERIPHERIQUES_RESERVES
+
+
 def instantane(ex_hote):
     """Liste des fichiers presents, en chemins relatifs POSIX."""
     vus = set()
     for cur, _d, fs in os.walk(ex_hote):
         for f in fs:
+            if est_peripherique_reserve(f):
+                dire("  ignore : %s (nom de peripherique reserve Windows ; "
+                     "probablement un `> nul` ecrit depuis bash)" % f)
+                continue
             rel = os.path.relpath(os.path.join(cur, f), ex_hote)
             vus.add(rel.replace("\\", "/"))
     return vus
