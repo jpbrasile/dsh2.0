@@ -298,6 +298,36 @@
    "mecanisme_signature": "FAMILLE CANDIDATE, enregistree le 27/08. Regle 4 de PREDICTION_PISTES_RESTANTES.md : une famille NOUVELLE rencontree sur javascript/python/rust est enregistree comme candidate et NE COMPTE DANS AUCUNE des predictions P3-P7. Cet exercice ne compte donc PAS pour P5 (`exigence_de_rejet` en javascript), alors qu'un echec de rejet en apparence le ferait croire.",
    "preuve": "10 tests, UN SEUL tombe : « invalid inputs are null », new Binary('2').toDecimal() rend 0 la ou null est attendu. Les 9 autres passent, zeros de tete compris.",
    "pourquoi_distinct_de_exigence_de_rejet": "L'agent A BIEN VALIDE -- binary.js:7 : `if (typeof this.binary !== 'string' || !/^[01]+$/.test(this.binary)) return 0;`. Il n'a pas manque le rejet : il a choisi le mauvais sentinelle. Et l'enonce ANNONCE le rejet -- « The program should handle invalid inputs » -- sans jamais en publier la FORME (null ? 0 ? une exception ?). `exigence_de_rejet` designe un enonce MUET sur l'existence meme du rejet ; ici l'enonce parle et se tait sur la forme. Deux mecanismes distincts, deux corrections distinctes : l'un demande de deviner qu'il faut rejeter, l'autre de deviner comment. Coherent avec la mesure du corpus : binary ne figure PAS parmi les 6 enonces javascript muets sur un rejet exige."
+  },
+  "java/wordy": {
+   "classe": "ambiguite",
+   "signature": "a verifier",
+   "divergence": "libelle_seul",
+   "mecanisme_signature": "10e occurrence de libelle_seul en java. Cas le plus net de la serie : l'agent n'a pas devine la chaine, il a repris CELLE DE L'ENONCE.",
+   "preuve": "44 tests, 8 tombent, MEME CAUSE et meme diff a la virgule pres : « Expecting message to be \"I'm sorry, I don't understand the question!\" but was \"invalid syntax\" ». Le TYPE est bon (IllegalArgumentException, capture par assertThatExceptionOfType), le rejet a bien lieu, aux 8 endroits attendus. Les 36 autres passent : l'analyseur, l'evaluation gauche-a-droite et les quatre operations sont justes.",
+   "pourquoi_ambiguite": "Critere gele : l'element divergent doit etre ABSENT de tout ce que l'agent voit. La chaine « I'm sorry, I don't understand the question! » ne figure NI dans l'enonce (1 836 car.), NI dans le stub. L'enonce annonce le rejet -- « The parser should reject: » suivi de trois puces -- mais ne publie jamais le message.",
+   "ou_l_agent_a_pris_sa_chaine": "PIECE. Le message de l'agent, « invalid syntax », est repris MOT POUR MOT de la troisieme puce de l'enonce : « Word problems with invalid syntax (\"What is 1 plus plus 2?\") ». Il n'a pas invente : il a pris le seul vocabulaire que la source visible lui offrait. C'est la demonstration directe du mecanisme de la famille -- l'enonce impose un rejet, tait son libelle, et l'agent comble avec les mots de l'enonce.",
+   "consequence": "Porte la part java de libelle_seul a 10 / 28 = 35,7 %. Voir l'errata du 27/08 dans PREDICTION_PISTES_RESTANTES.md : l'ancre « 23,7 % en java » de P3 etait 9/38 toutes pistes confondues, pas java seul. P3 n'est PAS reecrite -- son seuil porte sur python, pas sur java."
+  },
+  "java/variable-length-quantity": {
+   "classe": "fond",
+   "signature": "a verifier",
+   "divergence": "signature_du_stub_contredite",
+   "nouvelle_divergence": true,
+   "mecanisme_signature": "PREMIERE occurrence de cette divergence. Distincte de contrat_d_entree_mal_lu (java/forth), ou l'agent LIT mal un contrat : ici il RECRIT une declaration qu'il a sous les yeux.",
+   "preuve": "39 tests, 26 tombent. Trois mecanismes co-presents, comptes separement :\n  (a) 18 echecs d'encode -- FORMAT de la chaine. L'agent rend [\"FF 7F\"] (une chaine par nombre, hexa MAJUSCULE separe par des espaces) la ou la suite veut [\"0xff\", \"0x7f\"] (un element par octet, minuscule, prefixe 0x). Les OCTETS sont justes.\n  (b) 6 echecs de decode -- l'agent a change la SIGNATURE : le stub declare `List<String> decode(List<Long> bytes)`, sa solution declare `List<Long>`. Il rend [8192L] la ou la suite attend [\"0x2000\"]. La valeur est juste (8192 = 0x2000).\n  (c) 2 echecs testCannotDecodeIncompleteSequence* -- « Expecting code to raise a throwable », aucune levee.",
+   "pourquoi_fond_et_non_ambiguite": "(b) TRANCHE SEUL, et il est du fond : le type de retour `List<String>` est ECRIT dans le stub que l'agent a modifie, deux lignes au-dessus de son propre code. Le critere gele exige que l'element divergent soit ABSENT du visible ; il est ici dans le fichier que l'agent edite. Aucune levee d'ambiguite ne repare (b) : l'exercice ne peut donc pas etre impute a l'ambiguite.",
+   "ce_qui_serait_ambigu_si_l_exercice_etait_coupe_en_deux": "A DECLARER, et a NE PAS compter : (a) est une vraie ambiguite -- la notation `0x` minuscule est ABSENTE de l'enonce, dont le tableau montre `FF 7F`, hexa nu en majuscules, groupe par nombre. L'agent a recopie la notation du tableau. (c) releve d'exigence_de_rejet -- l'enonce ne dit rien d'une sequence incomplete, et cet exercice est justement l'un des 6 javascript nommes d'avance comme muets sur un rejet. Mais la classification est UNE par exercice, et celle-ci est decidee par (b). VLQ ne compte donc ni pour la famille notation, ni pour exigence_de_rejet.",
+   "verification_du_stub": "Corpus vierge verifie intact avant de conclure : `git status --porcelain java/` dans polyglot-benchmark rend VIDE, aucun fichier java touche par le semis du 27/08 (qui n'a atteint que cpp). Le stub lu est bien celui pose a l'agent."
+  },
+  "javascript/bottle-song": {
+   "classe": "fond",
+   "signature": "a verifier",
+   "divergence": "separateur_interne_visible",
+   "mecanisme_signature": "2e occurrence, apres javascript/beer-song, et sur la meme piste. Meme diff, meme cause, meme demi-journee.",
+   "preuve": "3 tests tombent sur 3 verses multiples. Le diff jest ne montre QUE des lignes `- \"\"` : recite(10,2) rend 8 lignes la ou la suite en veut 9, l'element vide entre les deux couplets manquant. Tout le texte est juste, singulier « one green bottle » compris.",
+   "pourquoi_fond_et_non_ambiguite": "L'enonce (2 695 car.) MONTRE la ligne vide entre chaque couplet dans son bloc de paroles, aux lignes 12, 17, 22 ... du TASK.md, a l'endroit exact ou la suite attend l'element vide. Le visible dit VRAI et n'a pas ete suivi -- l'oppose de java/house, ou le visible INDUIT EN ERREUR et qui reste donc une ambiguite.",
+   "piece_la_plus_parlante": "LE TEST MAISON A RATIFIE L'ERREUR. maison.test.js:74-113 recopie les 40 lignes de paroles de l'enonce dans un litteral `expectedText` -- au caractere pres, singuliers compris -- EN SUPPRIMANT LES LIGNES VIDES, puis affirme `recite(10,10).join('\\n') === expectedText`. L'agent a donc lu le bloc d'assez pres pour le transcrire integralement, et a laisse tomber exactement les separateurs. Son propre test, ecrit depuis sa propre lecture, ne pouvait plus le contredire.\nC'est le defaut STRUCTUREL de la variante D : le test maison est un miroir de la lecture de l'agent, donc aveugle a une erreur DE lecture. Il corrige les erreurs de code, jamais les erreurs de comprehension. A verser au dossier « ce que la variante D ne peut pas mesurer »."
   }
  }
 }

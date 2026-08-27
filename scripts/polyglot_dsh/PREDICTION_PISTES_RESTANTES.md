@@ -134,3 +134,52 @@ corpus python.
    `classification_echecs.json`. Une famille **nouvelle** rencontrée sur ces
    trois pistes est enregistrée comme *famille candidate* et **ne compte dans
    aucune** des prédictions ci-dessus.
+
+---
+
+## Errata — 27/08/2026, 18 h
+
+Ces corrections portent sur les **mesures qui motivent** les prédictions. Aucun
+seuil de falsification n'est touché : une prédiction déposée ne se réécrit pas.
+
+### E1 — l'ancre « 23,7 % en java » de la ligne 35 est fausse
+
+**Écrit :** « En **java**, la famille `libelle_seul` compte 9 des 38 échecs
+jugés (**23,7 %**) ».
+
+**Vrai :** 38 n'était pas le nombre d'échecs jugés en java — c'était le nombre
+total d'entrées classées **toutes pistes confondues** au moment du dépôt
+(java 27 + go 11). La part java seule valait **9 / 27 = 33,3 %**. Recompté par
+`part_libelle.py` depuis `classification_echecs.json` et `etat_run.lire`.
+
+**Ce que ça change à P3 : rien.** P3 se falsifie sur *« la part python dépasse
+10 % »*. Son critère ne dépend pas du chiffre java, qui n'y sert que de
+contraste. La comparaison publiée devra citer **33,3 % au dépôt**, jamais 23,7.
+
+**Ce que ça change au récit :** l'écart annoncé entre java et python passe de
+23,7 → ≤ 10 à **33,3 → ≤ 10**. La prédiction est donc plus exigeante que ce que
+son propre exposé laissait croire, pas moins.
+
+**Dérive à prévoir.** Le chiffre java bouge tant que le run tourne : avec
+`java/wordy`, classé le 27/08 à 17 h 50, la part java est passée à
+**10 / 28 = 35,7 %**. Toute citation doit être horodatée, ou renvoyer au
+dépouillement final. Le chiffre gelé pour la lecture est celui **au dépôt**.
+
+### E2 — une divergence neuve est apparue en java après le dépôt
+
+`java/variable-length-quantity`, classé le 27/08, porte
+`fond / signature_du_stub_contredite` — première occurrence, et
+`"nouvelle_divergence": true` dans `classification_echecs.json`.
+
+La règle 4 ci-dessus enregistre en *candidate* les familles neuves rencontrées
+sur **javascript, python, rust**. Celle-ci arrive sur **java**, piste déjà
+observée à 46/47 au dépôt : elle n'entre dans le champ d'aucune de P3 à P7 et ne
+peut donc en sauver ni en couler aucune. Elle est enregistrée pour ce qu'elle
+est, sans effet sur la lecture.
+
+Réserve de bonne foi : cet exercice porte aussi, à titre subordonné, une
+ambiguïté de notation (`0x` absent de l'énoncé) et une exigence de rejet muette.
+La classification est **une par exercice** et celle-ci est décidée par la
+signature contredite ; VLQ ne compte donc **ni** pour la famille notation, **ni**
+pour `exigence_de_rejet` — alors même qu'il figure dans la liste des 6 énoncés
+javascript nommés muets d'avance. Le détail est écrit dans son entrée.
