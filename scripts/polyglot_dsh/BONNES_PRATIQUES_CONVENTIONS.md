@@ -427,3 +427,176 @@ base »), ce qui donne ici la bonne réponse.
 l'erreur. À 51 verdicts, S4 hors cas fondateurs donne **2/6 contre 1/14, soit
 +26,2 points, p = 0,202**. La direction est celle qui était prédite ; le seuil
 n'est pas atteint.
+
+---
+
+# Les cas java — ce qu'une deuxième langue ajoute
+
+Tout ce qui précède vient de `go`. La piste `java` a été jouée **après** que la
+prédiction et ces familles ont été déposées : elle les met à l'épreuve au lieu
+de les illustrer. À **19 exercices joués sur 47** — 5 réussis, 13 échecs jugés,
+1 coupure — les **13 échecs jugés sont tous classés : 11 ambiguïtés, 2 fond.**
+
+Deux résultats structurent la suite.
+
+## Une cinquième famille : **libellé**
+
+Quatre cas java divergent **uniquement** sur le *texte* d'un message d'erreur.
+La bonne exception, au bon moment, avec un message de même sens.
+
+| exercice | attendu | obtenu |
+|---|---|---|
+| `java/affine-cipher` | `Error: keyA and alphabet size must be coprime.` | `a and m must be coprime.` |
+| `java/all-your-base` | `Bases must be at least 2.` | `base must be >= 2` |
+| `java/circular-buffer` | `Tried to read from empty buffer` | `Read from empty buffer` |
+| `java/dominoes` | `No domino chain found.` | `not all vertices have even degree` |
+
+Dans les quatre cas la chaîne attendue est **absente** de `.docs/` et du stub,
+vérifié par recherche récursive. Et dans les quatre cas la logique passe :
+`dominoes` réussit **les sept cas de chaînage positif** et ne tombe que sur les
+six rejets ; `circular-buffer` passe 9 tests sur 14.
+
+**Cette famille n'a pas de détecteur par exercice, et c'est le résultat.**
+`affine-cipher` annonce l'erreur (« your program should indicate that this is
+an error ») ; `all-your-base` n'a aucun mot du champ de l'erreur dans ses 1 362
+caractères. Rien ne distingue « une erreur » de « une erreur dont le texte sera
+comparé au caractère près ». Un détecteur serait aveugle ou tautologique — voir
+`PREDICTION_LIBELLES_ERREUR.md`.
+
+> **Pratique.** Quand une suite compare un message d'exception, elle teste une
+> chaîne que rien ne publie. Côté agent : il n'y a rien à faire, et c'est le
+> constat. Côté auteur d'exercice : ou bien écrire la chaîne dans l'énoncé, ou
+> bien n'assertion­ner que le **type** de l'exception.
+
+## Cas 7 — `java/house` : l'énoncé ne se tait pas, il **montre le contraire**
+
+Le cas le plus net du run, et il déplace la règle.
+
+Le contenu produit est identique **caractère pour caractère** : joindre la
+sortie de l'agent par une espace au lieu d'un saut de ligne donne exactement
+l'attendu. Tout l'enchâssement cumulatif — le sujet de l'exercice — est juste.
+
+Attendu, sur une seule ligne :
+
+```text
+This is the cow with the crumpled horn that tossed the dog that worried the cat that killed the rat that ate the malt that lay in the house that Jack built.
+```
+
+Obtenu : les mêmes mots, même ordre, même ponctuation, sur six lignes. Et
+l'énoncé, lui, affiche :
+
+```text
+This is the rat
+that ate the malt
+that lay in the house that Jack built.
+```
+
+**avec exactement les sauts de ligne que l'agent a produits.** L'agent a
+reproduit fidèlement le seul exemple qu'il pouvait voir. 13 tests sur 14
+tombent sur ce seul point.
+
+> **Pratique.** Un bloc rendu n'est pas une spécification. Jusqu'ici on disait
+> qu'il *tait* la structure (cas 1, séparateur terminal invisible). `house`
+> montre pire : il peut la **contredire**. Un exemple rendu se lit comme une
+> illustration typographique, jamais comme le gabarit de la chaîne.
+
+## Cas 8 — `java/alphametics` : `=` dans l'énoncé, `==` dans la suite
+
+L'énoncé ne donne jamais le puzzle comme une chaîne de code : un bloc en
+colonnes (`  S E N D` / `  M O R E +` / `-----------`), et en prose
+`SEND + MORE = MONEY`, avec **un seul** `=`. La suite passe `"I + BB == ILL"`.
+
+L'agent écrit `userInput.split("=")` et ses quatre tests maison emploient
+`"A + B = C"`, `"AS + A = MOM"`, `"ABC + DEF = GHIJ"` — tous repris de
+l'énoncé, tous passants : **le solveur marche**. Sur `==`, `split` rend
+`["I + BB ", "", " ILL"]`, le membre droit est vide, l'équation devient
+insoluble, et l'agent lève `UnsolvablePuzzleException` sur les neuf cas non
+triviaux. `testLeadingZero` passe — parce qu'il *attend* une exception.
+
+> **Pratique.** Un séparateur montré en prose n'est pas le séparateur attendu
+> par l'analyseur. Quand l'entrée est une chaîne et que sa grammaire n'est pas
+> écrite, accepter les variantes voisines (`=` et `==`) coûte trois caractères
+> et sauve l'exercice entier.
+
+## Cas 9 — `java/custom-set` : le sens d'une relation, dans une signature nue
+
+L'énoncé fait **269 caractères** et ne contient ni `subset`, ni `empty`, ni
+`contain`. Le stub porte `boolean isSubset(CustomSet<T> other)` — rien d'autre.
+
+La suite exige que `a.isSubset(b)` signifie « **b** est un sous-ensemble de
+**a** » : l'*argument* est le sous-ensemble. L'agent a écrit l'inverse,
+`this ⊆ other` — la convention de `set.issubset()` en Python et de
+`Set#subset?` en Ruby. **Le corpus inverse le sens usuel.** 21 tests passent ;
+les 2 qui tombent sont les seuls à porter sur ce sens.
+
+C'est le phénomène de `go/simple-linked-list`, où le stub nomme `Push` et `Pop`
+sans dire sur quel bout ils agissent. La famille **contrat**, qui n'avait qu'un
+cas, en a maintenant trois.
+
+> **Pratique.** Une signature nue ne donne pas le sens d'une relation binaire.
+> Quand un nom de méthode est symétriquement ambigu (`isSubset`, `contains`,
+> `dominates`), le vérifier contre le domaine plutôt que contre l'habitude
+> d'un langage — l'habitude peut être inversée ici.
+
+## Cas 10 — `java/go-counting` : quatre rejets que rien n'annonce
+
+Toute la logique de comptage passe. Les quatre échecs sont exactement les
+quatre coordonnées hors plateau, toutes en « Expecting code to raise a
+throwable ». L'énoncé fait 1 207 caractères et ne contient **aucune**
+occurrence de `error`, `invalid`, `must`, `cannot`, `exception`, `throw`,
+`outside` ni `range`. Le stub ne déclare aucun `throws`.
+
+Même phénomène que `go/tree-building`. La famille **exigence** est désormais la
+mieux peuplée du corpus.
+
+## Les deux cas de **fond**, et pourquoi ils comptent
+
+Un classement qui écarte un échec **sert** la prédiction quand l'exercice
+n'était pas signalé. Les deux sont donc établis sur ce que l'agent **pouvait
+lire**, jamais sur un compte d'échecs.
+
+- **`java/forth`** — cause unique, `ForthEvaluator.java:26` :
+  `for (String token : input)`. `input` est une liste de **lignes**
+  (`singletonList("1 dup")`) et l'agent traite la ligne entière comme un seul
+  jeton. Or l'énoncé **donne les règles de lexing** (« a number is a sequence
+  of one or more (ASCII) digits, a word is a sequence of … that is not a
+  number ») et la syntaxe `: word-name definition ;`. Ces règles n'ont de sens
+  que si l'agent découpe lui-même.
+- **`java/mazy-mice`** — l'agent implémente la borne basse et omet la haute,
+  alors que l'énoncé écrit les deux dans la **même phrase** : « The maze should
+  be between 5 and 100 cells in size. » Ses deux tests de borne basse passent,
+  donc il avait la bonne lecture — il n'en a appliqué que la moitié.
+
+## La leçon propre à la variante D
+
+Sur `java/forth`, l'agent a écrit **35 tests maison. Les 35 passent**, pendant
+que 54 des 55 tests officiels tombent.
+
+Des tests écrits par l'agent **confirment sa lecture du contrat au lieu de
+l'éprouver**. Un agent qui se relit ne se corrige pas : il se conforte. Cela ne
+se voit que parce que le juge est indépendant — et c'est un argument pour
+garder un juge que l'agent n'écrit pas, indépendamment de tout le reste.
+
+## Le tableau des familles, remis à jour
+
+| famille | ce qui diverge | cas |
+|---|---|---|
+| **sortie** | la forme de la valeur rendue | `go/beer-song`, `go/kindergarten-garden`, `java/bottle-song`, `java/food-chain`, `java/house` |
+| **entrée** | la forme de la donnée reçue | `go/connect`, `java/alphametics` |
+| **exigence** | un comportement que l'énoncé ne demande jamais | `go/kindergarten-garden`, `go/tree-building`, `go/poker`, `java/bank-account`, `java/go-counting` |
+| **contrat** | la signature ou le sens attendu par la suite | `go/protein-translation`, `go/simple-linked-list`, `java/custom-set` |
+| **libellé** | le *texte* exact d'un message d'erreur | `java/affine-cipher`, `java/all-your-base`, `java/circular-buffer`, `java/dominoes` |
+
+Sous-familles de **sortie** — la troisième reste sans cas :
+
+1. **Séparateur terminal** — *observé*, et désormais dans deux langues :
+   `go/beer-song`, `java/bottle-song`, `java/food-chain`.
+2. **Séparateur interne** — *observé*, `java/house`. Nouveau.
+3. **Ordre du résultat** — *non observé.*
+4. **Arrondi et forme des nombres** — *non observé.*
+5. **Vocabulaire : casse, singulier/pluriel** — *observé*, `go/kindergarten-garden`.
+
+**Réserve d'échantillon.** Ces familles viennent de deux langues sur six.
+`javascript`, `python` et `rust` n'ont pas commencé au moment où ces lignes
+sont écrites, et rien ici ne prétend qu'elles s'y retrouveront dans les mêmes
+proportions.
