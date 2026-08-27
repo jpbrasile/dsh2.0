@@ -582,7 +582,7 @@ Deux remèdes écartés **par la mesure** :
 conclut pas », avec la liste nominative des questions. Déjà mesuré.
 
 **B2b — rattrapage ciblé.** Rejouer **seulement** les questions tronquées avec
-`--reasoning-budget 24000`, valeur prise sur le **p90 de la chimie qui finit**
+`--reasoning-budget 24576`, valeur prise sur le **p90 de la chimie qui finit**
 (23 226) pour ne mordre que sur la queue. Le budget injecte `</think>` : c'est le
 levier qui vise la panne réelle. Population **étiquetée** (`marque`), jamais
 fusionnée.
@@ -596,3 +596,74 @@ fusionnée.
 reprendre le raisonnement déjà produit et ne demander que la conclusion — 10 min
 au lieu de 6 h, mais le journal ne garde que 40 000 des 101 344 caractères
 produits, soit un raisonnement amputé des deux tiers.
+
+---
+
+# Révision du 27/08/2026, 05:00 — R19 : 24 576 arrêté pour B2b, et il ne transfère PAS au polyglot
+
+## R19a. L'échelle de budget a été chiffrée, et elle ne paie pas
+
+Idée examinée : partir bas (8 k ou 16 k) et monter quand le budget mord, au lieu
+d'un barreau unique. Mesurée sur les 114 appels du bras libre.
+
+La distribution de la **pensée** est lourde, et c'est elle qui commande tout :
+
+    p25 1 358   p50 5 772   p75 10 474   p90 20 624   p95 25 442   + 20 fuites
+
+| barreau | escalade | coût du barreau |
+|---|---|---|
+| 8 192 | **46,5 %** | 117 s |
+| 16 384 | 30,7 % | 181 s |
+| 24 576 | 21,9 % | 228 s |
+
+**Et un ré-appel ne reprend pas, il recommence** : le cache couvre l'invite, pas
+la pensée. Escalader repaie tout le raisonnement du barreau précédent.
+
+| scénario | coût/question | reste non conclu |
+|---|---|---|
+| libre 32 768 (bras actuel) | **269 s** (mesuré) | 18 % |
+| **barreau unique 24 576** | **228 s** | 21,9 % |
+| échelle 8192 → 24576 | 223 s | 21,9 % |
+| échelle 16384 → 32768 | 262 s | 19,3 % |
+| échelle 8192 → 16384 → 32768 | **281 s** | 19,3 % |
+
+L'échelle à deux barreaux gagne 2 % — dans le bruit du modèle de coût. Celle à
+trois barreaux est **plus chère que de ne rien faire**. **Barreau unique retenu :
+24 576**, valeur reportée dans B2b (R18).
+
+Le barreau unique bat le bras actuel **sur les deux axes** : 228 s au lieu de
+269 s, *et* une réponse forcée là où 18 % des questions n'en produisaient aucune.
+Contrepartie déjà chiffrée : un appel coupé au budget répond juste **64,0 %**
+contre 100 % pour un appel qui conclut seul — d'où le refus de descendre à 8 k,
+qui couperait 46,5 % des appels au lieu de 21,9 %.
+
+## R19b. NON, 24 576 ne transfère pas au polyglot aider — deux raisons mesurées
+
+Question posée : le même barreau vaudrait-il pour le banc agentique ? **Non**, et
+les deux raisons sont indépendantes.
+
+**1. L'échelle n'est pas la même — le budget ne mordrait jamais.** Dans la boucle
+agentique la pensée se compte **par appel**, et les douze tirages du 26/08 la
+donnent :
+
+| bras | pensée/appel |
+|---|---|
+| pi | 311 – 337 |
+| dsh | 564 – 1 847 |
+
+**pi pense ~320 jetons par appel. 24 576 est 75× au-dessus.** Un budget à cette
+valeur ne s'activerait sur aucun appel du banc.
+
+**2. La fugue du polyglot n'est pas dans le même canal.** Sur les 4 tirages dsh
+morts au plafond de 16 384, la pensée par appel vaut **54**, **71** et
+**10 118** : au moins deux de ces morts ont une pensée quasi nulle — **la fugue
+était dans le canal VISIBLE**, pas dans le raisonnement. Un `--reasoning-budget`
+ne plafonne que la pensée : il est **structurellement aveugle** à ces deux-là.
+
+**3. Et c'est sans objet pour le livrable 1.** Le livrable 1 se fait avec **pi**,
+qui n'est mort au plafond **sur aucun** de ses 3 tirages. Le problème de fugue au
+banc est un problème de dsh, et dsh est sorti du livrable 1 (R9).
+
+**L'instrument du polyglot reste donc celui déjà en place** : le plafond de
+sortie par appel (16 384) et la laisse de tour (`--delai-tour 1800`). Ce sont
+eux qui bornent, et ils bornent les deux canaux.
