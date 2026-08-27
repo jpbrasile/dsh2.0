@@ -6359,3 +6359,75 @@ python pilote.py pi_D_t1_dflash2 --agent pi --accueil-pi $env:USERPROFILE\.pi-be
 
 Les 5 `.dsh.results.json` doivent etre retires d'abord, sinon `pilote.py:1044`
 saute l'exercice. **Retrait de fichiers = autorisation humaine**, non fait.
+
+---
+
+## R28y — 27/08 : la signature d'ambiguite NE SEPARE PAS. Lecture d'etape, contre moi
+
+**Lecture d'ETAPE, pas un depouillement.** La regle gelee dans
+`verifier_prediction.py` et dans `PREDICTION_PISTES_RESTANTES.md` dit que
+l'analyse fait foi **une seule fois, sur les 225 verdicts du run termine**. Ce
+qui suit sert a piloter le travail, jamais a conclure. Je l'inscris quand meme,
+maintenant, parce que ca va dans le sens qui me derange et qu'attendre serait
+choisir le moment.
+
+### Ce que la mesure dit, a 46 echecs juges sur 114 depouilles
+
+`python verifier_prediction.py pi_D_t1_dflash2`. Fisher exact unilateral,
+Bonferroni sur 4 signatures.
+
+| lecture | S1 | S2 | S3 | S4 |
+|---|---|---|---|---|
+| tout, fondateurs compris | -7,2 pt | **+19,9 pt** p×4 = 0,195 | **+32,5 pt** p×4 = 0,197 | +13,0 pt |
+| hors 3 fondateurs | -39,4 pt | +17,3 pt p×4 = 0,338 | +30,4 pt p×4 = 0,308 | +3,0 pt |
+| hors fondateurs **et** hors fond | -33,3 pt | +10,5 pt p×4 = **0,990** | +26,3 pt p×4 = 0,621 | +9,3 pt |
+
+**Rien ne survit a Bonferroni, a aucune ligne.** S1 est negative aux trois
+lectures. S4 est plate des qu'on retire les cas qui l'ont ecrite.
+
+### Le fait le plus genant, et il est structurel
+
+La lecture **la plus fine** — celle que ma propre methode impose, hors
+fondateurs et hors echecs de fond — est la **plus faible**. S2 tombe de
++17,3 a +10,5 pt, son p×4 de 0,338 a 0,990.
+
+Pourquoi : **5 des 10 echecs que j'ai classes `fond` etaient signales par S2**
+— `java/pov`, `java/variable-length-quantity`, `javascript/alphametics`,
+`javascript/beer-song`, `javascript/bottle-song`. Les retirer retire donc
+precisement les cas qui faisaient paraitre la signature predictive.
+
+Deux lectures possibles, et je ne peux pas trancher seul :
+
+* le critere gele a ete applique sans regarder si l'exercice etait signale — et
+  c'est ce que le code fait, litteralement : `verifier_prediction.py` lit la
+  classe depuis `classification_echecs.json` sans consulter la prediction ;
+* ou j'ai, sans le vouloir, durci en `fond` des cas signales.
+
+C'est la premiere question posee au red team `classification-echecs-27-08.md`.
+
+### Le detecteur rate plus de la moitie
+
+**24 des 46 echecs n'etaient signales par AUCUNE signature**, dont les trois
+premiers javascript juges. Chacun est soit une famille d'ambiguite que le
+detecteur ne sait pas voir, soit un echec de fond sans rapport avec l'enonce.
+Le detecteur couvre donc, au mieux, la moitie du phenomene qu'il pretend nommer.
+
+### Ce que ca ne remet PAS en cause
+
+L'ecart **+30,5 points** de R28w/R28x est un appariement de verdicts PASS/FAIL
+entre deux protocoles. Il ne depend ni de la classification, ni des signatures :
+aucune ligne ci-dessus ne le touche. Ce qui est atteint, c'est la these
+SECONDAIRE — « les echecs restants viennent surtout de l'enonce ». A 46 echecs,
+les pieces ne la soutiennent pas au seuil corrige.
+
+### Ce qu'il faut faire, et ne pas faire
+
+* **Ne pas** reecrire les signatures pour ameliorer le p. Le pre-enregistrement
+  a fige la liste ; la retoucher apres avoir vu les verdicts detruirait la seule
+  chose qui rendait la prediction falsifiable.
+* **Ne pas** conclure a l'inverse non plus : 46 echecs, ce n'est pas 225, et
+  javascript vient a peine de commencer. Un ecart non significatif a mi-parcours
+  n'est pas une refutation.
+* **Attendre** les 225 verdicts, puis depouiller une fois.
+* En attendant, ne plus ecrire nulle part que « les echecs viennent surtout de
+  l'enonce » sans citer ce tableau a cote.
