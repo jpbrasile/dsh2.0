@@ -6545,3 +6545,111 @@ Le red team compte **21** exercices fuites (20 go + satellite) et publie
 run ni sur les memes exclusions de confondus. Je publie la mienne parce que sa
 regle est ecrite dans l'instrument et rejouable ; l'ecart de comptage n'est pas
 elucide et il est declare comme tel.
+
+---
+
+## R29 — 27/08 : la sonde d'adaptateur. Un jugement remplace par une mesure, et l'instrument se retourne contre moi sur commande
+
+### Le probleme qu'elle resout
+
+Le critere gele classe un echec en `ambiguite` si DEUX conditions tiennent :
+(1) la logique passe les cas voisins, nommement ; (2) l'element divergent est
+absent de tout ce que l'agent peut voir.
+
+La condition (2) se verifie par lecture : on ouvre `TASK.md` et le stub, on
+cherche, on trouve ou on ne trouve pas. **La condition (1) se verifiait au
+jugement**, et c'est la que je pouvais me tromper dans mon sens. Trois echecs
+javascript l'ont montre nettement : les seuls tests officiels qui passaient le
+faisaient parce que l'agent rendait une valeur vide pour toute entree. Compter
+cela comme � la logique passe les cas voisins � est une complaisance.
+
+### La regle de la sonde
+
+Sur une **copie hors du repertoire du run**
+(`tmp.benchmarks/_sonde_adaptateur/`), appliquer **UNE substitution**, portant
+**uniquement sur la lecture de l'entree ou la convention en cause**, puis
+relancer la suite officielle par le meme juge docker.
+
+Ce qui est interdit : toucher une comparaison, une borne, un tri, une formule.
+La substitution doit tenir dans un `diff` de quelques lignes et se lire d'un
+coup d'oeil. Les sorties sont conservees dans
+`scripts/polyglot_dsh/sonde_adaptateur_*.txt` pour etre rejouables.
+
+  la suite officielle passe  -> l'algorithme etait juste, l'echec tient a la
+                                seule convention non publiee
+  elle echoue encore         -> il y a aussi du fond, et le classement doit
+                                le dire
+
+### Ce qu'elle a donne
+
+| exercice | substitution unique | avant | apres |
+|---|---|---|---|
+| `javascript/killer-sudoku-helper` | lire `{sum, size, exclude}` au lieu de `[somme, taille]` | 13 echecs / 23 | **PASS** |
+| `javascript/palindrome-products` | `{ min, max }` -> `{ minFactor: min, maxFactor: max }` | 9 echecs | **PASS** |
+| `javascript/meetup` | `dayIndex[weekday]` -> `dayIndex[...toLowerCase()]` | 95 echecs / 163 | **163 passed, 163 total** |
+| `java/forth` | decouper la LIGNE en jetons sur les espaces | 54 echecs / 90 | **31 echecs / 90** |
+
+Les trois premiers cas : la suite officielle passe **en entier**, et le seul
+fichier qui tombe ensuite est `maison.test.js` — les tests que l'AGENT avait
+ecrits, qui appellent l'ancienne signature. `meetup` est le cas extreme : les
+95 cas officiels (sept descripteurs, sept jours, bornes de mois, bissextiles)
+etaient **tous** justes, et la totalite de l'echec tenait a la CASSE d'une
+chaine, dans un exercice dont le stub vierge est `export const meetup = () =>`
+— sans aucun parametre declare.
+
+### Le quatrieme cas est le plus important
+
+`java/forth` est classe **`fond`** par moi. Je l'ai sonde exprès, parce qu'un
+instrument qu'on n'applique que la ou il donne le bon resultat n'est pas un
+instrument.
+
+Il ne passe pas. Le decoupage en jetons — la correction du contrat d'entree —
+fait tomber les echecs de 54 a 31 sur 90, et s'arrete la. Ce qui reste est du
+fond, et se nomme : `testOverCopiesTheSecondElementIfThereAreMoreThanTwo`
+attend `[1, 2, 3, 2]` et obtient `[2, 3, 2, 1]` — **la pile de l'agent est
+dans l'ordre inverse**. Aucune convention ne repare cela.
+
+**La sonde ne produit donc pas mecaniquement un PASS.** Elle separe. Le
+classement `fond` de `java/forth` est desormais confirme par une mesure et non
+par mon argument, et le chiffre est publiable tel quel : le contrat d'entree
+expliquait 23 des 54 echecs, les 31 autres sont des defauts.
+
+### Ce que ces mesures n'autorisent PAS a dire
+
+Trois PASS sur une seule piste, sur des cas que je soupconnais deja. A porter
+avec le resultat, sans quoi il est trompeur :
+
+1. **Biais de selection assume.** J'ai sonde la ou j'avais vu la signature
+   (suite officielle qui tombe en bloc, reussites vides). Sept entrees
+   `contrat_*` ou `signature_du_stub_contredite` restent non sondees, dont
+   `java/rational-numbers`, `java/custom-set`, `java/rest-api`,
+   `javascript/grep`, `javascript/grade-school`. Tant qu'elles ne le sont pas,
+   la mesure porte sur quatre cas, pas sur une population.
+
+2. **La piste des trois PASS est celle ou l'agent PERD.** javascript est a
+   **-20,0 points** contre le board (n = 15, p = 0,45, R28z). C'est le fait
+   genant et il faut le dire dans le meme souffle : montrer que trois echecs
+   javascript sont des conventions et non de l'incompetence **n'implique pas**
+   que l'agent y soit meilleur. Les deux choses coexistent — les enonces
+   javascript laissent beaucoup de conventions ouvertes, ET l'agent y perd.
+   Toute lecture qui transforme la premiere en la seconde est fausse.
+
+3. **La sonde etablit (1), pas (2).** Un exercice peut avoir un algorithme
+   parfait ET un element divergent parfaitement visible : la sonde passerait,
+   et le classement resterait `fond` par la condition (2). C'est le cas de
+   figure a surveiller ; il n'est pas encore survenu, mais rien ne l'empeche.
+
+4. **Elle ne dit rien du board.** Elle mesure ce que l'agent aurait obtenu si
+   la convention lui avait ete donnee. Elle ne dit pas ce que le meme modele
+   aurait fait sous le protocole aider, ou la suite officielle est visible et
+   la question ne se pose pas.
+
+### Reserve de protocole
+
+`_sonde_adaptateur` est un run bidon cree a cote du run reel ; **rien n'est
+ecrit dans `pi_D_t1_dflash2`**. Deux precautions apprises a la dure ce soir :
+la copie doit inclure les fichiers en point (`rejuger.py` refuse un exercice
+sans `.dsh.results.json`, et une copie par `*` les saute silencieusement — j'ai
+lu pendant plusieurs minutes une sortie perimee en croyant sonder) ; et la
+sortie reelle du juge doit etre sauvegardee avant la sonde, puisque
+`rejuger.py` ecrit au meme chemin.
