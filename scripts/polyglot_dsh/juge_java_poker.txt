@@ -1,0 +1,177 @@
+juge     : ./gradlew test
+conteneur: pi-polyglot-tests
+repertoire: /benchmarks/pi_D_t1_dflash2/java/exercises/practice/poker
+tests remis a neuf, @Disabled retires : src/test/java/PokerTest.java
+
+code de retour : 1   (5234 caracteres -> juge_java_poker.txt)
+ FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["4S 5H 4C 8S 5D"]
+    to contain exactly (and in same order):
+      ["2S 8H 2D 8D 3H"]
+    but some elements were not found:
+      ["2S 8H 2D 8D 3H"]
+    and others were not expected:
+      ["4S 5H 4C 8S 5D"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//PokerTest.twoDoublePairs(PokerTest.java:73)
+
+PokerTest > threeVsStraight() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["4S 5H 4C 8D 4H"]
+    to contain exactly (and in same order):
+      ["3S 4D 2S 6D 5C"]
+    but some elements were not found:
+      ["3S 4D 2S 6D 5C"]
+    and others were not expected:
+      ["4S 5H 4C 8D 4H"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//PokerTest.threeVsStraight(PokerTest.java:121)
+
+PokerTest > tieHasMultipleWinners() PASSED
+
+PokerTest > twoSquares() PASSED
+
+PokerTest > oneHand() PASSED
+
+PokerTest > identicallyRankedPairs() PASSED
+
+PokerTest > twoStraightFlushes() PASSED
+
+PokerTest > twoFlushes() PASSED
+
+PokerTest > flushVsFull() PASSED
+
+PokerTest > highestCardWins() PASSED
+
+PokerTest > fullVsSquare() PASSED
+
+PokerTest > onePairVsDoublePair() PASSED
+
+PokerTest > twoStraights() PASSED
+
+PokerTest > twoThrees() PASSED
+
+PokerTest > straightVsFlush() PASSED
+
+PokerTest > nothingVsOnePair() PASSED
+
+PokerTest > sameHighestPair() PASSED
+
+PokerTest > sameHighCards() PASSED
+
+PokerTest > doublePairVsThree() PASSED
+
+PokerTest > acesCanEndAStraight() PASSED
+
+PokerTest > sameSquaresMultipleDecks() PASSED
+
+PokerTest > sameThreesMultipleDecks() PASSED
+
+PokerTest > acesCanStartAStraight() FAILED
+    org.opentest4j.AssertionFailedError: 
+    Expecting actual:
+      ["4S 5H 4C 8D 4H"]
+    to contain exactly (and in same order):
+      ["4D AH 3S 2D 5C"]
+    but some elements were not found:
+      ["4D AH 3S 2D 5C"]
+    and others were not expected:
+      ["4S 5H 4C 8D 4H"]
+        at java.base@21.0.11/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+        at java.base@21.0.11/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+        at app//PokerTest.acesCanStartAStraight(PokerTest.java:137)
+
+PokerTest > twoFullssameThripletMultipleDecks() PASSED
+
+PokerTest > twoFulls() PASSED
+
+PokerTest > twoPairs() PASSED
+
+PokerTest > theLowestStraightStartsWithAce() PASSED
+
+MaisonTest > lowerPairBreaksTieInTwoPair() PASSED
+
+MaisonTest > aceDoesNotPlayBetween10AndKing() PASSED
+
+MaisonTest > highestPairBreaksFullHouseTie() PASSED
+
+MaisonTest > bestHandMultipleHands() PASSED
+
+MaisonTest > highestTwoPairWins() PASSED
+
+MaisonTest > aceLowStraightFlushBeatsHighStraightFlushOfLowerRank() PASSED
+
+MaisonTest > highestCardWins() PASSED
+
+MaisonTest > aceIsLowInStraight() PASSED
+
+MaisonTest > multipleHandsCanTie() PASSED
+
+MaisonTest > highestFourOfKindWins() PASSED
+
+MaisonTest > fullHouseBeatsTwoPair() PASSED
+
+MaisonTest > kickerBreaksFlushTie() PASSED
+
+MaisonTest > tripRankBeatsHigherPairInFullHouse() PASSED
+
+MaisonTest > aceWithTwoIsNotAStraight() PASSED
+
+MaisonTest > highestPairWins() PASSED
+
+MaisonTest > straightFlushBeatsFourOfKind() PASSED
+
+MaisonTest > twoPairBeatsOnePair() PASSED
+
+MaisonTest > bestHandSingleHand() PASSED
+
+MaisonTest > tiesArePossible() PASSED
+
+MaisonTest > highestFlushWins() PASSED
+
+MaisonTest > flushBeatsStraight() PASSED
+
+MaisonTest > acesAreHigh() PASSED
+
+MaisonTest > kickerBreaksTieInTwoPair() PASSED
+
+MaisonTest > kickerBreaksFourOfKindTie() PASSED
+
+MaisonTest > highestStraightFlushWins() PASSED
+
+MaisonTest > fourOfKindBeatsFullHouse() PASSED
+
+MaisonTest > aceHighStraightBeatsBroadway() PASSED
+
+MaisonTest > highestFullHouseWins() PASSED
+
+MaisonTest > onePairBeatsHighCard() PASSED
+
+MaisonTest > highCardDoesNotBeatStraight() PASSED
+
+> Task :test FAILED
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.7/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+3 actionable tasks: 2 executed, 1 up-to-date
+
+58 tests completed, 3 failed
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':test'.
+> There were failing tests. See the report at: file:///benchmarks/pi_D_t1_dflash2/java/exercises/practice/poker/build/reports/tests/test/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 3s
