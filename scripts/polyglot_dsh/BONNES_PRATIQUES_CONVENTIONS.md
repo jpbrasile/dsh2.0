@@ -378,3 +378,52 @@ stub qui déclare une erreur, énoncé qui n'en dit rien. Premier cas où la
 prédiction voit juste sur un exercice qui n'a pas servi à l'écrire. Un cas ne
 conclut rien : à 49 verdicts, S4 hors cas fondateurs donne 1/5 contre 1/13,
 soit +12,3 points, **p = 0,490**.
+
+---
+
+## Cas 6 — `go/protein-translation` : la famille **contrat**, enfin observée
+
+**Relevé** : 27/08/2026, run `pi_D_t1_dflash2`, 35,3 s, tour non coupé.
+
+**Ce que le juge a dit** — pas un échec de test, un échec de **compilation** :
+
+```
+FAIL	protein [build failed]
+./protein_translation_test.go:8:5:  undefined: ErrStop
+./protein_translation_test.go:11:5: undefined: ErrInvalidBase
+```
+
+**La preuve.** `ErrStop` et `ErrInvalidBase` n'apparaissent **nulle part** hors
+du fichier de test : ni dans `.docs/instructions.md`, ni dans le stub, qui ne
+donne que
+
+```go
+func FromRNA(rna string) ([]string, error)
+func FromCodon(codon string) (string, error)
+```
+
+La suite exige deux **variables d'erreur exportées, nommées exactement ainsi**,
+et vérifie même qu'elles ne sont pas `nil`. Aucune information visible par
+l'agent ne porte ces noms. Ce n'est pas une convention devinable : c'est une
+convention **inconnaissable** en variante D.
+
+**La bonne pratique** — et elle est la seule honnête ici : quand une signature
+rend `(T, error)` sans nommer d'erreur sentinelle, un appelant peut vouloir
+**comparer** l'erreur, pas seulement la tester. Déclarer des sentinelles
+exportées (`var ErrXxx = errors.New(...)`) est l'idiome Go standard et coûte
+deux lignes. Le nom, lui, reste un tirage — sauf à suivre la convention
+`Err` + le mot du domaine tel que l'énoncé l'emploie (« stop », « invalid
+base »), ce qui donne ici la bonne réponse.
+
+**La quatrième famille a enfin son cas.** Le tableau des familles portait
+« contrat — la signature publique » sans exemple observé. Le voici :
+
+| famille | ce qui diverge | cas observé |
+|---|---|---|
+| **contrat** | des identifiants publics que la suite exige par leur nom exact | `go/protein-translation` (`ErrStop`, `ErrInvalidBase`) |
+
+**Pour la prédiction : seconde confirmation hors échantillon.** Signalé **S4**
+— stub qui déclare une erreur, énoncé qui n'emploie aucun mot du champ de
+l'erreur. À 51 verdicts, S4 hors cas fondateurs donne **2/6 contre 1/14, soit
++26,2 points, p = 0,202**. La direction est celle qui était prédite ; le seuil
+n'est pas atteint.
