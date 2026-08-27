@@ -3,7 +3,8 @@
     "a_quoi_ca_sert": "Le taux d'echec brut melange DEUX populations qui ne disent pas la meme chose : un echec d'AMBIGUITE (l'enonce ne dit pas ce que la suite exige) et un echec de FOND (l'agent a ecrit un bug). Aucune signature d'enonce ne peut attraper un echec de fond. Les laisser dans la colonne « non signales » dilue mecaniquement tout ecart mesure.",
     "critere": "Il n'est PAS invente pour l'occasion : c'est la barre deja ecrite dans BONNES_PRATIQUES_CONVENTIONS.md le 27/08, avant ces echecs. Un echec est classe AMBIGUITE si et seulement si les DEUX conditions tiennent : (1) la logique passe les cas voisins -- on peut nommer quels cas passent ; (2) l'element divergent est ABSENT de l'enonce ET du stub, c'est-a-dire de tout ce que l'agent peut voir. Sinon : FOND.",
     "regle_d_usage": "Le classement se fait en lisant la sortie du juge et l'enonce, JAMAIS en regardant si l'exercice etait signale par une signature. Le critere est symetrique : un exercice signale qui echoue sur un bug est classe FOND comme les autres, et sort du depouillement lui aussi. C'est ce qui empeche le classement de fabriquer l'ecart qu'il est cense mesurer.",
-    "chaque_entree_porte_sa_preuve": "Le champ `preuve` doit citer la piece : ligne de l'enonce, ligne du stub, ou cas voisins qui passent. Une entree sans preuve verifiable est a retirer, pas a garder par confort."
+    "chaque_entree_porte_sa_preuve": "Le champ `preuve` doit citer la piece : ligne de l'enonce, ligne du stub, ou cas voisins qui passent. Une entree sans preuve verifiable est a retirer, pas a garder par confort.",
+    "mecanisme_signature": "Champ SEPARE, et il ne change AUCUN calcul. La prediction du 27/08 annonce que les exercices signales ECHOUENT PLUS -- elle n'annonce pas par quel mecanisme. Exiger apres coup que le mecanisme corresponde reviendrait a resserrer le critere une fois les resultats connus. Le champ enregistre donc si le mecanisme de la signature est bien celui qui a fait echouer l'exercice, pour que la publication puisse le dire, sans jamais retirer ni ajouter un cas au decompte."
   },
   "echecs": {
     "go/beer-song": {
@@ -23,11 +24,21 @@
     },
     "go/poker": {
       "classe": "ambiguite",
+      "signature": "S4",
+      "mecanisme_signature": "oui -- l'echec EST le rejet manquant d'une entree invalide, ce que S4 annonce",
       "preuve": "Tous les cas de classement et de departage passent ; seul le rejet d'une main invalide tombe. Le stub declare ([]string, error) ; l'enonce fait 4 lignes et n'emploie ni « error », ni « invalid », ni « must »."
     },
     "go/protein-translation": {
       "classe": "ambiguite",
+      "signature": "S4",
+      "mecanisme_signature": "oui -- l'echec porte sur les sentinelles d'erreur elles-memes",
       "preuve": "ErrStop et ErrInvalidBase n'apparaissent NI dans .docs/, NI dans le stub -- verifie par grep le 27/08. La suite les exige par leur nom exact et verifie qu'ils ne sont pas nil."
+    },
+    "go/simple-linked-list": {
+      "classe": "ambiguite",
+      "signature": "S4",
+      "mecanisme_signature": "NON -- S4 signale le contrat d'erreur de Pop() (int, error) ; l'echec porte sur le BOUT sur lequel Push et Pop agissent. La signature a designe le bon exercice pour la mauvaise raison, et le decompte le garde tel quel.",
+      "preuve": "L'enonce parle d'un lecteur de musique, demande « create a singly linked list » et « reverse the list », et ne nomme JAMAIS Push, Pop, Size ni Array -- verifie sur .docs/instructions.md entier. Ces quatre-la n'existent que comme signatures nues dans le stub, sans un mot de semantique : ni le bout sur lequel Push/Pop agissent, ni l'ordre que rend Array. Le juge : « Push to non empty list: [4 1 2 3], want [1 2 3 4] » et « Pop from non empty list: 1, want 3 »."
     },
     "go/pig-latin": {
       "classe": "ambiguite",
