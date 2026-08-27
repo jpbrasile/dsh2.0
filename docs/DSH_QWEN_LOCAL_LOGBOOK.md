@@ -5124,3 +5124,62 @@ porte toujours `tests_outcomes [false]` — **il n'a pas été édité**. Un
 résultat ne se corrige pas à la main ; soit l'exercice est rejoué proprement,
 soit le faux FAIL est publié avec ce paragraphe. Le choix revient à
 l'opérateur.
+
+---
+
+### R28j — le chien de garde du silence a mordu, et le rejeu d'alphametics est armé
+
+#### La réserve ouverte depuis R28e tombe
+
+Depuis R28e, une phrase revenait à chaque compte rendu : *« toujours non
+prouvé : aucune `COUPE : silence` »*. Le tueur de boîtes de dialogue avait été
+prouvé en production (18 kills, R28g), le chien du silence jamais — seule la
+laisse au chronomètre avait coupé, et R28f expliquait pourquoi elle ne pouvait
+pas perdre au tour 2.
+
+Le 27/08, sur `go/bottle-song` :
+
+```
+COUPE : silence 601s sans appel au modele (apres 640.1 s)
+go          bottle-song                      FAIL   640.8s  tours=1
+```
+
+L'agent a passé son dernier appel au modèle vers 39 s, puis rien pendant
+601 s. Le chien a coupé, le pilote a enchaîné sur l'exercice suivant. C'est la
+première coupure sur silence **en conditions réelles**, et elle valide le seul
+garde-fou qui restait éprouvé au banc seulement.
+
+Ce que ça ne dit pas : *pourquoi* l'agent s'est tu 10 minutes. La sortie de
+l'agent est conservée (`sortie_queue`, 600 caractères) ; la cause reste à lire.
+Et le seuil de 600 s reste à réévaluer quand java et rust arriveront — leurs
+compilations à froid peuvent légitimement dépasser 10 minutes sans appel au
+modèle.
+
+#### go/alphametics : rejeu armé, pas bricolé
+
+Décision de l'opérateur : rejouer plutôt que publier le faux FAIL avec une
+note. Fait dans cet ordre, et rien n'a été détruit :
+
+1. **Preuve d'abord.** Les deux fichiers de test jugés ont été comparés au
+   corpus vierge : `alphametics_test.go` et `cases_test.go` sont **identiques
+   octet pour octet** (sha256 `eb22bd71…`). Le `ok alphametics 5.103s` du
+   rejeu portait donc bien sur la suite officielle, pas sur un fichier de
+   l'agent resté en place. Sans ce contrôle, la conclusion de R28i ne valait
+   rien.
+2. `.dsh.results.json` et `maison_test.go` **déplacés** dans le bac à sable
+   (`alphametics_faux_fail/`), avec une copie de la solution incriminée. Le
+   pilote remet les éditables à neuf de lui-même (`pilote.py:845`), donc le
+   rejeu repart du stub : c'est un échantillon franc, pas une reprise.
+3. `rejouer_alphametics.ps1`, lancé **détaché** (PID 66776).
+
+**Il attend, et c'est le point.** Le 4090 est occupé par le run principal. Deux
+agents sur un serveur `--parallel 1` se mettent en file et se volent le cache
+de préfixe : on abîmerait à la fois la durée d'alphametics **et** celle de
+l'exercice traité au même moment par le run principal. Matériel partagé
+occupé ⇒ attendre. Le script sonde toutes les 60 s, exige trois relevés
+consécutifs sans lanceur ni pilote, refuse de démarrer si un pilote tiers
+apparaît (code 3), remonte le proxy 8013 que le lanceur aura arrêté, puis
+repasse `auditer_pass.py --tous` — l'audit du lanceur aura tourné sans cet
+exercice.
+
+Journal : `scripts/polyglot_dsh/rejeu_alphametics.log`.
