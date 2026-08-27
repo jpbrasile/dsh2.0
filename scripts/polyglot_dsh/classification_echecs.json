@@ -7,6 +7,20 @@
     "mecanisme_signature": "Champ SEPARE, et il ne change AUCUN calcul. La prediction du 27/08 annonce que les exercices signales ECHOUENT PLUS -- elle n'annonce pas par quel mecanisme. Exiger apres coup que le mecanisme corresponde reviendrait a resserrer le critere une fois les resultats connus. Le champ enregistre donc si le mecanisme de la signature est bien celui qui a fait echouer l'exercice, pour que la publication puisse le dire, sans jamais retirer ni ajouter un cas au decompte."
   },
   "echecs": {
+    "java/affine-cipher": {
+      "classe": "ambiguite",
+      "signature": "aucune",
+      "divergence": "libelle_seul",
+      "mecanisme_signature": "S4 n'a PAS tire, et c'etait correct : elle exige que l'enonce soit muet sur l'erreur, or la ligne 27 dit « your program should indicate that this is an error ». L'enonce n'est pas muet sur l'erreur, il est muet sur son TEXTE. Autre famille -- voir PREDICTION_LIBELLES_ERREUR.md.",
+      "preuve": "Les 14 autres tests passent. Les 2 qui tombent sont testEncodeThrowsMeaningfulException et testDecodeThrowsMeaningfulException, tous deux sur le TEXTE : attendu « Error: keyA and alphabet size must be coprime. », obtenu « a and m must be coprime. » -- redige avec le vocabulaire de l'enonce (a, m, lignes 26-27). La chaine attendue est ABSENTE de .docs/, verifie par grep le 27/08. Sortie complete relue par rejuger.py, la queue de 3 000 car. du pilote ne portait que la pile gradle."
+    },
+    "java/all-your-base": {
+      "classe": "ambiguite",
+      "signature": "aucune",
+      "divergence": "libelle_seul",
+      "mecanisme_signature": "aucune signature ne pouvait tirer : l'enonce fait 1 362 caracteres et ne contient AUCUN mot du champ de l'erreur, et le stub ne porte que le remplisseur UnsupportedOperationException commun a 46 stubs java sur 47. Rien de visible n'annonce l'exception.",
+      "preuve": "Les cas de conversion passent. Ceux qui tombent (testFirstBaseIsOne, testFirstBaseIsZero, testSecondBaseIsZero...) le font tous sur le TEXTE : attendu « Bases must be at least 2. », obtenu « base must be >= 2 ». Meme sens, autre redaction."
+    },
     "go/beer-song": {
       "classe": "ambiguite",
       "fondateur": true,
