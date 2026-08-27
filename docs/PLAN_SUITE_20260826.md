@@ -1243,3 +1243,92 @@ vers **08 h le 28/08**, +2 h de mesure appariée → **~10 h le 28**.
 Sur un banc à queue lourde, une moyenne sur 11 tirages ne prédit rien quand un
 tirage sur sept coûte trente fois la médiane. C'est la deuxième fois de la
 journée.
+
+---
+
+# Révision du 27/08/2026, 10:30 — R28 : le harnais pendait, et le temps du run était faux
+
+## R28a. Le diagnostic
+
+Les tours coupés à 1 800 s **ne calculaient pas**. Sur 15 exercices jugés, les
+3 coupures montrent la même signature : l'agent cesse d'appeler le modèle au
+bout de 20 à 164 s, puis silence total jusqu'à la laisse. **5 231 s des 8 328 s
+de paroi, 63 %, GPU à l'arrêt.**
+
+Deux causes, toutes deux confirmées sur pièces :
+
+1. **Commandes non bornées.** L'outil `bash` de pi : `"Timeout in seconds
+   (optional, no default timeout)"`. Le modèle reçoit ce paramètre à chaque
+   appel et l'omet 3 fois sur 3. Pris sur le fait : `find / -name plf_build.ps1`
+   sur tout le disque (pi tourne sur l'hôte, `/` = `C:`).
+2. **Boîte `Debug Assertion Failed` du CRT MSVC**, signalée par l'opérateur.
+   CMake 4.3.1 → générateur Visual Studio → config **Debug** → `assert()` actif.
+   Elle n'écrit rien au journal des événements.
+
+## R28b. Les trois protections, et le seuil qui vient des données
+
+| protection | ce qu'elle couvre | où |
+|---|---|---|
+| `--veille-silence 600` | commande non bornée, boîte manquée | `pilote.py:lancer_dsh` |
+| `SetErrorMode` hérité | plantage franc (WER) | `pilote.py:taire_les_boites_windows` |
+| tueur de boîtes `#32770` | `assert` MSVC, dialogue modal | `pilote.py:chasser_les_boites` |
+
+**Seuil lu, pas choisi** : 460 écarts entre appels — médiane 0,1 s, p99 83,4 s,
+plus long **légitime** 120,4 s, puis rien jusqu'à 1 677 s. 600 s = 5× de marge.
+À réévaluer quand java et rust arriveront (compilation froide).
+
+**Sûreté du chien** : il ne s'arme qu'après avoir vu un appel de ce tour tomber
+dans le journal de fil. Surveiller le mauvais fichier fabriquerait des FAIL.
+
+**Sûreté du tueur** : condition stricte de descendance. Éprouvé sur banc — un
+`MessageBox` réel à profondeur 2 est fermé, les 9 fenêtres de l'opérateur
+intactes.
+
+## R28c. Ce que ça change pour l'estimation
+
+L'estimation de R27 (**381,4 s/exercice, ~22,5 h restantes**) **est caduque** :
+elle intégrait les pendaisons comme si c'était du calcul. Les 4 exercices
+rejoués sous harnais réparé donnent 465,1 / 77,0 / 167,1 / 117,4 s. Aucune
+nouvelle projection n'est publiée ici : il faut d'abord une vingtaine
+d'exercices sous le harnais corrigé. **Trois estimations fausses en une journée
+suffisent.**
+
+## R28d. État de la carte au 27/08 10:30
+
+Run `pi_D_t1_dflash2` relancé **10:23:48**, journal
+`scripts/polyglot_dsh/polyglot_t1_dflash2_d.log`, avec
+`-DelaiTour 1800 -DelaiTour2 600 -VeilleSilence 600`.
+En tête du journal, les deux lignes qui prouvent l'armement :
+
+    veille silence : 600 s ; journal de fil ...\wire_pi_D_t1_dflash2.jsonl
+    boites d'erreur Windows desactivees pour la descendance
+
+**16 cpp jugés sur 26.** 4 résultats écartés et conservés
+(`.pendu-20260827-095314`, `.crash-relance-0807`).
+
+Commandes pour la suite :
+
+    # depouiller le rejeu (avant / apres, cote a cote)
+    python comparer_pendus.py pi_D_t1_dflash2 --horodatage 20260827-095314
+
+    # rejouer d'autres cas abimes (refuse si un pilote vit)
+    scripts\polyglot_dsh\rejouer_les_pendus.ps1 [-PuisRelancerPrincipal]
+
+    # apres tout arret brutal
+    python reparer_amputes.py pi_D_t1_dflash2 --appliquer
+
+    # mesure appariee du semis cpp, quand le bloc cpp sera depasse
+    scripts\polyglot_dsh\mesurer_valeur_du_semis.ps1
+
+**Piège connu, non corrigé** : `mesurer_valeur_du_semis.ps1` lance son proxy
+avec `PROXY_LOG = wire_<run>_complement.jsonl` alors que le pilote déduit
+`wire_<run>.jsonl`. Le chien ne s'armera donc pas pendant cette étape — sans
+danger par construction (repli sur le comportement d'avant), mais à corriger par
+un `--journal-fil` explicite.
+
+## R28e. Ce qui reste NON PROUVÉ
+
+Aucune coupure sur silence ni boîte tuée **en conditions réelles**. Le journal
+du run ne porte encore ni `COUPE : silence` ni `BOITE DE DIALOGUE tuée`. Tant
+que ces lignes n'existent pas, le correctif est une hypothèse outillée et
+éprouvée sur banc — pas un fait mesuré sur le banc lui-même.

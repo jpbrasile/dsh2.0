@@ -4712,3 +4712,138 @@ principal vers **08 h le 28/08**, plus ~2 h de mesure appariée → **~10 h le 2
 La leçon est toujours la même et je la répète parce que je viens de la
 re-apprendre : sur un banc à queue lourde, **une moyenne sur 11 tirages ne
 prédit rien** quand un tirage sur sept coûte trente fois la médiane.
+
+## 27/08 10:30 — Les tours coupés à 1 800 s ne calculaient pas : ils pendaient
+
+Ordre : « tu peux auditer les timeout au tour 1 pour voir si on peut mieux
+faire ». La réponse est oui, et pas du tout où je regardais.
+
+### Ce que dit la mesure
+
+Sur 15 exercices jugés, **aucune** des 3 coupures à la laisse n'est un calcul
+long. Dans les trois cas l'agent cesse d'appeler le modèle au bout de 20 à
+164 s, puis plus **un seul appel** jusqu'à la laisse.
+
+| tour coupé | appels au modèle | puis | verdict |
+|---|---|---|---|
+| `all-your-base` t2 | 6 appels en **20 s** | **1 780 s de silence** | FAIL |
+| `kindergarten-garden` t1 | jusqu'à 08:22:44 | **1 760 s de silence** | PASS (t2) |
+| `linked-list` t1 | 21 appels en **135 s**, 9 302 jetons | **1 677 s de silence** | PASS |
+
+**5 231 s des 8 328 s de paroi — 63 % — GPU à l'arrêt.** Deux horloges
+indépendantes concordent : le journal proxy (aucun appel) et les mtimes sur
+disque (aucun octet écrit). `linked-list` avait fini sa réponse à t+61 s, a
+passé 29 minutes sans rien faire, et il **PASSE** — la coupure n'efface rien,
+elle retire le clavier ; le juge passe ensuite sur ce qui est sur le disque.
+
+### Cause 1 : les commandes non bornées
+
+L'outil `bash` de pi déclare son délai `Optional`, et son propre schéma dit
+`"Timeout in seconds (optional, no default timeout)"` ;
+`resolveTimeoutMs(undefined)` rend `undefined`. Le dernier appel avant chaque
+silence porte `fin_raison: "tool_calls"` : le modèle a demandé un outil, la
+réponse n'est jamais revenue.
+
+**Le modèle SAIT.** Il reçoit les 4 outils et ce paramètre à chaque appel, avec
+sa description. Il l'omet trois fois sur trois. La seule ligne du prompt système
+de pi sur cet outil est `"Execute bash commands (ls, grep, find, etc.)"` — rien
+sur le fait de borner quoi que ce soit. Pris sur le fait le 27/08 à 09:34:45 :
+`find / -name plf_build.ps1` balayant tout le disque (pi tourne sur l'hôte, donc
+`/` c'est `C:`), fichier inexistant, `head -3` qui ne recevra jamais rien.
+**Deux** de ces `find` tournaient encore au moment de l'arrêt.
+
+### Cause 2 : les boîtes de dialogue — signalée par l'opérateur
+
+« j'ai des fenêtres d'erreurs en pop up […] c'était pour des erreurs cpp++
+abandon, retry ». C'est la boîte **`Debug Assertion Failed`** du CRT MSVC. Aucun
+compilateur sur le `PATH` : CMake 4.3.1 passe par le générateur Visual Studio,
+dont la configuration par défaut est **Debug**, donc `assert()` actif.
+
+Elle n'écrit **rien** au journal des événements — d'où un seul incident visible
+là où l'opérateur en voyait plusieurs. J'avais d'abord posé `SetErrorMode`, qui
+ne la couvre pas : elle vient d'un `MessageBox` appelé *dans* le processus fils,
+pas du rapport d'erreurs Windows. Il a fallu le dire et changer de correctif.
+
+### Ce qu'on ne fait pas, et pourquoi
+
+**Pas de laisse plus courte.** Elle est aveugle : elle punit aussi le tour qui
+travaille. Les 13 tours 1 qui finissent seuls tiennent tous sous **492 s**
+(médiane 119). Les pendaisons, elles, durent ce que la laisse autorise.
+
+**Pas de `NDEBUG`.** Ça supprimerait la boîte en désactivant **tous** les
+`assert()` — y compris ceux que l'agent écrit dans **ses propres** tests. Ils
+passeraient à vide, il se croirait arrivé, et le taux baisserait sans qu'on
+sache pourquoi. Le remède serait pire que le mal.
+
+**Pas de ligne ajoutée à la consigne.** « Borne tes commandes » marcherait
+peut-être, mais la consigne est ce que le banc mesure, et variante D dit
+« énoncé nu ».
+
+### Les trois protections
+
+**Chien de garde sur le silence**, `--veille-silence`, défaut 600 s. Le seuil
+est **lu dans la distribution, pas choisi** : 460 écarts entre appels
+consécutifs, médiane 0,1 s, p99 83,4 s, plus long écart **légitime** 120,4 s —
+puis un gouffre, rien entre 121 s et 1 677 s. 600 s laisse 5× de marge, de quoi
+couvrir une compilation froide gradle ou cargo que le seul bloc cpp n'a pas
+encore montrée.
+
+*Sûreté* : le chien ne s'arme qu'après avoir **vu** un appel de ce tour tomber
+dans le journal de fil. Le chemin de ce journal dépend du lanceur ; surveiller
+le mauvais fichier ferait couper des tours **sains** et fabriquerait des FAIL.
+Tant qu'aucun appel n'y tombe, seule la laisse ordinaire s'applique.
+
+**`SetErrorMode`** hérité par toute la descendance, pour les plantages francs.
+
+**Tueur de boîtes** : toutes les 15 s, les fenêtres de classe `#32770` dont le
+propriétaire est un **descendant de l'agent de ce tour** — et eux seuls. Ce
+n'est pas qu'un gain de temps : le binaire planté rend alors un code non nul,
+`bash` reprend, et l'agent **voit** que son test a planté.
+
+### Le banc d'essai du tueur, avant de le lâcher
+
+Un tueur de processus non testé est exactement ce qu'on ne déploie pas.
+
+1. `_descendants` remonte une chaîne réelle de **profondeur 3**, vérifiée contre
+   une photographie directe de la table des processus. **Mes deux premiers tests
+   ne prouvaient rien** : bash sous Windows aplatit la chaîne en `exec`, la
+   profondeur réelle valait 1. Il a fallu refaire la chaîne en Python.
+2. Aucune des 9 applications à fenêtre de l'opérateur n'est vue comme
+   descendante.
+3. **Cas complet** : un descendant à profondeur 2 ouvre un vrai `MessageBox`
+   `MB_ABORTRETRYIGNORE` titré « Microsoft Visual C++ Runtime Library ». Le
+   tueur le ferme, tue le bon PID, et les 9 fenêtres de l'opérateur sont
+   intactes.
+
+### Le rejeu, et la règle écrite avant
+
+Périmètre **restreint par l'opérateur aux tours 1 pendus**. Règle posée avant de
+lancer : *le verdict du rejeu est l'officiel, quel qu'il soit ; les anciens sont
+renommés, jamais supprimés, et publiés à côté.*
+
+| exercice | avant (harnais pendu) | après |
+|---|---|---|
+| `all-your-base` | **FAIL** 1 947,6 s (t2 pendu) | **PASS** 465,1 s |
+| `kindergarten-garden` | PASS 2 007,9 s (t1 pendu) | PASS **77,0 s** |
+| `linked-list` | PASS 1 812,5 s (t1 pendu) | PASS **167,1 s** |
+| `complex-numbers` | (amputé) | PASS 117,4 s |
+
+**5 059 s économisées sur trois exercices, 8,1×.** C'est *ça* la mesure du
+correctif : le temps, et il est prouvé.
+
+`all-your-base` bascule FAIL → PASS, **en notre faveur** — c'est exactement
+pourquoi la règle devait être écrite d'abord. Je ne l'attribue **pas** au
+correctif : n = 1 sur un banc qui échantillonne. Plausible — son tour 2 avait eu
+20 s de travail avant de pendre, il en a eu un vrai cette fois — pas prouvé.
+
+`all-your-base` était hors périmètre après la restriction ; il a été écarté par
+un premier lancement du script parti avec l'ancienne liste. Je l'ai tranché
+**avant** de connaître le résultat, ce qui est le seul moment où la décision est
+propre.
+
+### Ce qui reste non prouvé
+
+**Aucune coupure sur silence ni boîte tuée n'est encore survenue en conditions
+réelles.** Le correctif est mesuré, compilé, éprouvé sur banc — mais tant que le
+journal du run ne porte pas sa première ligne `COUPE : silence` ou
+`BOITE DE DIALOGUE tuée`, c'est une hypothèse outillée, pas un fait.
