@@ -7196,3 +7196,182 @@ deux sont des acquis :
 2. Le **pre-vol** « l'agent repond-il ? » — « le banc ne part pas : un agent
    muet rendrait 225 FAIL indiscernables d'un mauvais modele ». C'est
    exactement le garde-fou dont l'absence a coute 71 exercices a 20 h 12.
+
+---
+
+## R33 — 28/08, les 225 sont là : cinq défauts de banc trouvés en lisant UN exercice en entier
+
+Point de départ : l'opérateur refuse ma conclusion sur python (« non pas
+d'accord il y a un bug ») et demande de **lire tout un exemple pour
+comprendre**. La méthode paie cinq fois. Aucun de ces défauts n'a été trouvé
+par une statistique ; tous par la lecture d'un cas.
+
+### 1. Python n'était pas l'anomalie — c'était le seau à moitié plein
+
+J'avais annoncé python à 6,2 %. C'était **1/16 pendant que le rejeu
+démarrait**. Python fini : **12/34 = 35,3 %** contre 11,8 % au board en
+première tentative, soit **+23,5 points** — la troisième plus forte
+progression du corpus. Ma piste « format des couplets » était fausse et est
+retirée. Ce qui tient de ce dépouillement : les échecs python sont
+massivement de l'**API cachée** (`added()` doit rendre une liste, `WHITE`
+absent à l'import, `pretty` manquant, ordre des arguments de `list-ops`,
+dollars contre cents), pas du raisonnement raté.
+
+### 2. Le pilote attribuait la suite officielle à l'agent — 225 sur 225
+
+`avant = instantane(ex_hote)` est pris **après** `masquer` (l. 1095-1096).
+Toute la suite officielle — sortie avant la photo, remise par `demasquer`
+après le tour — tombe donc dans `apres - avant` et se fait classer « écrite
+par l'agent ». Mesuré : les 225 résultats portent leur propre suite dans
+`tests_ecrits_par_l_agent`.
+
+Sans effet sur les verdicts mesurés, et c'est **vérifié** : `poser_tests`
+repose la suite depuis le vierge, et le juge de `grade-school` a bien exécuté
+les 20 tests officiels.
+
+**Mais le correctif du trou de masquage en faisait une mine.** Depuis 42474af
+(27/08 18:21), `chemins_a_masquer` masque aussi les tests officiels non
+déclarés, que `poser_tests` ne repose pas. Séquence : masqué → remis →
+attribué à l'agent → re-masqué → jamais reposé. Vérifié sur `go/alphametics`
+et `go/book-store`. Portée : go 18/39 et java 1/47. Elle n'a jamais tiré — le
+run a démarré à 07:47, le correctif est de 18:21.
+
+Correctif `4e5e3e9` : le corpus vierge tranche, pas l'instantané. Un fichier
+qui existe dans le vierge est officiel, quel que soit l'ordre des appels.
+**Validé en vol** : `java/bowling`, premier exercice joué après le correctif,
+enregistre `['src/test/java/MaisonTest.java']`.
+
+### 3. Le détecteur cherchait des noms, pas des formes
+
+`FLAIRS_TEST` cherchait `testCases` / `func Test`. Or `go/wordy` déclare
+`var tests = []wordyTest{` et `go/dnd-character` `var modifierTests =
+[]struct {`. Correctif `12e8071` : dans un fichier déjà retenu par
+`NOMS_TEST`, une tranche déclarée au niveau paquet **est** une table de cas.
+go passe de 18 à 20 ; le corpus en porte exactement 20, la couverture est
+complète. Le 21 avancé par RT#4 ne se reproduit pas.
+
+**Et le +31,0 que j'avais publié était faux, par confusion entre fuite et
+difficulté.**
+
+| cellule go | D | board a1 | écart |
+|---|---|---|---|
+| suite **visible** (20) | 80,0 % | 30,0 % | +50,0 |
+| suite **masquée** (19) | 52,6 % | 10,5 % | +42,1 |
+
+Le board marque déjà 30,0 % contre 10,5 % sur la même partition : ces
+exercices sont plus faciles, fuite ou pas. Ce qui est imputable à la fuite est
+la **différence des différences, +7,9 points sur 20 exercices**, soit ≈ +4,1
+points sur la colonne go et ≈ +0,7 sur le global. Pas +31,0.
+
+### 4. L'audit levait, et signalait six faux suspects
+
+`res.get("tests_outcomes", [False])[-1]` : le défaut de `get` ne joue pas
+quand la clé existe et vaut `[]`. Et `masques` était lu dans le champ
+corrompu du §2, donc `maison_test.cpp` n'y figurait pas et l'audit le
+déclarait « non masqué au verdict » sur 6 cpp correctement masqués.
+Correctif `3211310`, vérifié en recalculant le champ : **8 suspects → 2**.
+
+Les deux restants, tranchés à la main :
+
+- **`cpp/clock`** — `clock.h` identique au corrigé, mais c'est le semis
+  déclaré (`clock.h.stub-origine` présent) ; l'audit le retient parce qu'un
+  corps subsiste, `inline bool operator!=` qui rend `!(lhs == rhs)`. Le
+  fichier noté est `clock.cpp`, 842 octets contre 1196 au corrigé, écrit par
+  l'agent. **Le PASS tient.**
+- **`go/ledger`** — **FAUX PASS, retiré.** Tour coupé à 855,7 s, aucune sortie
+  d'agent, aucun test maison, `ledger.go` octet pour octet identique au stub.
+  L'énoncé le dit lui-même : *« the code however is rather badly written,
+  though (somewhat surprisingly) it consistently passes the test suite »*. Le
+  verdict mesure le stub. Le board, lui, **échoue** `ledger` deux fois : il
+  casse du code qui marchait.
+
+Recensement des **12 tours coupés** : 4 comptés PASS, dont 3 avec solution
+écrite (`cpp/zebra-puzzle`, `go/crypto-square`, `rust/poker`) et le seul
+`go/ledger` à stub intact. Côté FAIL, 5 coupés à stub intact mesurent la
+laisse et non le code (`go/octal`, `java/connect`, `javascript/connect`,
+`python/forth`, `rust/doubly-linked-list`) : ils restent FAIL — un agent qui
+ne livre pas échoue — mais la raison est déclarée.
+
+### 5. Le correctif du masquage avait rouvert le piège `nul`
+
+`java/bowling` n'avait **jamais rendu de verdict**. Rejoué, il meurt à 0,0 s :
+
+    ValueError("path is on mount '\\.\nul', start on mount 'C:'")
+
+L'agent avait laissé un fichier de zéro octet nommé `nul`, nom de périphérique
+réservé Windows. Le garde `est_peripherique_reserve` existait depuis 75f7ac2
+(27/08 **18:07**) et couvrait `instantane` et `nettoyer_artefacts`. Mais
+`tests_hors_config` est arrivé avec 42474af (27/08 **18:21**) — quatorze
+minutes plus tard, avec un `os.walk` de plus et sans le garde. Correctif
+`97a67e6`. Même nom, même cause pour `javascript/food-chain`.
+
+### 6. Et le plantage se scellait lui-même
+
+Deuxième rejeu de `java/bowling` : **« 0 joués »**. Le premier rejeu avait
+écrit un `.dsh.results.json` **sans `tests_outcomes`** pour garder la trace de
+l'exception, et la reprise (l. 1663) ne testait que **l'existence du
+fichier**. Un exercice qui plante devenait donc **inrejouable par sa propre
+trace de plantage**. Correctif : « déjà jugé » veut dire « porte un verdict »,
+pas « porte un fichier ».
+
+Les deux exercices ont ensuite joué pour de vrai : `java/bowling` FAIL en
+378,1 s (31 tests, 15 échoués), `javascript/food-chain` FAIL en 61,7 s.
+**Corpus complet : 225 verdicts.**
+
+### 7. Le chiffre, et ce qu'il vaut
+
+Comparaison **appariée** au board sur les mêmes 225 exercices (McNemar), et
+non deux binomiales indépendantes. Les IC95 sont des Wilson ; ils mesurent la
+généralisation à « des exercices comme ceux-là », pas une erreur
+d'échantillonnage — le corpus entier a été mesuré.
+
+| lecture | n | D | IC95 | board a1 | écart | McNemar |
+|---|---|---|---|---|---|---|
+| tel que mesuré | 225 | 48,9 % | [42,4 ; 55,4] | 16,9 % | +32,0 | b=85 c=13, p=4·10⁻¹⁴ |
+| t1 homogène | 225 | 47,1 % | [40,7 ; 53,6] | 16,9 % | +30,2 | p=3,6·10⁻¹³ |
+| − `go/ledger` | 224 | 46,9 % | [40,4 ; 53,4] | 17,0 % | +29,9 | p=6,2·10⁻¹³ |
+| **− fuite go** | 225 | **46,0 %** | **[39,4 ; 52,3]** | 16,9 % | **+29,1** | — |
+
+Par langue, tel que mesuré :
+
+| | n | D | board a1 | écart |
+|---|---|---|---|---|
+| cpp | 26 | 96,2 % | 11,5 % | +84,6 |
+| go | 39 | 66,7 % | 20,5 % | +46,2 |
+| rust | 30 | 60,0 % | 20,0 % | +40,0 |
+| python | 34 | 35,3 % | 11,8 % | +23,5 |
+| java | 47 | 31,9 % | 10,6 % | +21,3 |
+| javascript | 49 | 28,6 % | 24,5 % | +4,1 |
+
+**46,0 % est un MAJORANT**, parce que le semis cpp n'est pas retranché : il
+n'est pas mesuré. Le bras témoin `pi_cpp_sans_semis`, posé par cd4f461 comme
+la justification en attente, **n'a toujours pas été joué**. Rappel du semis :
+l'en-tête servi porte **92 %** des noms déclarés par le corrigé, contre
+**57 %** pour le stub python vierge.
+
+**Le chiffre publiable sans réserve non quantifiée** est celui des 178
+exercices sans avantage de protocole identifié — ni semis cpp, ni suite go
+visible :
+
+> **38,2 %** [31,4 ; 45,5] contre **16,3 %** au board.
+> **+21,9 points**, b=51 / c=12, **p = 7,5·10⁻⁷**.
+
+### 8. Ce qui reste ouvert
+
+- **Jouer `pi_cpp_sans_semis`.** Tant qu'il manque, la colonne cpp (26
+  exercices, 96,2 %) n'a pas de témoin et 46,0 % reste un plafond.
+- La ligne exacte de partage des segments joués **avant** l'ajout de
+  `go\bin` et `jdk21\bin` au PATH de l'agent (R32 §3).
+- `go/robot-simulator` dans `classification_echecs.json` : la preuve attribue
+  à l'agent des signatures qui sont celles du stub vierge.
+- Les trois « Décision humaine » en attente dans `redteam/`.
+
+### 9. La leçon de méthode
+
+Cinq défauts, tous trouvés en lisant **un exercice de bout en bout** —
+énoncé, stub, test de l'agent, suite officielle, sortie du juge, fil
+d'appels — et aucun par une statistique agrégée. Deux d'entre eux venaient
+d'un correctif posé le jour même : le §5 (un `os.walk` ajouté quatorze
+minutes après le garde qui le protégeait) et le §2 (le masquage élargi sans
+élargir la repose). **Un correctif qui ajoute un parcours doit reprendre les
+gardes de tous les parcours existants.**
