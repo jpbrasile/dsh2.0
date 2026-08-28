@@ -1660,8 +1660,24 @@ def main():
         ex_hote = os.path.join(run_hote, lang, "exercises", "practice", ex)
         ex_vierge = os.path.join(vierge, lang, "exercises", "practice", ex)
         res_f = os.path.join(ex_hote, ".dsh.results.json")
+        # REPRISE : « deja juge » veut dire « porte un verdict », pas « porte un
+        # fichier ». Quand un exercice leve, le bloc `except` ci-dessous ecrit
+        # un resultat SANS `tests_outcomes` pour garder la trace de l'exception
+        # -- et l'ancien test, qui ne regardait que l'existence du fichier,
+        # rendait alors l'exercice INREJOUABLE : le plantage se scellait
+        # lui-meme. Mesure du 28/08 sur java/bowling : premier rejeu ->
+        # ValueError sur le fichier `nul`, resultat vide ecrit ; second rejeu,
+        # garde pose -> « 0 joues », l'exercice saute par sa propre trace de
+        # plantage. Un verdict absent se rejoue, il ne se garde pas.
         if os.path.exists(res_f):
-            continue                      # reprise : deja juge
+            try:
+                deja = json.load(io.open(res_f, encoding="utf-8"))
+            except Exception:
+                deja = {}
+            if deja.get("tests_outcomes"):
+                continue                  # reprise : deja juge
+            dire("  %s/%s : resultat SANS verdict (%s) -- on rejoue."
+                 % (lang, ex, deja.get("exception", "cause non enregistree")))
         try:
             stash_ex = os.path.join(BENCH_HOTE, "_masque", args.nom, lang, ex)
             res = un_exercice(ex_hote, ex_vierge, cmd_dsh, env,
