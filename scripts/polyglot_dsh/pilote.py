@@ -1021,6 +1021,19 @@ def tests_hors_config(ex_hote, deja):
                                                 "node_modules", "target",
                                                 "build")]
         for f in fs:
+            # MEME PIEGE QU'EN l. 830, et ce parcours-ci l'avait rouvert : ce
+            # `os.walk` est arrive avec le correctif du trou de masquage
+            # (42474af, 27/08 18:21), soit APRES le garde des peripheriques
+            # reserves (75f7ac2, 18:07), et sans lui. Sur `java/bowling`, ou
+            # l'agent avait laisse un fichier de zero octet nomme `nul`,
+            # `os.path.relpath` leve
+            # `ValueError: path is on mount '\\.\nul', start on mount 'C:'`
+            # et l'exercice meurt a 0,0 s avant meme le premier tour --
+            # mesure le 28/08 en rejouant l'exercice. Deuxieme exercice perdu
+            # par le meme nom : javascript/food-chain.
+            if est_peripherique_reserve(f):
+                dire("  ignore : %s (nom de peripherique reserve Windows)" % f)
+                continue
             rel = os.path.relpath(os.path.join(cur, f),
                                   ex_hote).replace("\\", "/")
             if rel in deja or not NOMS_TEST.search(rel):
